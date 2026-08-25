@@ -6,7 +6,7 @@ namespace Civitron{
         public:
         ItemData data;
         Item();
-        sf::Vector2f GetTexCoords(int height);
+        sf::Vector2f GetTexCoords();
 		void Tick(Planet *planet);
 
         void FromJson(nlohmann::json& j);

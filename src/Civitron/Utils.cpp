@@ -62,12 +62,11 @@ namespace Civitron
 	int TileToChunkPos(int pos){
 		return fastFloorDiv(pos);
 	}
-	sf::Vector3i TileToChunkPos(sf::Vector3i &pos)
+	sf::Vector2i TileToChunkPos(sf::Vector2i &pos)
 	{
 		return {
 			fastFloorDiv(pos.x),
 			fastFloorDiv(pos.y),
-			fastFloorDiv(pos.z),
 		};
 	}
 	ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key code)

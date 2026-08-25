@@ -5,19 +5,16 @@
 #include "TileInfo.hpp"
 namespace Civitron{
     Item::Item(){
-        position = {0,0,0};
+        position = {0,0};
         myClass = ITEM;
         data = {0,1};
     }
-    sf::Vector2f Item::GetTexCoords(int height){
+    sf::Vector2f Item::GetTexCoords(){
         nlohmann::json j = ItemInfo::itemsJson[std::to_string(data.id)];
         return JsonAsVector(j["coordinates"]);
     }
 
     void Item::Tick(Planet* planet){
-        if (planet->GetTileAt(position - sf::Vector3i(0,1,0))->type == GetTileID("Air")){
-            MoveTo(position - sf::Vector3i(0,1,0));
-        }
         sf::Vector3i chunkPos = TileToChunkPos(position);
         auto& entities = planet->chunks[chunkPos]->entities;
         for (int i = 0; i < entities.size(); i ++){
@@ -33,12 +30,12 @@ namespace Civitron{
     }
 
     void Item::FromJson(nlohmann::json& j){
-        position = {j["position"][0],j["position"][1],j["position"][2]};
+        position = {j["position"][0],j["position"][1]};
         data.FromJson(j["data"]);
     }
     nlohmann::json Item::ToJson(){
         nlohmann::json j = Entity::ToJson();
-        j["position"] = {position.x,position.y,position.z};
+        j["position"] = {position.x,position.y};
         j["data"] = data.ToJson();
         return j;
     }

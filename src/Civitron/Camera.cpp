@@ -16,7 +16,6 @@ namespace Civitron
 		zoomRate = pow(2.f, 1.f / numScrollsToDouble);
 		zoomSpeed = 25.f;
 		moveSpeed = 32.f;
-		viewHeight = 15;
 	}
 	Camera::Camera()
 	{
@@ -27,7 +26,6 @@ namespace Civitron
 		// the zoom rate is the (numscrollstodouble)th root of 2, so that it takes that many scrolls to double the zoom
 		int numScrollsToDouble = 3;
 		zoomRate = pow(2.f, 1.f / numScrollsToDouble);
-		viewHeight = 20;
 		zoomSpeed = 25.f;
 		moveSpeed = 512.f;
 	}
@@ -96,7 +94,6 @@ namespace Civitron
 		nlohmann::json j;
 		j["position"] = {position.x, position.y};
 		j["targetZoom"] = targetZoom;
-		j["viewHeight"] = viewHeight;
 		return j;
 	}
 
@@ -105,7 +102,6 @@ namespace Civitron
 		targetZoom = j["targetZoom"];
 		zoom = j["targetZoom"];
 		position = {j["position"][0], j["position"][1]};
-		viewHeight = j["viewHeight"];
 	}
 
 	Camera::~Camera()

@@ -16,7 +16,6 @@ namespace Civitron
 		float zoomRate;
 		float zoomSpeed;
 		float moveSpeed;
-		int viewHeight;
 		~Camera();
 		Camera();
 		Camera(sf::Vector2f position, float zoom);

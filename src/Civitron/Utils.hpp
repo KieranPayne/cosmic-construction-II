@@ -8,6 +8,6 @@ namespace Civitron
     sf::Color HexToColor(const std::string &hex);
     sf::Vector2f JsonAsVector(nlohmann::json &j);
     int TileToChunkPos(int pos);
-    sf::Vector3i TileToChunkPos(sf::Vector3i &pos);
+    sf::Vector2i TileToChunkPos(sf::Vector2i &pos);
     ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key key);
 }

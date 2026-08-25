@@ -8,10 +8,8 @@ namespace Civitron
 	{
 	public:
 		std::vector<ItemData> inventory;
-		std::vector<sf::Vector3i> path;
-		bool justJumped = false;
 		Human();
-		sf::Vector2f GetTexCoords(int height);
+		sf::Vector2f GetTexCoords();
 		void Tick(Planet *planet);
 		void FromJson(nlohmann::json &j);
 		nlohmann::json ToJson();

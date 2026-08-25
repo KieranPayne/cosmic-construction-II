@@ -27,51 +27,28 @@ namespace Civitron
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
-		int prevHeight = camera.viewHeight;
-		if (inputState.Down(sf::Keyboard::Key::LControl))
-		{
-			if (inputState.scroll.y > 0)
-			{
-				camera.viewHeight++;
-			}
-			else if (inputState.scroll.y < 0)
-			{
-				camera.viewHeight--;
-			}
-		}
-		if (inputState.Pressed(sf::Keyboard::Key::E))
-		{
-			camera.viewHeight++;
-		}
-		if (inputState.Pressed(sf::Keyboard::Key::Q))
-		{
-			camera.viewHeight--;
-		}
-		bool changedViewHeight = prevHeight != camera.viewHeight;
 		while (trackingEntity >= (int)entities.size()){
 			trackingEntity --;
 		}
 		if (trackingEntity != -1)
 		{
 			Entity *e = entities[trackingEntity].get();
-			sf::Vector2f targetPos = sf::Vector2f((e->position.x + 0.5f) * TILE_SIZE, (e->position.z + 0.5f) * TILE_SIZE);
+			sf::Vector2f targetPos = sf::Vector2f((e->position.x + 0.5f) * TILE_SIZE, (e->position.y + 0.5f) * TILE_SIZE);
 #define LERP(a, b, t) (a) + ((b) - (a)) * (t)
 			camera.position = sf::Vector2f(LERP(camera.position.x, targetPos.x, dt * 10), LERP(camera.position.y, targetPos.y, dt * 10));
 #undef LERP
-			camera.viewHeight = e->position.y;
 		}
 		camera.Update(dt, inputState);
-		GenerateChunksInView(target, changedViewHeight);
+		GenerateChunksInView(target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
 	}
-	void Planet::GenerateChunksInView(sf::RenderTarget *target, bool changedViewHeight)
+	void Planet::GenerateChunksInView(sf::RenderTarget *target)
 	{
 		sf::FloatRect view = camera.toFloatRect(target);
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
 		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
-		int y = floor((float)camera.viewHeight / CHUNK_SIZE);
 		for (int x = topLeft.x; x <= bottomRight.x; x++)
 		{
 			for (int z = topLeft.y; z <= bottomRight.y; z++)
@@ -79,24 +56,22 @@ namespace Civitron
 
 				for (int i = 0; i <= viewDepth; i++)
 				{
-					int y = camera.viewHeight - i;
-					int chunkY = floor((float)y / CHUNK_SIZE);
-					if (!chunks.contains({x, chunkY, z}))
+					if (!chunks.contains({x, z}))
 					{
 
-						chunks[{x, chunkY, z}] = std::unique_ptr<Chunk>(generator.GenerateChunk({x, chunkY, z}));
+						chunks[{x, z}] = std::unique_ptr<Chunk>(generator.GenerateChunk({x, z}));
 					}
-					sf::Vector3i pos(x, y, z);
-					if (!layerVertices.contains(pos))
-					{
+					sf::Vector2i pos(x, z);
+					// if (!layerVertices.contains(pos))
+					// {
 						GenerateLayerVertices(pos);
-					}else{
-						auto index = std::find(verticesToRedraw.begin(),verticesToRedraw.end(),pos); 
-						if (index != verticesToRedraw.end()){
-							GenerateLayerVertices(pos);
-							verticesToRedraw.erase(index);
-						}
-					}
+					// }else{
+						// auto index = std::find(verticesToRedraw.begin(),verticesToRedraw.end(),pos); 
+						// if (index != verticesToRedraw.end()){
+							// GenerateLayerVertices(pos);
+							// verticesToRedraw.erase(index);
+						// }
+					// }
 				}
 			}
 		}
@@ -112,50 +87,49 @@ namespace Civitron
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
 		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
-		int y = floor((float)camera.viewHeight / CHUNK_SIZE);
-		sf::FloatRect rect = camera.toFloatRect(window.get());
-		sf::VertexArray overlay(sf::PrimitiveType::Triangles, 6);
-		overlay[0].position = rect.position;
-		overlay[1].position = rect.position + sf::Vector2f(rect.size.x, 0);
-		overlay[2].position = rect.position + rect.size;
-		overlay[3].position = rect.position;
-		overlay[4].position = rect.position + rect.size;
-		overlay[5].position = rect.position + sf::Vector2f(0, rect.size.y);
-		for (int i = 0; i < 6; i++)
-		{
-			overlay[i].color = sf::Color(0, 0, 0, overlayAlpha);
+		// sf::FloatRect rect = camera.toFloatRect(window.get());
+		// sf::VertexArray overlay(sf::PrimitiveType::Triangles, 6);
+		// overlay[0].position = rect.position;
+		// overlay[1].position = rect.position + sf::Vector2f(rect.size.x, 0);
+		// overlay[2].position = rect.position + rect.size;
+		// overlay[3].position = rect.position;
+		// overlay[4].position = rect.position + rect.size;
+		// overlay[5].position = rect.position + sf::Vector2f(0, rect.size.y);
+		// for (int i = 0; i < 6; i++)
+		// {
+		// 	overlay[i].color = sf::Color(0, 0, 0, overlayAlpha);
 		}
-		std::vector<std::vector<int>> heights;
-		for (int x = topLeft.x; x <= bottomRight.x; x++)
-		{
-			heights.push_back({});
-			for (int z = topLeft.y; z <= bottomRight.y; z++)
-			{
-				for (int y = 0; y <= viewDepth; y++)
-				{
-					if (layerVertices[sf::Vector3i(x, camera.viewHeight - y, z)].second || y == viewDepth)
-					{
-						heights.back().push_back(viewDepth-y);
-						break;
-					}
-				}
-			}
-		}
-		for (int i = 0; i <= viewDepth; i++)
-		{
-			int y = camera.viewHeight - viewDepth + i;
-			window->draw(overlay, states);
+		// std::vector<std::vector<int>> heights;
+		// for (int x = topLeft.x; x <= bottomRight.x; x++)
+		// {
+		// 	heights.push_back({});
+		// 	for (int z = topLeft.y; z <= bottomRight.y; z++)
+		// 	{
+		// 		for (int y = 0; y <= viewDepth; y++)
+		// 		{
+		// 			if (layerVertices[sf::Vector3i(x, camera.viewHeight - y, z)].second || y == viewDepth)
+		// 			{
+		// 				heights.back().push_back(viewDepth-y);
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// for (int i = 0; i <= viewDepth; i++)
+		// {
+			// int y = camera.viewHeight - viewDepth + i;
+			// window->draw(overlay, states);
 			std::vector<sf::Vertex> entityVerts = {};
 			for (int x = topLeft.x; x <= bottomRight.x; x++)
 			{
 				for (int z = topLeft.y; z <= bottomRight.y; z++)
 				{
 					//TODO: LINE BELOW MADE CHUNKS DISAPPEAR
-					sf::Vector3i cPos(x,TileToChunkPos(y),z);
+					sf::Vector2i cPos(x,z);
 					if (chunks.contains(cPos)){
 						Chunk* c = chunks[cPos].get();
 						for (auto& e : c->entities){
-							auto verts = e->GetVertices(this,y);
+							auto verts = e->GetVertices();
 							entityVerts.insert(entityVerts.end(),verts.begin(),verts.end());
 						}
 					}
@@ -165,12 +139,12 @@ namespace Civitron
 						continue;
 					}
 					sf::Vector3i pos(x,y,z);
-					auto &verts = layerVertices[pos].first;
+					// auto &verts = layerVertices[pos].first;
 					window->draw(verts, states);
 				}
 			}
 			window->draw(entityVerts.data(),entityVerts.size(),sf::PrimitiveType::Triangles,entityStates);
-		}
+		// }
 		// sf::VertexArray arr(sf::PrimitiveType::Triangles);
 		// for (Entity *e : entitiesToRender)
 		// {
@@ -205,7 +179,7 @@ namespace Civitron
 		{
 			auto bytes = c.second->ToBytes();
 			std::string chunkPath = path + "/chunks/";
-			chunkPath += std::to_string(c.second->position.x) + " " + std::to_string(c.second->position.y) + " " + std::to_string(c.second->position.z);
+			chunkPath += std::to_string(c.second->position.x) + " " + std::to_string(c.second->position.y);
 			std::ofstream out(chunkPath + ".txt");
 			out.write(reinterpret_cast<const char *>(bytes.data()), bytes.size());
 			out.close();
@@ -390,20 +364,20 @@ namespace Civitron
 		sf::Vector3i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y][subChunkPos.z];
 	}
-	void Planet::SetTileAt(sf::Vector3i position, Tile tile)
+	void Planet::SetTileAt(sf::Vector2i position, Tile tile)
 	{
-		sf::Vector3i chunkPos = TileToChunkPos(position);
+		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
 			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
-		sf::Vector3i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y][subChunkPos.z] = tile;
-		sf::Vector3i p(chunkPos.x,position.y, chunkPos.z);
+		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
+		chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
+		sf::Vector2i p(chunkPos.x, chunkPos.y);
 		
-		if (std::find(verticesToRedraw.begin(),verticesToRedraw.end(),p) == verticesToRedraw.end()){
-			verticesToRedraw.push_back(p);
-		}
+		// if (std::find(verticesToRedraw.begin(),verticesToRedraw.end(),p) == verticesToRedraw.end()){
+		// 	verticesToRedraw.push_back(p);
+		// }
 	}
 	void Planet::Tick()
 	{
@@ -417,14 +391,14 @@ namespace Civitron
 			}
 		}
 	}
-	std::pair<std::vector<sf::Vertex>,bool> Planet::GetVertices(sf::Vector3i tilePosition)
+	std::pair<std::vector<sf::Vertex>,bool> Planet::GetVertices(sf::Vector2i tilePosition)
 	{
-		sf::Vector3i chunkPos = TileToChunkPos(tilePosition);
+		sf::Vector2i chunkPos = TileToChunkPos(tilePosition);
 		Chunk *chunk = chunks[chunkPos].get();
 		tilePosition -= chunkPos * CHUNK_SIZE;
 		float alpha = 255.f;
 		static float falloff = 0.85f;
-		Tile *t = &chunk->tiles[tilePosition.x][tilePosition.y][tilePosition.z];
+		Tile *t = &chunk->tiles[tilePosition.x][tilePosition.y];
 		if (t->type != GetTileID("Air"))
 		{
 			std::vector<sf::Vertex> vertices = {};
@@ -435,7 +409,7 @@ namespace Civitron
 				{0, 0},
 				{TILE_SIZE, TILE_SIZE},
 				{0, TILE_SIZE}};
-			sf::Vector2f worldPos = {(float)(tilePosition.x * TILE_SIZE), (float)(tilePosition.z * TILE_SIZE)};
+			sf::Vector2f worldPos = {(float)(tilePosition.x * TILE_SIZE), (float)(tilePosition.y * TILE_SIZE)};
 			sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].position;
 			for (int i = 0; i < 6; i++)
 			{
