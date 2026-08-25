@@ -1,0 +1,44 @@
+main:
+DELAY 1 S
+PRINT starting
+TIMING START
+REPEAT 200 test for error
+TIMING END C:\Users\kiera\Desktop\Civitron timing results
+END
+
+test for error:
+GOTO create save
+//DELAY 0.5 S
+REPEAT 3 scroll
+GOTO quit game
+END
+
+//clicks new game, types auto generated save and clicks done
+create save:
+MOVE 492 244
+MOVE 493 244
+MBP 0
+MBR 0
+MOVE 28 61
+MBP 0
+MBR 0
+TYPE auto generated save
+MOVE 36 166
+MBP 0
+MBR 0
+END
+
+quit game:
+KBP 36
+KBR 36
+MOVE 29 59
+MBP 0
+MBR 0
+END
+
+scroll:
+MOVE 850 200
+MBP 0
+MOVE 300 200
+MBR 0
+END

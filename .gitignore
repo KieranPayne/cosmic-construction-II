@@ -1,0 +1,14 @@
+# Build system
+bin
+gmon.out
+*.stats
+Thumbs.db
+.DS_Store
+build
+CMakePresets.json
+out
+# VS Code
+.vscode
+imgui.ini
+# Project specific
+#

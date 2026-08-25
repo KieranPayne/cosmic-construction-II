@@ -1,0 +1,59 @@
+REPEAT 10 main
+END
+
+main:
+GOTO create save
+GOTO pan
+GOTO quit game
+GOTO load game
+GOTO quit game
+GOTO delete save
+END
+//clicks new game, types auto generated save and clicks done
+create save:
+MOVE 492 244
+MOVE 493 244
+MBP 0
+MBR 0
+MOVE 28 61
+MBP 0
+MBR 0
+TYPE auto generated save
+MOVE 36 166
+MBP 0
+MBR 0
+END
+
+pan:
+MOVE 850 200
+MBP 0
+MOVE 300 200
+MBR 0
+
+quit game:
+KBP 36
+KBR 36
+MOVE 29 59
+MBP 0
+MBR 0
+END
+
+load game:
+MOVE 500 300
+MBP 0
+MBR 0
+MOVE 50 75
+MBP 0
+MBR 0
+END
+
+delete save:
+MOVE 500 300
+MBP 0
+MBR 0
+MOVE 280 75
+MBP 0
+MBR 0
+KBP 36
+KBR 36
+END
