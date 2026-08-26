@@ -141,7 +141,7 @@ namespace cc
 						times.insert(times.begin() + i,time);
 						names.insert(names.begin() + i, j["saveName"]);
 						playTimes.insert(playTimes.begin() + i,playTime);
-						directories.insert(directories.begin() + i,fullPath);
+						directories.insert(directories.begin() + i,d);
 						found = true;
 						break;
 					}
@@ -149,7 +149,7 @@ namespace cc
 				if (!found){
 					times.push_back(time);
 					names.push_back(j["saveName"]);
-					directories.push_back(fullPath);
+					directories.push_back(d);
 					playTimes.push_back(playTime);
 				} 
 				// auto metadata = Split(SaveManager::ReadData(fullPath + "/metadata.txt"), '\n');

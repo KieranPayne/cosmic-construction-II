@@ -10,6 +10,7 @@ namespace cc
 	{
 	public:
 		std::unordered_map<sf::Vector2i, std::unique_ptr<Chunk>,ChunkHash> chunks;
+		std::unordered_map<sf::Vector2i, std::optional<sf::VertexArray>,ChunkHash> tileVertices;
 		Generator generator;
 		Camera camera;
 		int index;

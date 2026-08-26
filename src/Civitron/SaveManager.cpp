@@ -65,6 +65,7 @@ namespace cc
 		}
 		void Load(int index)
 		{
+			std::cout << index << std::endl;
 			playTimeTimer.restart();
 			std::string path = GetSavedataDir();
 			auto dirs = ListDirectories(path);
