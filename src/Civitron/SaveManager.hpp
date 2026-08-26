@@ -12,7 +12,7 @@ namespace Civitron
         void Load(int index);
         void WriteMetadata();
         void LoadStartingChunks(State* state);
-        void CreateDefaultPopulation(State* state);
+        // void CreateDefaultPopulation(State* state);
 
         bool CreateDirectory(std::string path);
         bool DirExists(std::string path);

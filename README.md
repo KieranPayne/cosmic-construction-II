@@ -3,12 +3,8 @@
 a top down colony builder game similar to cosmic construction, based on the code of civitron.
 
 to do:
-- convert civitron 3D code to 2D
-    - chunk class
-    - saving and loading
-    - entities
-    - rendering
-    - tile system
-    - population
-    - world gen
-    - imgui stuff
+- get rendering working again
+- make sure everything else works as expected
+- clean up code
+- add background tile sysetm 
+    - can have any rgb colour, used to display biomes and water and stuff

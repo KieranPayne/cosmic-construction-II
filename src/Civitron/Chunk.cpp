@@ -2,23 +2,20 @@
 #include "TileInfo.hpp"
 namespace Civitron
 {
-	Chunk::Chunk(sf::Vector3i position)
+	Chunk::Chunk(sf::Vector2i position)
 	{
 		this->position = position;
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				for (int z = 0; z < CHUNK_SIZE; z++)
-				{
-					tiles[x][y][z].type = 0;
-				}
+				tiles[x][y].type = 0;
 			}
 		}
 	}
 	Chunk::Chunk()
 	{
-		position = {0, 0, 0};
+		position = {0, 0};
 	}
 
 	sf::Vector2i closestSquareDims(int area)
@@ -44,12 +41,9 @@ namespace Civitron
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				for (int z = 0; z < CHUNK_SIZE; z++)
-				{
-					int index = (x * CHUNK_SIZE * CHUNK_SIZE + y * CHUNK_SIZE + z) * 2;
-					values[index] = tiles[x][y][z].type >> 8;
-					values[index + 1] = tiles[x][y][z].type & 255;
-				}
+				int index = (x * CHUNK_SIZE + y) * 2;
+				values[index] = tiles[x][y].type >> 8;
+				values[index + 1] = tiles[x][y].type & 255;
 			}
 		}
 		return values;
@@ -61,24 +55,10 @@ namespace Civitron
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				for (int z = 0; z < CHUNK_SIZE; z++)
-				{
-					int i = x * CHUNK_SIZE * CHUNK_SIZE + y * CHUNK_SIZE + z;
-					i *= 2;
-					uint16_t value = (uint16_t)(bytes[i] << 8) + bytes[i + 1];
-					tiles[x][y][z].type = value;
-				}
-			}
-		}
-	}
-	void Chunk::RemoveEntity(Entity *entity)
-	{
-		for (int i = 0; i < entities.size(); i++)
-		{
-			if (entities[i] == entity)
-			{
-				entities.erase(entities.begin() + i);
-				break;
+				int i = x * CHUNK_SIZE + y;
+				i *= 2;
+				uint16_t value = (uint16_t)(bytes[i] << 8) + bytes[i + 1];
+				tiles[x][y].type = value;
 			}
 		}
 	}

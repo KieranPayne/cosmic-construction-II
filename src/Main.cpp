@@ -2,14 +2,14 @@
 #include "Civitron/MainMenu.hpp"
 #include "Civitron/State.hpp"
 #include "Civitron/TileInfo.hpp"
-#include "Civitron/ItemInfo.hpp"
+// #include "Civitron/ItemInfo.hpp"
 #include "Input/Input.hpp"
 #include "Timer.hpp"
 #include "imgui/imgui-SFML.h"
 #include "imgui/imgui.h"
 #include <fstream>
 #include <iostream>
-#include "Civitron/EntityInfo.hpp"
+// #include "Civitron/EntityInfo.hpp"
 #include "MacroRunner.hpp"
 // a unique pointer to the window object; this is unique to prevent accidentally creating multiple windows
 std::unique_ptr<sf::RenderWindow> window;
@@ -43,9 +43,9 @@ int main()
 	state->renderTarget = window.get();
 	sf::Clock deltaClock;
 	Civitron::TileInfo::Init();
-	Civitron::EntityInfo::Init();
-	Civitron::ItemInfo::Init();
-	Civitron::EntityInfo::Build();
+	// Civitron::EntityInfo::Init();
+	// Civitron::ItemInfo::Init();
+	// Civitron::EntityInfo::Build();
 	auto &io = ImGui::GetIO();
 	io.Fonts->Clear();
 	ImFont *font = io.Fonts->AddFontFromFileTTF("content/resources/fonts/default font.ttf", 30.f);

@@ -3,11 +3,9 @@
 #include "PerlinNoise.hpp"
 #include "SaveManager.hpp"
 #include "Utils.hpp"
-#include "EntityInfo.hpp"
 #include "TileInfo.hpp"
 #include "../imgui/imgui.h"
 #include "../Main.hpp"
-#include "Human.hpp"
 #include <queue>
 namespace Civitron
 {
@@ -18,26 +16,26 @@ namespace Civitron
 		camera = Camera();
 		currFps = 0;
 	}
-	void Planet::SetSeed(uint64_t seed)
-	{
-		generator.SetSeed(seed);
-	}
+	// void Planet::SetSeed(uint64_t seed)
+	// {
+	// 	generator.SetSeed(seed);
+	// }
 	void Planet::Update(double dt)
 	{
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
-		while (trackingEntity >= (int)entities.size()){
-			trackingEntity --;
-		}
-		if (trackingEntity != -1)
-		{
-			Entity *e = entities[trackingEntity].get();
-			sf::Vector2f targetPos = sf::Vector2f((e->position.x + 0.5f) * TILE_SIZE, (e->position.y + 0.5f) * TILE_SIZE);
-#define LERP(a, b, t) (a) + ((b) - (a)) * (t)
-			camera.position = sf::Vector2f(LERP(camera.position.x, targetPos.x, dt * 10), LERP(camera.position.y, targetPos.y, dt * 10));
-#undef LERP
-		}
+// 		while (trackingEntity >= (int)entities.size()){
+// 			trackingEntity --;
+// 		}
+// 		if (trackingEntity != -1)
+// 		{
+// 			Entity *e = entities[trackingEntity].get();
+// 			sf::Vector2f targetPos = sf::Vector2f((e->position.x + 0.5f) * TILE_SIZE, (e->position.y + 0.5f) * TILE_SIZE);
+// #define LERP(a, b, t) (a) + ((b) - (a)) * (t)
+// 			camera.position = sf::Vector2f(LERP(camera.position.x, targetPos.x, dt * 10), LERP(camera.position.y, targetPos.y, dt * 10));
+// #undef LERP
+// 		}
 		camera.Update(dt, inputState);
 		GenerateChunksInView(target);
 		DrawInfoGUI(dt);
@@ -64,7 +62,7 @@ namespace Civitron
 					sf::Vector2i pos(x, z);
 					// if (!layerVertices.contains(pos))
 					// {
-						GenerateLayerVertices(pos);
+						// GenerateLayerVertices(pos);
 					// }else{
 						// auto index = std::find(verticesToRedraw.begin(),verticesToRedraw.end(),pos); 
 						// if (index != verticesToRedraw.end()){
@@ -81,12 +79,37 @@ namespace Civitron
 		// std::vector<Entity *> entitiesToRender = {};
 		sf::RenderStates states;
 		states.texture = &TileInfo::atlas.texture;
-		sf::RenderStates entityStates;
-		entityStates.texture = &EntityInfo::atlas.texture;
+		// sf::RenderStates entityStates;
+		// entityStates.texture = &EntityInfo::atlas.texture;
 		sf::FloatRect view = camera.toFloatRect(target);
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
 		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
+		std::vector<sf::Vertex> vertices;
+		for (int x = topLeft.x; x <= bottomRight.x; x ++)
+		{
+			for (int y = topLeft.y; y <= bottomRight.y; y ++)
+			{
+				for (int cx = 0; cx < CHUNK_SIZE; cx ++)
+				{
+					for (int cy = 0; cy < CHUNK_SIZE; cy ++)
+					{
+						auto verts = GetVertices({x * CHUNK_SIZE + cx,y * CHUNK_SIZE + cy});
+						if (verts.second)
+						{
+							vertices.insert(vertices.end(),verts.first.begin(),verts.first.end());
+						}
+					}
+				}
+			}
+		}
+		sf::VertexArray vertexArray(sf::PrimitiveType::Triangles, vertices.size());
+
+		for (std::size_t i = 0; i < vertices.size(); ++i)
+		{
+			vertexArray[i] = vertices[i];
+		}
+		target->draw(vertexArray,states);
 		// sf::FloatRect rect = camera.toFloatRect(window.get());
 		// sf::VertexArray overlay(sf::PrimitiveType::Triangles, 6);
 		// overlay[0].position = rect.position;
@@ -98,7 +121,7 @@ namespace Civitron
 		// for (int i = 0; i < 6; i++)
 		// {
 		// 	overlay[i].color = sf::Color(0, 0, 0, overlayAlpha);
-		}
+		// }
 		// std::vector<std::vector<int>> heights;
 		// for (int x = topLeft.x; x <= bottomRight.x; x++)
 		// {
@@ -119,31 +142,31 @@ namespace Civitron
 		// {
 			// int y = camera.viewHeight - viewDepth + i;
 			// window->draw(overlay, states);
-			std::vector<sf::Vertex> entityVerts = {};
-			for (int x = topLeft.x; x <= bottomRight.x; x++)
-			{
-				for (int z = topLeft.y; z <= bottomRight.y; z++)
-				{
-					//TODO: LINE BELOW MADE CHUNKS DISAPPEAR
-					sf::Vector2i cPos(x,z);
-					if (chunks.contains(cPos)){
-						Chunk* c = chunks[cPos].get();
-						for (auto& e : c->entities){
-							auto verts = e->GetVertices();
-							entityVerts.insert(entityVerts.end(),verts.begin(),verts.end());
-						}
-					}
+			// std::vector<sf::Vertex> entityVerts = {};
+			// for (int x = topLeft.x; x <= bottomRight.x; x++)
+			// {
+			// 	for (int z = topLeft.y; z <= bottomRight.y; z++)
+			// 	{
+			// 		//TODO: LINE BELOW MADE CHUNKS DISAPPEAR
+			// 		sf::Vector2i cPos(x,z);
+			// 		if (chunks.contains(cPos)){
+			// 			Chunk* c = chunks[cPos].get();
+			// 			for (auto& e : c->entities){
+			// 				auto verts = e->GetVertices();
+			// 				entityVerts.insert(entityVerts.end(),verts.begin(),verts.end());
+			// 			}
+			// 		}
 
-					if (i < heights[x - topLeft.x][z - topLeft.y])
-					{
-						continue;
-					}
-					sf::Vector3i pos(x,y,z);
-					// auto &verts = layerVertices[pos].first;
-					window->draw(verts, states);
-				}
-			}
-			window->draw(entityVerts.data(),entityVerts.size(),sf::PrimitiveType::Triangles,entityStates);
+			// 		if (i < heights[x - topLeft.x][z - topLeft.y])
+			// 		{
+			// 			continue;
+			// 		}
+			// 		sf::Vector3i pos(x,y,z);
+			// 		// auto &verts = layerVertices[pos].first;
+					// window->draw(verts, states);
+				// }
+			// }
+			// window->draw(entityVerts.data(),entityVerts.size(),sf::PrimitiveType::Triangles,entityStates);
 		// }
 		// sf::VertexArray arr(sf::PrimitiveType::Triangles);
 		// for (Entity *e : entitiesToRender)
@@ -185,37 +208,37 @@ namespace Civitron
 			out.close();
 		}
 		//save entities
-		std::string entityData = "[\n";
-		for (auto &e : entities)
-		{
-			auto j = e->ToJson();
-			entityData += j.dump(2);
-			// separator
-			entityData += ",\n";
-		}
-		if (entityData.size() > 2){
-			entityData = entityData.substr(0, entityData.size() - 2);
-		}
-		entityData += "\n]";
-		SaveManager::WriteData(path + "/entities.json", entityData);
+		// std::string entityData = "[\n";
+		// for (auto &e : entities)
+		// {
+		// 	auto j = e->ToJson();
+		// 	entityData += j.dump(2);
+		// 	// separator
+		// 	entityData += ",\n";
+		// }
+		// if (entityData.size() > 2){
+		// 	entityData = entityData.substr(0, entityData.size() - 2);
+		// }
+		// entityData += "\n]";
+		// SaveManager::WriteData(path + "/entities.json", entityData);
 		//save populations
-		std::string populationData = "[\n";
-		for (auto& p : populations){
-			populationData += p.ToJson().dump(2) + ",\n";
-		}
-		if (populationData.size() > 2){
-			populationData = populationData.substr(0, populationData.size() - 2);
-		}
-		populationData += "\n]";
-		SaveManager::WriteData(path + "/populations.json", populationData);
+		// std::string populationData = "[\n";
+		// for (auto& p : populations){
+		// 	populationData += p.ToJson().dump(2) + ",\n";
+		// }
+		// if (populationData.size() > 2){
+		// 	populationData = populationData.substr(0, populationData.size() - 2);
+		// }
+		// populationData += "\n]";
+		// SaveManager::WriteData(path + "/populations.json", populationData);
 		//save generator data
-		std::string generatorPath = path + "/generator";
-		if (!SaveManager::DirExists(generatorPath))
-		{
-			SaveManager::CreateDirectory(generatorPath);
-		}
-		generatorPath += "/";
-		generator.Save(generatorPath);
+		// std::string generatorPath = path + "/generator";
+		// if (!SaveManager::DirExists(generatorPath))
+		// {
+		// 	SaveManager::CreateDirectory(generatorPath);
+		// }
+		// generatorPath += "/";
+		// generator.Save(generatorPath);
 		//misc variables get saved in planet json
 		SaveManager::WriteData(path + "/planet.json",ToJson().dump(2));
 	}
@@ -238,8 +261,8 @@ namespace Civitron
 		{
 			auto coords = Split(f.substr(chunkPath.size() + 1), ' ');
 			// remove file extension
-			coords[2] = coords[2].substr(0, coords[2].size() - 4);
-			sf::Vector3i vec{std::stoi(coords[0]), std::stoi(coords[1]), std::stoi(coords[2])};
+			coords[1] = coords[1].substr(0, coords[1].size() - 4);
+			sf::Vector2i vec{std::stoi(coords[0]), std::stoi(coords[1])};
 			std::array<uint8_t, CHUNK_NUM_BYTES> bytes = {};
 			std::ifstream in(f, std::ios::binary);
 			in.read(reinterpret_cast<char *>(bytes.data()), bytes.size());
@@ -247,25 +270,25 @@ namespace Civitron
 			chunks[vec]->FromBytes(bytes);
 		}
 		// load entities
-		std::string entityData = SaveManager::ReadData(path + "/entities.json");
-		nlohmann::json j = nlohmann::json::parse(entityData);
-		for (auto &json : j)
-		{
-			Entity *e = Entity::LoadFromJson(json);
-			AddEntity(e);
-		}
-		//load populations
-		std::string populationData = SaveManager::ReadData(path + "/populations.json");
-		j = nlohmann::json::parse(populationData);
-		for (auto &json : j)
-		{
-			Population p;
-			p.FromJson(json);
-			populations.push_back(p);
-		}
+		// std::string entityData = SaveManager::ReadData(path + "/entities.json");
+		// nlohmann::json j = nlohmann::json::parse(entityData);
+		// for (auto &json : j)
+		// {
+		// 	Entity *e = Entity::LoadFromJson(json);
+		// 	AddEntity(e);
+		// }
+		// //load populations
+		// std::string populationData = SaveManager::ReadData(path + "/populations.json");
+		// j = nlohmann::json::parse(populationData);
+		// for (auto &json : j)
+		// {
+		// 	Population p;
+		// 	p.FromJson(json);
+		// 	populations.push_back(p);
+		// }
 
-		std::string generatorPath = path + "/generator/";
-		generator.Load(generatorPath);
+		// std::string generatorPath = path + "/generator/";
+		// generator.Load(generatorPath);
 		// load misc data
 		FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
 	}
@@ -280,7 +303,7 @@ namespace Civitron
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
-		ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
+		// ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
 		
 		ImGui::SliderInt("Overlay Alpha", &overlayAlpha, 0, 255);
 		ImGui::SliderInt("View Depth", &viewDepth, 0, 15);
@@ -320,49 +343,49 @@ namespace Civitron
 		else if (currentView == 1)
 		{
 			std::string result = "";
-			for (auto &e : entities)
-			{
-				result += e->ToJson().dump(1);
-				result += "\n";
-			}
+			// for (auto &e : entities)
+			// {
+			// 	result += e->ToJson().dump(1);
+			// 	result += "\n";
+			// }
 			ImGui::Text(result.c_str());
 		}else if(currentView == 2){
 			std::string result = "";
-			for (auto &p : populations)
-			{
-				result += p.ToJson().dump(1);
-				result += "\n";
-			}
+			// for (auto &p : populations)
+			// {
+			// 	result += p.ToJson().dump(1);
+			// 	result += "\n";
+			// }
 			ImGui::Text(result.c_str());
 		}
 		ImGui::End();
 	}
-	void Planet::AddEntity(Entity *e)
+	// void Planet::AddEntity(Entity *e)
+	// {
+	// 	e->planet = this;
+	// 	entities.push_back(std::unique_ptr<Entity>(e));
+	// 	auto pos = TileToChunkPos(e->position);
+	// 	if (!chunks.contains(pos))
+	// 	{
+	// 		chunks[pos] = std::unique_ptr<Chunk>(generator.GenerateChunk(pos));
+	// 	}
+	// 	chunks[pos]->entities.push_back(e);
+	// }
+	// void Planet::RemoveEntity(Entity* e){
+	// 	auto chunkPos = TileToChunkPos(e->position);
+	// 	auto& c = chunks[chunkPos];
+	// 	c->RemoveEntity(e);
+	// 	e->toBeDeleted = true;
+	// }
+	Tile *Planet::GetTileAt(sf::Vector2i position)
 	{
-		e->planet = this;
-		entities.push_back(std::unique_ptr<Entity>(e));
-		auto pos = TileToChunkPos(e->position);
-		if (!chunks.contains(pos))
-		{
-			chunks[pos] = std::unique_ptr<Chunk>(generator.GenerateChunk(pos));
-		}
-		chunks[pos]->entities.push_back(e);
-	}
-	void Planet::RemoveEntity(Entity* e){
-		auto chunkPos = TileToChunkPos(e->position);
-		auto& c = chunks[chunkPos];
-		c->RemoveEntity(e);
-		e->toBeDeleted = true;
-	}
-	Tile *Planet::GetTileAt(sf::Vector3i position)
-	{
-		sf::Vector3i chunkPos = TileToChunkPos(position);
+		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
 			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
-		sf::Vector3i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y][subChunkPos.z];
+		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
+		return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
 	}
 	void Planet::SetTileAt(sf::Vector2i position, Tile tile)
 	{
@@ -381,24 +404,25 @@ namespace Civitron
 	}
 	void Planet::Tick()
 	{
-		for (int i = 0; i < entities.size(); i ++)
-		{
-			if (entities[i]->toBeDeleted){
-				entities.erase(entities.begin() + i);
-				i --;
-			}else{
-				entities[i]->Tick(this);
-			}
-		}
+		// for (int i = 0; i < entities.size(); i ++)
+		// {
+		// 	if (entities[i]->toBeDeleted){
+		// 		entities.erase(entities.begin() + i);
+		// 		i --;
+		// 	}else{
+		// 		entities[i]->Tick(this);
+		// 	}
+		// }
 	}
 	std::pair<std::vector<sf::Vertex>,bool> Planet::GetVertices(sf::Vector2i tilePosition)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(tilePosition);
 		Chunk *chunk = chunks[chunkPos].get();
-		tilePosition -= chunkPos * CHUNK_SIZE;
+		sf::Vector2i subChunkPos = tilePosition - chunkPos * CHUNK_SIZE;
+		// tilePosition -= chunkPos * CHUNK_SIZE;
 		float alpha = 255.f;
 		static float falloff = 0.85f;
-		Tile *t = &chunk->tiles[tilePosition.x][tilePosition.y];
+		Tile *t = &chunk->tiles[subChunkPos.x][subChunkPos.y];
 		if (t->type != GetTileID("Air"))
 		{
 			std::vector<sf::Vertex> vertices = {};
@@ -415,46 +439,46 @@ namespace Civitron
 			{
 				vertices.push_back({worldPos + offsets[i], sf::Color(alpha, alpha, alpha, 255), texPos + offsets[i]});
 			}
-			bool solid = TileInfo::tileRegistry[t->type].solid;
-			return {vertices,solid};
+			// bool solid = TileInfo::tileRegistry[t->type].solid;
+			return {vertices,true};
 		}
 		return {{},false};
 	}
-	bool Planet::TileIsWalkable(sf::Vector3i pos)
-	{
-		return GetTileAt(pos)->type == GetTileID("Air") && TileInfo::tileRegistry[GetTileAt(pos - sf::Vector3i(0, 1, 0))->type].walkable;
-	}
+	// bool Planet::TileIsWalkable(sf::Vector3i pos)
+	// {
+	// 	return GetTileAt(pos)->type == GetTileID("Air") && TileInfo::tileRegistry[GetTileAt(pos - sf::Vector3i(0, 1, 0))->type].walkable;
+	// }
 
-	void Planet::GenerateLayerVertices(sf::Vector3i pos)
-	{
-		sf::Vector3i p = pos;
-		pos.x *= CHUNK_SIZE;
-		pos.z *= CHUNK_SIZE;
-		// sf::VertexArray arr(sf::PrimitiveType::Triangles, CHUNK_SIZE * CHUNK_SIZE * 6);
-		std::vector<sf::Vertex> arr;
-		arr.reserve(CHUNK_SIZE * CHUNK_SIZE * 6);
-		sf::Vector2f offset(pos.x * TILE_SIZE, pos.z * TILE_SIZE);
-		int index = 0;
-		bool solid = true;
-		for (int x = 0; x < CHUNK_SIZE; x++)
-		{
-			for (int z = 0; z < CHUNK_SIZE; z++)
-			{
-				auto [vertices, tileSolid] = GetVertices(pos + sf::Vector3i(x, 0, z));
-				solid = solid && tileSolid;
-				for (int i = 0; i < vertices.size(); i++)
-				{
-					vertices[i].position += offset;
-					arr.push_back(vertices[i]);
-				}
-				index += vertices.size();
-			}
-		}
-		layerVertices[p] = std::pair<sf::VertexBuffer, bool>(sf::VertexBuffer(sf::PrimitiveType::Triangles), solid);
-		auto &buff = layerVertices[p].first;
-		buff.create(arr.size());
-		buff.update(arr.data());
-	}
+	// void Planet::GenerateLayerVertices(sf::Vector3i pos)
+	// {
+	// 	sf::Vector3i p = pos;
+	// 	pos.x *= CHUNK_SIZE;
+	// 	pos.z *= CHUNK_SIZE;
+	// 	// sf::VertexArray arr(sf::PrimitiveType::Triangles, CHUNK_SIZE * CHUNK_SIZE * 6);
+	// 	std::vector<sf::Vertex> arr;
+	// 	arr.reserve(CHUNK_SIZE * CHUNK_SIZE * 6);
+	// 	sf::Vector2f offset(pos.x * TILE_SIZE, pos.z * TILE_SIZE);
+	// 	int index = 0;
+	// 	bool solid = true;
+	// 	for (int x = 0; x < CHUNK_SIZE; x++)
+	// 	{
+	// 		for (int z = 0; z < CHUNK_SIZE; z++)
+	// 		{
+	// 			auto [vertices, tileSolid] = GetVertices(pos + sf::Vector3i(x, 0, z));
+	// 			solid = solid && tileSolid;
+	// 			for (int i = 0; i < vertices.size(); i++)
+	// 			{
+	// 				vertices[i].position += offset;
+	// 				arr.push_back(vertices[i]);
+	// 			}
+	// 			index += vertices.size();
+	// 		}
+	// 	}
+	// 	layerVertices[p] = std::pair<sf::VertexBuffer, bool>(sf::VertexBuffer(sf::PrimitiveType::Triangles), solid);
+	// 	auto &buff = layerVertices[p].first;
+	// 	buff.create(arr.size());
+	// 	buff.update(arr.data());
+	// }
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
 		ImGui::Begin("Tool Menu");
@@ -495,7 +519,7 @@ namespace Civitron
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
-				SetTileAt(sf::Vector3i(worldTilePos.x, camera.viewHeight, worldTilePos.y), Tile(currentTile));
+				SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
 			}
 		}
 		else if (currentView == 1)
@@ -504,23 +528,23 @@ namespace Civitron
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
-				Human *h = new Human();
-				AddEntity(h);
-				h->MoveTo(sf::Vector3i(worldTilePos.x, camera.viewHeight, worldTilePos.y));
+				// Human *h = new Human();
+				// AddEntity(h);
+				// h->MoveTo(sf::Vector3i(worldTilePos.x, camera.viewHeight, worldTilePos.y));
 			}
 		}
 		ImGui::End();
 	}
 	nlohmann::json Planet::ToJson(){
 		nlohmann::json j;
-		j["trackingEntity"] = trackingEntity;
+		// j["trackingEntity"] = trackingEntity;
 		j["overlayAlpha"] = overlayAlpha;
 		j["viewDepth"] = viewDepth;
 		j["camera"] = camera.ToJson();
 		return j;
 	}
 	void Planet::FromJson(nlohmann::json j){
-		trackingEntity = j["trackingEntity"];
+		// trackingEntity = j["trackingEntity"];
 		overlayAlpha = j["overlayAlpha"];
 		viewDepth = j["viewDepth"];
 		camera.FromJson(j["camera"]);

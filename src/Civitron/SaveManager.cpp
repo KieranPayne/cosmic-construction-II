@@ -9,7 +9,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "Human.hpp"
 #include <chrono>
 namespace Civitron
 {
@@ -57,9 +56,9 @@ namespace Civitron
 			{
 				SaveManager::seed = HashFromString(seed);
 			}
-			s->planets[0].SetSeed(SaveManager::seed);
+			// s->planets[0].SetSeed(SaveManager::seed);
 			LoadStartingChunks(s);
-			CreateDefaultPopulation(s);
+			// CreateDefaultPopulation(s);
 			// s->planets[0].chunks[{0, 0, 0}] = std::unique_ptr<Chunk>(s->planets[0].generator.GenerateChunk({0, 0, 0}));
 			// Entity *h = new Human();
 			// h->position = {0, 20, 0};
@@ -84,7 +83,7 @@ namespace Civitron
 			State *s = new State();
 			InputState inputState;
 			s->renderTarget = window.get();
-			s->planets[0].SetSeed(seed);
+			// s->planets[0].SetSeed(seed);
 			s->planets[0].Load();
 			s->Update(inputState,0);
 			state = s;
@@ -358,20 +357,20 @@ namespace Civitron
 		int range = 10;
 		for (int x = -range; x <= range; x ++){
 			for (int z = -range; z <= range; z ++){
-				state->planets[0].chunks[{x, 0, z}] = std::unique_ptr<Chunk>(state->planets[0].generator.GenerateChunk({x, 0, z}));
+				state->planets[0].chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0].generator.GenerateChunk({x, z}));
 			}
 		}
 	}
-	void SaveManager::CreateDefaultPopulation(State* state){
-		int numHumans = 5;
-		Population p;
-		p.planet = &state->planets[0];
-		for (int i = 0; i < numHumans; i ++){
-			Entity *h = new Human();
-			h->position = {0, 20, 0};
-			state->planets[0].AddEntity(h);
-			p.humans.push_back((Human*)h);
-		}
-		state->planets[0].populations.push_back(p);
-	}
+	// void SaveManager::CreateDefaultPopulation(State* state){
+	// 	int numHumans = 5;
+	// 	Population p;
+	// 	p.planet = &state->planets[0];
+	// 	for (int i = 0; i < numHumans; i ++){
+	// 		Entity *h = new Human();
+	// 		h->position = {0, 20, 0};
+	// 		state->planets[0].AddEntity(h);
+	// 		p.humans.push_back((Human*)h);
+	// 	}
+	// 	state->planets[0].populations.push_back(p);
+	// }
 }
