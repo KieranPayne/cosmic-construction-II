@@ -15,7 +15,11 @@ namespace cc
 		{
 			for (int x = 0; x < CHUNK_SIZE; x ++)
 			{
-				c->tiles[x][y] = Tile(rand() % 7);
+				// c->tiles[x][y] = Tile(rand() % 7);
+				if (y == 0 || y == CHUNK_SIZE - 1 || x == 0 || x == CHUNK_SIZE - 1)
+				{
+					c->tiles[x][y] = Tile(5);
+				}
 			}
 		}
 		return c;

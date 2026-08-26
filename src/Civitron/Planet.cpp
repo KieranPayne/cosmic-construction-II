@@ -12,8 +12,8 @@ namespace cc
 	Planet::Planet()
 	{
 		index = -1;
-		chunks.clear();
-		camera = Camera();
+		// chunks.clear();
+		// camera = Camera();
 		currFps = 0;
 	}
 	void Planet::Update(double dt)
@@ -37,15 +37,12 @@ namespace cc
 			for (int z = topLeft.y; z <= bottomRight.y; z++)
 			{
 
-				for (int i = 0; i <= viewDepth; i++)
+				if (!chunks.contains({x, z}))
 				{
-					if (!chunks.contains({x, z}))
-					{
 
-						chunks[{x, z}] = std::unique_ptr<Chunk>(generator.GenerateChunk({x, z}));
-					}
-					sf::Vector2i pos(x, z);
+					chunks[{x, z}] = std::unique_ptr<Chunk>(generator.GenerateChunk({x, z}));
 				}
+				sf::Vector2i pos(x, z);
 			}
 		}
 	}
@@ -62,26 +59,13 @@ namespace cc
 		{
 			for (int y = topLeft.y; y <= bottomRight.y; y ++)
 			{
-				for (int cx = 0; cx < CHUNK_SIZE; cx ++)
+				if (!tileVertices.contains({x,y}))
 				{
-					for (int cy = 0; cy < CHUNK_SIZE; cy ++)
-					{
-						auto verts = GetVertices({x * CHUNK_SIZE + cx,y * CHUNK_SIZE + cy});
-						if (verts.second)
-						{
-							vertices.insert(vertices.end(),verts.first.begin(),verts.first.end());
-						}
-					}
+					GetTileVertices({x,y});
 				}
+				target->draw(tileVertices[{x,y}],states);
 			}
 		}
-		sf::VertexArray vertexArray(sf::PrimitiveType::Triangles, vertices.size());
-
-		for (std::size_t i = 0; i < vertices.size(); ++i)
-		{
-			vertexArray[i] = vertices[i];
-		}
-		target->draw(vertexArray,states);
 	}
 	void Planet::Save()
 	{
@@ -219,7 +203,12 @@ namespace cc
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
-		sf::Vector2i p(chunkPos.x, chunkPos.y);
+		if (tileVertices.contains(chunkPos))
+		{
+			//erase the vertices since they're no longer accurate
+			//note: erase instead of rebuilding since these may not necessarily be visible, so this would be wasted effort.
+			tileVertices.erase(chunkPos);
+		}
 	}
 	void Planet::Tick()
 	{
@@ -316,5 +305,51 @@ namespace cc
 		overlayAlpha = j["overlayAlpha"];
 		viewDepth = j["viewDepth"];
 		camera.FromJson(j["camera"]);
+	}
+	void Planet::GetTileVertices (sf::Vector2i chunkPos)
+	{
+		sf::VertexArray arr(sf::PrimitiveType::Triangles,CHUNK_SIZE * CHUNK_SIZE * 6 * 2);
+		//get background tile vertices
+		static sf::Vector2f offsets[6] = {
+		{0, 0},
+		{TILE_SIZE, 0},
+		{TILE_SIZE, TILE_SIZE},
+		{0, 0},
+		{TILE_SIZE, TILE_SIZE},
+		{0, TILE_SIZE}};
+		int i = 0; 
+		Chunk* c = chunks[chunkPos].get();
+		for (int x = 0; x < CHUNK_SIZE; x ++)
+		{
+			for (int y = 0; y < CHUNK_SIZE; y ++)
+			{
+				for (int j = 0; j < 6; j ++)
+				{
+					sf::Vertex v;
+					v.position = (sf::Vector2f)(chunkPos * CHUNK_SIZE * TILE_SIZE) + sf::Vector2f{x * TILE_SIZE,y * TILE_SIZE} + offsets[j];
+					v.color = c->backgroundTiles[x][y].color;
+					
+					arr[i] = v;
+					i ++; 
+				}	
+			}
+		}
+		for (int x = 0; x < CHUNK_SIZE; x ++)
+		{
+			for (int y = 0; y < CHUNK_SIZE; y ++)
+			{
+				auto verts = GetVertices({chunkPos.x * CHUNK_SIZE + x,chunkPos.y * CHUNK_SIZE + y});
+				if (verts.second)
+				{
+					for (auto& v : verts.first)
+					{
+						arr[i] = v;
+						i ++;
+					}
+				}
+			}
+		}
+		arr.resize(i);
+		tileVertices[chunkPos] = arr;
 	}
 }

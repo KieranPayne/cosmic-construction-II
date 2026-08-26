@@ -10,7 +10,7 @@ namespace cc
 	{
 	public:
 		std::unordered_map<sf::Vector2i, std::unique_ptr<Chunk>,ChunkHash> chunks;
-		std::unordered_map<sf::Vector2i, std::optional<sf::VertexArray>,ChunkHash> tileVertices;
+		std::unordered_map<sf::Vector2i, sf::VertexArray,ChunkHash> tileVertices;
 		Generator generator;
 		Camera camera;
 		int index;
@@ -30,6 +30,7 @@ namespace cc
 		void DrawToolGUI(InputState& inputState);
 		void Save();
 		void Load();
+		void GetTileVertices (sf::Vector2i chunkPos);
 		//like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
 		void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>,bool> GetVertices(sf::Vector2i tilePosition);

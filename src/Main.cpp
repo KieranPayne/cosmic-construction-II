@@ -25,7 +25,7 @@ int main()
 {
 	srand(time(NULL));
 	window = std::make_unique<sf::RenderWindow>(sf::VideoMode({(unsigned int)width, (unsigned int)height}), "Civitron");
-	window->setFramerateLimit(200);
+	window->setFramerateLimit(9999);
 	window->setVerticalSyncEnabled(false);
 	// set the icon image that is displayed in the corner of the window
 	sf::Image icon;

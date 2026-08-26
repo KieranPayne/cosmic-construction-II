@@ -62,6 +62,7 @@ namespace cc
 			s->Update(inputState,0);
 			delete state;
 			state = s;
+			Save(s);
 		}
 		void Load(int index)
 		{

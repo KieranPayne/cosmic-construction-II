@@ -5,6 +5,11 @@ namespace cc
 	Atlas::Atlas(std::vector<sf::Texture> &textures)
 	{
 		positions = {};
+		//to make vertices with tex coords 0 have no colour
+		sf::Image i({1,1},sf::Color::White);
+		sf::Texture t;
+		t.loadFromImage(i);
+		AddTexture(t);
 		// algorithm that finds the position of each texture. Added in rows with the height of the maximum height of the texture.
 		for (int i = 0; i < textures.size(); i++)
 		{
@@ -14,6 +19,10 @@ namespace cc
 	}
 	Atlas::Atlas()
 	{
+		sf::Image i({1,1},sf::Color::White);
+		sf::Texture t;
+		t.loadFromImage(i);
+		AddTexture(t);
 	}
 	void Atlas::AddTexture(sf::Texture texture)
 	{
@@ -60,6 +69,9 @@ namespace cc
 		{
 			std::cerr << "failed to convert to texture";
 		}
-		// texture.copyToImage().saveToFile(SaveManager::GetSavedataDir() + "/atlas.png");
+		//remove the single white pixel placed at the start of the atlas
+		textures.erase(textures.begin());
+		positions.erase(positions.begin());
+		texture.copyToImage().saveToFile(SaveManager::GetSavedataDir() + "/atlas.png");
 	}
 }

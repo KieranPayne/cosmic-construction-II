@@ -4,7 +4,7 @@ a top down colony builder game similar to cosmic construction, based on the code
 
 to do:
 x fix bug where load slots arent working properly
-- improve render speed of tiles
+x improve render speed of tiles
 - start background tile system
     - rgb colour, start by just generating basic perlin noise
     - generate water, sand grass, stone

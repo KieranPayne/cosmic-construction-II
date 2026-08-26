@@ -13,4 +13,9 @@ namespace cc
 		}
 		Tile(uint16_t type){this->type  = type;}
 	};
+	struct BackgroundTile
+	{
+		public:
+		sf::Color color;
+	};
 }

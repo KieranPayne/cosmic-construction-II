@@ -4,11 +4,12 @@
 namespace cc
 {
 #define CHUNK_SIZE 32
-constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * 2; 
+constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 3); 
 	class Chunk
 	{
 	public:
 		Tile tiles[CHUNK_SIZE][CHUNK_SIZE] = {};
+		BackgroundTile backgroundTiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 		sf::Vector2i position;
 		Chunk(sf::Vector2i position);
 		Chunk();

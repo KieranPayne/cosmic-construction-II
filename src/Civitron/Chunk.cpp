@@ -10,6 +10,8 @@ namespace cc
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
 				tiles[x][y].type = 0;
+				int brightness = rand() % 256;
+				backgroundTiles[x][y].color = sf::Color(brightness,brightness,brightness);
 			}
 		}
 	}
@@ -46,6 +48,16 @@ namespace cc
 				values[index + 1] = tiles[x][y].type & 255;
 			}
 		}
+		for (int x = 0; x < CHUNK_SIZE; x ++)
+		{
+			for (int y = 0; y < CHUNK_SIZE; y ++)
+			{
+				int index = CHUNK_SIZE * CHUNK_SIZE * 2 + (x * CHUNK_SIZE + y) * 3;
+				values[index] = backgroundTiles[x][y].color.r;
+				values[index + 1] = backgroundTiles[x][y].color.g;
+				values[index + 2] = backgroundTiles[x][y].color.b;
+			}
+		}
 		return values;
 	}
 	void Chunk::FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>bytes)
@@ -59,6 +71,14 @@ namespace cc
 				i *= 2;
 				uint16_t value = (uint16_t)(bytes[i] << 8) + bytes[i + 1];
 				tiles[x][y].type = value;
+			}
+		}
+		for (int x = 0; x < CHUNK_SIZE; x ++)
+		{
+			for (int y = 0; y < CHUNK_SIZE; y ++)
+			{
+				int i = (CHUNK_SIZE * CHUNK_SIZE * 2) + (x * CHUNK_SIZE + y) * 3;
+				backgroundTiles[x][y].color = sf::Color(bytes[i],bytes[i+1],bytes[i+2]);
 			}
 		}
 	}
