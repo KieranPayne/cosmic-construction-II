@@ -2,7 +2,7 @@
 #include "../PCH.hpp"
 #include "../json.hpp"
 #include "../imgui/imgui.h"
-namespace Civitron
+namespace cc
 {
     std::vector<std::string> Split(std::string str, char splitChar);
     sf::Color HexToColor(const std::string &hex);

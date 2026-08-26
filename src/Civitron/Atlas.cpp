@@ -1,6 +1,6 @@
 #include "Atlas.hpp"
 #include "SaveManager.hpp"
-namespace Civitron
+namespace cc
 {
 	Atlas::Atlas(std::vector<sf::Texture> &textures)
 	{

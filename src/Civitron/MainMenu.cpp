@@ -5,7 +5,7 @@
 #include "SaveManager.hpp"
 #include "State.hpp"
 #include "Utils.hpp"
-namespace Civitron
+namespace cc
 {
 	MainMenu::MainMenu()
 	{

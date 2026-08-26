@@ -39,10 +39,10 @@ int main()
 		return -1;
 	Input input;
 	// state = new Civitron::State();
-	state = new Civitron::MainMenu();
+	state = new cc::MainMenu();
 	state->renderTarget = window.get();
 	sf::Clock deltaClock;
-	Civitron::TileInfo::Init();
+	cc::TileInfo::Init();
 	// Civitron::EntityInfo::Init();
 	// Civitron::ItemInfo::Init();
 	// Civitron::EntityInfo::Build();

@@ -1,6 +1,6 @@
 #pragma once
 #include "../PCH.hpp"
-namespace Civitron
+namespace cc
 {
 
 	class Atlas

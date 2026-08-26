@@ -4,7 +4,7 @@
 #include "../imgui/imgui.h"
 #include "MainMenu.hpp"
 #include "SaveManager.hpp"
-namespace Civitron
+namespace cc
 {
 	State::State()
 	{

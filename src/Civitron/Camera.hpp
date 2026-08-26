@@ -2,7 +2,7 @@
 #include "../Input/Input.hpp"
 #include "../PCH.hpp"
 #include "../json.hpp"
-namespace Civitron
+namespace cc
 {
 	class Camera
 	{

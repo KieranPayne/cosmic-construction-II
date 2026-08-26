@@ -4,14 +4,12 @@
 #include "Chunk.hpp"
 #include "Generator.hpp"
 #include "../json.hpp"
-namespace Civitron
+namespace cc
 {
 	class Planet
 	{
 	public:
 		std::unordered_map<sf::Vector2i, std::unique_ptr<Chunk>,ChunkHash> chunks;
-		//note that x and z are in chunk coordinates, whereas y is view height
-		//bool indicates the layer is solid
 		Generator generator;
 		Camera camera;
 		int index;

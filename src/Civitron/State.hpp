@@ -6,7 +6,7 @@
 #include "Generator.hpp"
 #include "Planet.hpp"
 
-namespace Civitron
+namespace cc
 {
 	class State : public Kosmic::State
 	{

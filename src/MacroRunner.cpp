@@ -170,7 +170,7 @@ namespace Kosmic
     void Macro::Parse(std::string str)
     {
         commands = {};
-        auto lines = Civitron::Split(str, '\n');
+        auto lines = cc::Split(str, '\n');
         for (auto &line : lines)
         {
             // skip blank lines and comments
@@ -178,7 +178,7 @@ namespace Kosmic
             {
                 continue;
             }
-            auto parts = Civitron::Split(line, ' ');
+            auto parts = cc::Split(line, ' ');
             if (parts[0] == "DELAY")
             {
                 double duration = std::stod(parts[1]);
@@ -286,7 +286,7 @@ namespace Kosmic
     }
     void Macro::ParseFile(std::string path)
     {
-        std::string data = Civitron::SaveManager::ReadData(path);
+        std::string data = cc::SaveManager::ReadData(path);
         Parse(data);
     }
     void Macro::Execute(State *state)

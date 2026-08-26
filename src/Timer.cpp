@@ -100,7 +100,7 @@ namespace Kosmic
 			data = {};
 			currentIndent = 0;
 			stack = {};
-			Civitron::SaveManager::WriteData(path, text);
+			cc::SaveManager::WriteData(path, text);
 		}
 		void WriteToGUI()
 		{

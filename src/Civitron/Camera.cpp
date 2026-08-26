@@ -3,7 +3,7 @@
 #include "../Main.hpp"
 #include "../json.hpp"
 #include <cmath>
-namespace Civitron
+namespace cc
 {
 	Camera::Camera(sf::Vector2f position, float zoom)
 	{
@@ -69,16 +69,12 @@ namespace Civitron
 	}
 	sf::FloatRect Camera::toFloatRect(sf::RenderTarget *target)
 	{
-		
-		// get float rect representing camera
 		int width = target->getSize().x;
 		int height = target->getSize().y;
 		sf::FloatRect rect = sf::FloatRect({position.x - width * zoom / 2.f, position.y - height * zoom / 2.f}, {width * zoom, height * zoom});
 		double pixelSize = zoom;
 		rect.position.x = std::round(rect.position.x / pixelSize) * pixelSize;
 		rect.position.y = std::round(rect.position.y / pixelSize) * pixelSize;
-		// rect.size.x = round(rect.size.x / pixelSize) * pixelSize;
-		// rect.size.y = round(rect.size.y / pixelSize) * pixelSize;	
 		return rect;
 	}
 
@@ -106,7 +102,6 @@ namespace Civitron
 
 	Camera::~Camera()
 	{
-		// delete hitbox;
 	}
 
 	sf::Vector2f Camera::ToWorldPos(sf::Vector2f screenPosition, sf::RenderTarget* target){

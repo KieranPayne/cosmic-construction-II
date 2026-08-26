@@ -1,7 +1,7 @@
 #pragma once
 #include "../PCH.hpp"
 
-namespace Civitron
+namespace cc
 {
 #define TILE_SIZE 16
 	struct Tile

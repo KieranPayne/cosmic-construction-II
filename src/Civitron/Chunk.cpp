@@ -1,6 +1,6 @@
 #include "Chunk.hpp"
 #include "TileInfo.hpp"
-namespace Civitron
+namespace cc
 {
 	Chunk::Chunk(sf::Vector2i position)
 	{

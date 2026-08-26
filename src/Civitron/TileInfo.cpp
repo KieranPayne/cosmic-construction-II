@@ -2,7 +2,7 @@
 #include "Utils.hpp"
 #include <fstream>
 #include <iostream>
-namespace Civitron
+namespace cc
 {
 	uint16_t GetTileID(std::string name){
 		return TileInfo::nameLookup[name]->id;

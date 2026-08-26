@@ -1,7 +1,7 @@
 #pragma once
 #include "../PCH.hpp"
 #include "Atlas.hpp"
-namespace Civitron
+namespace cc
 {
 	uint16_t GetTileID(std::string name);
 	namespace TileInfo

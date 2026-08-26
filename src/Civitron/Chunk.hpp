@@ -1,7 +1,7 @@
 #pragma once
 #include "../PCH.hpp"
 #include "Tile.hpp"
-namespace Civitron
+namespace cc
 {
 #define CHUNK_SIZE 32
 constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * 2; 

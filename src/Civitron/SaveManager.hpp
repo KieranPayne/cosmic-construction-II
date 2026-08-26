@@ -1,6 +1,6 @@
 #pragma once
 #include "State.hpp"
-namespace Civitron
+namespace cc
 {
     namespace SaveManager
     {
@@ -12,8 +12,6 @@ namespace Civitron
         void Load(int index);
         void WriteMetadata();
         void LoadStartingChunks(State* state);
-        // void CreateDefaultPopulation(State* state);
-
         bool CreateDirectory(std::string path);
         bool DirExists(std::string path);
         std::vector<std::string> ListFiles(std::string path);

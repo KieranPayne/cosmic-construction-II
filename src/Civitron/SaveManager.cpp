@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <chrono>
-namespace Civitron
+namespace cc
 {
 	namespace SaveManager
 	{
@@ -56,19 +56,12 @@ namespace Civitron
 			{
 				SaveManager::seed = HashFromString(seed);
 			}
-			// s->planets[0].SetSeed(SaveManager::seed);
 			LoadStartingChunks(s);
-			// CreateDefaultPopulation(s);
-			// s->planets[0].chunks[{0, 0, 0}] = std::unique_ptr<Chunk>(s->planets[0].generator.GenerateChunk({0, 0, 0}));
-			// Entity *h = new Human();
-			// h->position = {0, 20, 0};
-			// s->planets[0].AddEntity(h);
 			s->renderTarget = window.get();
 			InputState inputState;
 			s->Update(inputState,0);
 			delete state;
 			state = s;
-			// Save((State*) state);
 		}
 		void Load(int index)
 		{
@@ -83,7 +76,6 @@ namespace Civitron
 			State *s = new State();
 			InputState inputState;
 			s->renderTarget = window.get();
-			// s->planets[0].SetSeed(seed);
 			s->planets[0].Load();
 			s->Update(inputState,0);
 			state = s;
@@ -361,16 +353,4 @@ namespace Civitron
 			}
 		}
 	}
-	// void SaveManager::CreateDefaultPopulation(State* state){
-	// 	int numHumans = 5;
-	// 	Population p;
-	// 	p.planet = &state->planets[0];
-	// 	for (int i = 0; i < numHumans; i ++){
-	// 		Entity *h = new Human();
-	// 		h->position = {0, 20, 0};
-	// 		state->planets[0].AddEntity(h);
-	// 		p.humans.push_back((Human*)h);
-	// 	}
-	// 	state->planets[0].populations.push_back(p);
-	// }
 }

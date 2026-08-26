@@ -1,6 +1,6 @@
 #pragma once
 #include "../State.hpp"
-namespace Civitron
+namespace cc
 {
 	class MainMenu : public Kosmic::State
 	{

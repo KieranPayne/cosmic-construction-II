@@ -1,6 +1,6 @@
 #include "Utils.hpp"
 #include "Chunk.hpp"
-namespace Civitron
+namespace cc
 {
 	std::vector<std::string> Split(std::string str, char splitChar)
 	{
