@@ -98,6 +98,7 @@ namespace cc
 	}
 	void State::SetSeed(uint64_t seed)
 	{
+		this->seed = seed;
 		planets[0].SetSeed(seed);
 	}
 }

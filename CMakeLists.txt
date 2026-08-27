@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(Civitron LANGUAGES CXX)
+project(CCII LANGUAGES CXX)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 include(FetchContent)
@@ -14,11 +14,11 @@ FetchContent_MakeAvailable(SFML)
 # SET(GCC_COVERAGE_COMPILE_FLAGS "-O3")
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.hpp)
-add_executable(Civitron ${SOURCES})
+add_executable(CCII ${SOURCES})
 
 
-target_compile_features(Civitron PRIVATE cxx_std_20)
-target_link_libraries(Civitron PRIVATE SFML::Graphics SFML::Window SFML::System SFML::Audio SFML::Network)
+target_compile_features(CCII PRIVATE cxx_std_20)
+target_link_libraries(CCII PRIVATE SFML::Graphics SFML::Window SFML::System SFML::Audio SFML::Network)
 add_custom_target(copy_content ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/content
@@ -28,4 +28,4 @@ add_custom_target(copy_content ALL
 
 
 add_definitions(-w)
-add_dependencies(Civitron copy_content)
+add_dependencies(CCII copy_content)

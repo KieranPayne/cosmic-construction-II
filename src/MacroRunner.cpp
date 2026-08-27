@@ -1,6 +1,6 @@
 #include "MacroRunner.hpp"
-#include "Civitron/Utils.hpp"
-#include "Civitron/SaveManager.hpp"
+#include "CC/Utils.hpp"
+#include "CC/SaveManager.hpp"
 #include "State.hpp"
 #include "imgui/imgui.h"
 #include "imgui/imgui-SFML.h"

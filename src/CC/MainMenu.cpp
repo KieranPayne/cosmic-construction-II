@@ -47,7 +47,7 @@ namespace cc
 		float originalFontScale = ImGui::GetFont()->Scale;
 		ImGui::SetWindowFontScale(3.0f); // Double font size
 
-		const char *title = "Civitron";
+		const char *title = "Cosmic Construction II";
 		ImVec2 textSize = ImGui::CalcTextSize(title);
 		ImGui::SetCursorPos(ImVec2((displaySize.x - textSize.x) * 0.5f, displaySize.y * 0.2f));
 		ImGui::TextUnformatted(title);

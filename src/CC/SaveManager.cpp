@@ -320,7 +320,7 @@ namespace cc
 			{
 				CreateDirectory(gamePath);
 			}
-			return std::string(userProfile) + "/Documents/Games/Civitron";
+			return std::string(userProfile) + "/Documents/Games/Cosmic Construction II";
 #else
 			const char *home = getenv("HOME");
 			if (!home || !*home)
@@ -330,7 +330,7 @@ namespace cc
 			{
 				CreateDirectory(gamePath);
 			}
-			return std::string(home) + "/Documents/Games/Civitron";
+			return std::string(home) + "/Documents/Games/Cosmic Construction II";
 #endif
 		}
 		std::string ReadData(std::string path)

@@ -89,7 +89,7 @@ namespace cc
 			auto bytes = c.second->ToBytes();
 			std::string chunkPath = path + "/chunks/";
 			chunkPath += std::to_string(c.second->position.x) + " " + std::to_string(c.second->position.y);
-			std::ofstream out(chunkPath + ".txt");
+			std::ofstream out(chunkPath + ".txt", std::ios::binary);
 			out.write(reinterpret_cast<const char *>(bytes.data()), bytes.size());
 			out.close();
 		}
