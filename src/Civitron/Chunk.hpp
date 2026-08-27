@@ -14,7 +14,7 @@ constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 3);
 		Chunk(sf::Vector2i position);
 		Chunk();
 		std::array<uint8_t,CHUNK_NUM_BYTES> ToBytes();
-		void FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>);
+		void FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>&);
 	};
 
 	struct ChunkHash

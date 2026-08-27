@@ -8,6 +8,7 @@ namespace cc
 {
 	State::State()
 	{
+		seed = 0;
 		activePlanet = 0;
 		planets.push_back(Planet());
 		planets[0].index = 0;
@@ -94,5 +95,9 @@ namespace cc
 	}
 	State::~State()
 	{
+	}
+	void State::SetSeed(uint64_t seed)
+	{
+		planets[0].SetSeed(seed);
 	}
 }

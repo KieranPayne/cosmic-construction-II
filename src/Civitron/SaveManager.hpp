@@ -6,11 +6,11 @@ namespace cc
     {
         extern std::string saveName;
         extern std::string savePath;
-        extern uint64_t seed;
+        // extern uint64_t seed;
         void Save(State *state);
         void CreateSave(std::string name, std::string seed);
         void Load(int index);
-        void WriteMetadata();
+        void WriteMetadata(State* state);
         void LoadStartingChunks(State* state);
         bool CreateDirectory(std::string path);
         bool DirExists(std::string path);

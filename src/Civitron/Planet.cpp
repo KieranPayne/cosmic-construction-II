@@ -299,12 +299,15 @@ namespace cc
 		j["overlayAlpha"] = overlayAlpha;
 		j["viewDepth"] = viewDepth;
 		j["camera"] = camera.ToJson();
+		j["seed"] = seed;
+		j["generator"] = generator.ToJson();
 		return j;
 	}
 	void Planet::FromJson(nlohmann::json j){
 		overlayAlpha = j["overlayAlpha"];
 		viewDepth = j["viewDepth"];
 		camera.FromJson(j["camera"]);
+		generator.FromJson(j["generator"]);
 	}
 	void Planet::GetTileVertices (sf::Vector2i chunkPos)
 	{
@@ -338,18 +341,30 @@ namespace cc
 		{
 			for (int y = 0; y < CHUNK_SIZE; y ++)
 			{
-				auto verts = GetVertices({chunkPos.x * CHUNK_SIZE + x,chunkPos.y * CHUNK_SIZE + y});
-				if (verts.second)
+				Tile* t = &c->tiles[x][y];
+
+				//air tile; forgive the magic number pls
+				if (t->type == 0)
 				{
-					for (auto& v : verts.first)
-					{
-						arr[i] = v;
-						i ++;
-					}
+					continue;
 				}
+				sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].position;
+				for (int j = 0; j < 6; j ++)
+				{
+					sf::Vertex v;
+					v.position = (sf::Vector2f)(chunkPos * CHUNK_SIZE * TILE_SIZE) + sf::Vector2f{x * TILE_SIZE,y * TILE_SIZE} + offsets[j];
+					v.texCoords = texPos + offsets[j];
+					arr[i] = v;
+					i ++; 
+				}	
 			}
 		}
 		arr.resize(i);
 		tileVertices[chunkPos] = arr;
+	}
+	void Planet::SetSeed(uint64_t seed)
+	{
+		this->seed = seed;
+		generator.SetSeed(seed);
 	}
 }

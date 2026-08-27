@@ -10,8 +10,9 @@ namespace cc
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
 				tiles[x][y].type = 0;
-				int brightness = rand() % 256;
-				backgroundTiles[x][y].color = sf::Color(brightness,brightness,brightness);
+				backgroundTiles[x][y].color = sf::Color::White;
+				// int brightness = rand() % 256;
+				// backgroundTiles[x][y].color = sf::Color(brightness,brightness,brightness);
 			}
 		}
 	}
@@ -38,47 +39,50 @@ namespace cc
 
 	std::array<uint8_t, CHUNK_NUM_BYTES> Chunk::ToBytes()
 	{
-		std::array<uint8_t, CHUNK_NUM_BYTES> values;
+		std::array<uint8_t, CHUNK_NUM_BYTES> bytes{};
+
+		size_t index = 0;
+
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				int index = (x * CHUNK_SIZE + y) * 2;
-				values[index] = tiles[x][y].type >> 8;
-				values[index + 1] = tiles[x][y].type & 255;
+				uint16_t type = tiles[x][y].type;
+
+				bytes[index++] = static_cast<uint8_t>(type >> 8);
+				bytes[index++] = static_cast<uint8_t>(type & 0xFF);
+
+				bytes[index++] = backgroundTiles[x][y].color.r;
+				bytes[index++] = backgroundTiles[x][y].color.g;
+				bytes[index++] = backgroundTiles[x][y].color.b;
 			}
 		}
-		for (int x = 0; x < CHUNK_SIZE; x ++)
-		{
-			for (int y = 0; y < CHUNK_SIZE; y ++)
-			{
-				int index = CHUNK_SIZE * CHUNK_SIZE * 2 + (x * CHUNK_SIZE + y) * 3;
-				values[index] = backgroundTiles[x][y].color.r;
-				values[index + 1] = backgroundTiles[x][y].color.g;
-				values[index + 2] = backgroundTiles[x][y].color.b;
-			}
-		}
-		return values;
+
+		return bytes;
 	}
-	void Chunk::FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>bytes)
+
+	void Chunk::FromBytes(
+		std::array<uint8_t, CHUNK_NUM_BYTES> &bytes)
 	{
-		constexpr int numBytes = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * 2;
+		size_t index = 0;
+
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				int i = x * CHUNK_SIZE + y;
-				i *= 2;
-				uint16_t value = (uint16_t)(bytes[i] << 8) + bytes[i + 1];
-				tiles[x][y].type = value;
-			}
-		}
-		for (int x = 0; x < CHUNK_SIZE; x ++)
-		{
-			for (int y = 0; y < CHUNK_SIZE; y ++)
-			{
-				int i = (CHUNK_SIZE * CHUNK_SIZE * 2) + (x * CHUNK_SIZE + y) * 3;
-				backgroundTiles[x][y].color = sf::Color(bytes[i],bytes[i+1],bytes[i+2]);
+				uint16_t type =
+					(static_cast<uint16_t>(bytes[index]) << 8) |
+					static_cast<uint16_t>(bytes[index + 1]);
+
+				tiles[x][y].type = type;
+				index += 2;
+
+				backgroundTiles[x][y].color = sf::Color(
+					bytes[index],
+					bytes[index + 1],
+					bytes[index + 2]);
+
+				index += 3;
 			}
 		}
 	}

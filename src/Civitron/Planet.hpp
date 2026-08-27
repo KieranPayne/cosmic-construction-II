@@ -16,6 +16,7 @@ namespace cc
 		int index;
 		int viewDepth = 10;
 		int overlayAlpha = 76;
+		uint64_t seed = 0;
 
 		//for display
 		double currFps;
@@ -38,6 +39,7 @@ namespace cc
 		void SetTileAt(sf::Vector2i position, Tile tile);
 		nlohmann::json ToJson();
 		void FromJson(nlohmann::json j);
+		void SetSeed(uint64_t seed);
 		// some nonsense to allow having a vector of unique ptrs
 		Planet(const Planet &) = delete;
 		Planet &operator=(const Planet &) = delete;

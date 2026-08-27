@@ -16,7 +16,7 @@ namespace cc
 	{
 		std::string saveName;
 		std::string savePath;
-		uint64_t seed;
+		// uint64_t seed;
 		sf::Clock playTimeTimer;
 
 		void CreateSave(std::string name, std::string seed)
@@ -50,13 +50,15 @@ namespace cc
 			const bool randomize = false;
 			if (seed == "" && randomize)
 			{
-				SaveManager::seed = rand();
+				s->SetSeed(rand());
+				// SaveManager::seed = rand();
 			}
 			else
 			{
-				SaveManager::seed = HashFromString(seed);
+				s->SetSeed(HashFromString(seed));
+				// SaveManager::seed = HashFromString(seed);
 			}
-			LoadStartingChunks(s);
+			// LoadStartingChunks(s);
 			s->renderTarget = window.get();
 			InputState inputState;
 			s->Update(inputState,0);
@@ -74,8 +76,8 @@ namespace cc
 
 			nlohmann::json j = nlohmann::json::parse(ReadData(savePath + "/metadata.json"));
 			saveName = j["saveName"];
-			seed = j["seed"];
 			State *s = new State();
+			s->SetSeed(j["seed"]);
 			InputState inputState;
 			s->renderTarget = window.get();
 			s->planets[0].Load();
@@ -85,9 +87,9 @@ namespace cc
 		void Save(State *state)
 		{
 			state->planets[0].Save();
-			WriteMetadata();
+			WriteMetadata(state);
 		}
-		void WriteMetadata()
+		void WriteMetadata(State* state)
 		{
 			struct stat buffer;   
   			bool exists = (stat ((savePath + "/metadata.json").c_str(), &buffer) == 0); 
@@ -105,7 +107,7 @@ namespace cc
 			auto duration = now.time_since_epoch();
 			auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
 			j["modified"] = seconds;
-			j["seed"] = seed;
+			j["seed"] = state->seed;
 			WriteData(savePath + "/metadata.json", j.dump(2));
 		}
 		void WriteData(std::string path, std::string string)

@@ -11,17 +11,18 @@ namespace cc
 	class State : public Kosmic::State
 	{
 	public:
-		Generator generator;
 		std::vector<Planet> planets;
 		int activePlanet;
 		int viewHeight;
-		bool paused;
-		bool doTick;
+		uint64_t seed;
 		double timeSinceTick;
 		double timePerTick;
+		bool paused;
+		bool doTick;
 		void DerivedUpdate();
 		void DerivedRender();
 		void DisplayPauseMenu();
+		void SetSeed(uint64_t seed);
 		State();
 		~State();
 	};
