@@ -58,7 +58,7 @@ namespace cc
 			{
 				targetZoom *= zoomRate;
 			}
-			if (targetZoom > 4.f)
+			if (targetZoom > 8.f)
 			{
 				targetZoom /= zoomRate;
 			}

@@ -3,7 +3,6 @@
 a top down colony builder game similar to cosmic construction, based on the code of civitron.
 
 to do:
-- add imgui widget that displays info about tile being hovered over
 - decide whether background tiles have textures
 - add entity
 - add human 

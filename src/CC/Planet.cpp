@@ -32,6 +32,8 @@ namespace cc
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
 		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
+		topLeft -= {1,1};
+		bottomRight += {1,1};
 		for (int x = topLeft.x; x <= bottomRight.x; x++)
 		{
 			for (int z = topLeft.y; z <= bottomRight.y; z++)
@@ -144,6 +146,8 @@ namespace cc
 		static float t = 0.1f;
 		ImGui::SliderFloat("Time Per Tick",&t, 0.f, 1.f);
 		((State*)state)->timePerTick = t;
+		
+		// bgTile += "Colour: " + std::to_string()
 		const char *currentLabel = "None";
 		switch (currentView)
 		{
@@ -244,6 +248,19 @@ namespace cc
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
 		ImGui::Begin("Tool Menu");
+		ImGui::Text("Hovering over:");
+		std::string bgTile = "Background Tile:\n";
+		sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
+		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
+		sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
+		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;
+		BackgroundTile* bgT = &chunks[worldChunkPos]->backgroundTiles[subChunkPos.x][subChunkPos.y];
+		bgTile += "Colour: " + std::to_string(bgT->color.r) + " " + std::to_string(bgT->color.g) + " " + std::to_string(bgT->color.b) + "\n";
+		bgTile += "Type: " + std::to_string(bgT->type);
+		ImGui::Text(bgTile.c_str());
+		std::string tile = "Tile:\n";
+		tile += "Type: " + TileInfo::tileRegistry[GetTileAt(worldTilePos)->type].name;
+		ImGui::Text(tile.c_str());
 		static int currentView = 0;
 		std::vector<std::string> names = {"Add Tile", "Add Entity", "blah blahh blahhhhoiahsdfoj"};
 		const char *currentLabel = "None";
