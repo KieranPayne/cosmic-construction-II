@@ -55,6 +55,7 @@ namespace cc
 				bytes[index++] = backgroundTiles[x][y].color.r;
 				bytes[index++] = backgroundTiles[x][y].color.g;
 				bytes[index++] = backgroundTiles[x][y].color.b;
+				bytes[index++] = backgroundTiles[x][y].type;
 			}
 		}
 
@@ -71,18 +72,16 @@ namespace cc
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
 				uint16_t type =
-					(static_cast<uint16_t>(bytes[index]) << 8) |
-					static_cast<uint16_t>(bytes[index + 1]);
+					(static_cast<uint16_t>(bytes[index++]) << 8) |
+					static_cast<uint16_t>(bytes[index++]);
 
 				tiles[x][y].type = type;
-				index += 2;
 
 				backgroundTiles[x][y].color = sf::Color(
-					bytes[index],
-					bytes[index + 1],
-					bytes[index + 2]);
-
-				index += 3;
+					bytes[index++],
+					bytes[index++],
+					bytes[index++]);
+				backgroundTiles[x][y].type == bytes[index++];
 			}
 		}
 	}

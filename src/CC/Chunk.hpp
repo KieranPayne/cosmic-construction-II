@@ -4,7 +4,7 @@
 namespace cc
 {
 #define CHUNK_SIZE 32
-constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 3); 
+constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 4); 
 	class Chunk
 	{
 	public:

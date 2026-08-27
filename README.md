@@ -3,9 +3,7 @@
 a top down colony builder game similar to cosmic construction, based on the code of civitron.
 
 to do:
-- move seed into state, then planet has its own seed
-- make generator set background tiles according to perlin noise
-- add thresholds for stone, grass, water, sand colours
+- add imgui widget that displays info about tile being hovered over
 - decide whether background tiles have textures
 - add entity
 - add human 

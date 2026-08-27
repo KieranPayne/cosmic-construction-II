@@ -13,9 +13,18 @@ namespace cc
 		}
 		Tile(uint16_t type){this->type  = type;}
 	};
+	
 	struct BackgroundTile
 	{
 		public:
+		enum BackgroundTileType : uint8_t
+		{
+			WATER = 0,
+			SAND,
+			GRASS,
+			STONE
+		};
 		sf::Color color;
+		BackgroundTileType type;
 	};
 }
