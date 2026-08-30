@@ -51,10 +51,10 @@ namespace cc
 
 				bytes[index++] = static_cast<uint8_t>(type >> 8);
 				bytes[index++] = static_cast<uint8_t>(type & 0xFF);
-
-				bytes[index++] = backgroundTiles[x][y].color.r;
-				bytes[index++] = backgroundTiles[x][y].color.g;
+				//TODO: not sure why these need to be bgr instead of rgb, need to investigate
 				bytes[index++] = backgroundTiles[x][y].color.b;
+				bytes[index++] = backgroundTiles[x][y].color.g;
+				bytes[index++] = backgroundTiles[x][y].color.r;
 				bytes[index++] = backgroundTiles[x][y].type;
 			}
 		}
@@ -81,9 +81,46 @@ namespace cc
 					bytes[index++],
 					bytes[index++],
 					bytes[index++]);
-				backgroundTiles[x][y].type == bytes[index++];
+				backgroundTiles[x][y].type = (BackgroundTile::BackgroundTileType)bytes[index++];
 			}
 		}
 	}
-
+	void Chunk::RenderEntities(sf::RenderTarget* target)
+	{
+		sf::RenderStates states;
+		states.texture = &EntityInfo::atlas.texture;
+		//allows for 1 rectangles per entity
+		sf::VertexArray arr(sf::PrimitiveType::Triangles, entities.size() * 6);
+		int i = 0;
+		for (auto& e : entities)
+		{
+			auto verts = e->GetVerts();
+			for (int j = 0; j < verts.size(); j ++)
+			{
+				arr[i] = verts[j];
+				i ++;
+			}
+		}
+		arr.resize(i);
+		target->draw(arr,states);
+	}
+	void Chunk::AddEntity(Entity* entity)
+	{
+		entities.push_back(entity);
+	}
+	void Chunk::RemoveEntity(int index)
+	{
+		entities.erase(entities.begin() + index);
+	}
+	void Chunk::RemoveEntity(Entity* entity)
+	{
+		for (int i = 0; i < entities.size(); i ++)
+		{
+			if (entities[i] == entity)
+			{
+				RemoveEntity(i);
+				return;
+			}
+		}
+	}
 }

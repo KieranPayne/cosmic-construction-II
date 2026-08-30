@@ -60,6 +60,7 @@ namespace cc
 			}
 			// LoadStartingChunks(s);
 			s->renderTarget = window.get();
+			s->planets[0].AddEntity(new Entity());
 			InputState inputState;
 			s->Update(inputState,0);
 			delete state;

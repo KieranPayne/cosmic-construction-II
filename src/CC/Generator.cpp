@@ -84,7 +84,7 @@ namespace cc
 				c->backgroundTiles[x][y].color = col;
 			}
 		}
-
+		
 		return c;
 	}
 

@@ -72,6 +72,6 @@ namespace cc
 		//remove the single white pixel placed at the start of the atlas
 		textures.erase(textures.begin());
 		positions.erase(positions.begin());
-		// texture.copyToImage().saveToFile(SaveManager::GetSavedataDir() + "/atlas.png");
+		texture.copyToImage().saveToFile(SaveManager::GetSavedataDir() + "/atlas.png");
 	}
 }

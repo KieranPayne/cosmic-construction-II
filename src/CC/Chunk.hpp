@@ -1,6 +1,7 @@
 #pragma once
 #include "../PCH.hpp"
 #include "Tile.hpp"
+#include "Entity.hpp"
 namespace cc
 {
 #define CHUNK_SIZE 32
@@ -11,10 +12,15 @@ constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 4);
 		Tile tiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 		BackgroundTile backgroundTiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 		sf::Vector2i position;
+		std::vector<Entity*> entities;
 		Chunk(sf::Vector2i position);
 		Chunk();
 		std::array<uint8_t,CHUNK_NUM_BYTES> ToBytes();
 		void FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>&);
+		void RenderEntities(sf::RenderTarget* target);
+		void AddEntity(Entity* entity);
+		void RemoveEntity(Entity* entity);
+		void RemoveEntity(int index);
 	};
 
 	struct ChunkHash

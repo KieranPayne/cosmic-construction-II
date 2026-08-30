@@ -5,6 +5,7 @@
 // #include "Civitron/ItemInfo.hpp"
 #include "Input/Input.hpp"
 #include "Timer.hpp"
+#include "CC/EntityInfo.hpp"
 #include "imgui/imgui-SFML.h"
 #include "imgui/imgui.h"
 #include <fstream>
@@ -43,9 +44,9 @@ int main()
 	state->renderTarget = window.get();
 	sf::Clock deltaClock;
 	cc::TileInfo::Init();
-	// Civitron::EntityInfo::Init();
+	cc::EntityInfo::Init();
 	// Civitron::ItemInfo::Init();
-	// Civitron::EntityInfo::Build();
+	cc::EntityInfo::Build();
 	auto &io = ImGui::GetIO();
 	io.Fonts->Clear();
 	ImFont *font = io.Fonts->AddFontFromFileTTF("content/resources/fonts/default font.ttf", 30.f);

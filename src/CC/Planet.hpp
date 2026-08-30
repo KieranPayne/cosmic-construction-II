@@ -4,13 +4,15 @@
 #include "Chunk.hpp"
 #include "Generator.hpp"
 #include "../json.hpp"
+#include "Entity.hpp"
 namespace cc
 {
 	class Planet
 	{
 	public:
-		std::unordered_map<sf::Vector2i, std::unique_ptr<Chunk>,ChunkHash> chunks;
-		std::unordered_map<sf::Vector2i, sf::VertexArray,ChunkHash> tileVertices;
+		std::vector<std::unique_ptr<Entity>> entities;
+		std::unordered_map<sf::Vector2i, std::unique_ptr<Chunk>, ChunkHash> chunks;
+		std::unordered_map<sf::Vector2i, sf::VertexArray, ChunkHash> tileVertices;
 		Generator generator;
 		Camera camera;
 		int index;
@@ -18,7 +20,7 @@ namespace cc
 		int overlayAlpha = 76;
 		uint64_t seed = 0;
 
-		//for display
+		// for display
 		double currFps;
 
 		Planet();
@@ -28,13 +30,15 @@ namespace cc
 		void GenerateChunksInView(sf::RenderTarget *target);
 		void Render(sf::RenderTarget *target);
 		void DrawInfoGUI(double dt);
-		void DrawToolGUI(InputState& inputState);
+		void DrawToolGUI(InputState &inputState);
 		void Save();
 		void Load();
-		void GetTileVertices (sf::Vector2i chunkPos);
-		//like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
+		void GetTileVertices(sf::Vector2i chunkPos);
+		void MoveEntity(Entity* entity, sf::Vector2i oldPos, sf::Vector2i newPos);
+		void AddEntity(Entity* entity);
+		// like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
 		void GenerateLayerVertices(sf::Vector2i pos);
-		std::pair<std::vector<sf::Vertex>,bool> GetVertices(sf::Vector2i tilePosition);
+		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
 		Tile *GetTileAt(sf::Vector2i position);
 		void SetTileAt(sf::Vector2i position, Tile tile);
 		nlohmann::json ToJson();

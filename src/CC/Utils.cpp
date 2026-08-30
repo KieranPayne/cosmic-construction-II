@@ -69,6 +69,13 @@ namespace cc
 			fastFloorDiv(pos.y),
 		};
 	}
+	sf::Vector2i TileToChunkPos(sf::Vector2f &pos)
+	{
+		return {
+			static_cast<int>(std::floor(pos.x / 32.0f)),
+			static_cast<int>(std::floor(pos.y / 32.0f))
+		};
+	}
 	ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key code)
 	{
 		switch (code)

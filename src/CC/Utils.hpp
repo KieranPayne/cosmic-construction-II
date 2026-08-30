@@ -9,5 +9,6 @@ namespace cc
     sf::Vector2f JsonAsVector(nlohmann::json &j);
     int TileToChunkPos(int pos);
     sf::Vector2i TileToChunkPos(sf::Vector2i &pos);
+    sf::Vector2i TileToChunkPos(sf::Vector2f &pos);
     ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key key);
 }

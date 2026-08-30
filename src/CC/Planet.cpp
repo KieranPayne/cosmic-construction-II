@@ -68,6 +68,14 @@ namespace cc
 				target->draw(tileVertices[{x,y}],states);
 			}
 		}
+		//draw entities
+		for (int x = topLeft.x - 1; x <= bottomRight.x + 1; x ++)
+		{
+			for (int y = topLeft.y - 1; y <= bottomRight.y + 1; y ++)
+			{
+				chunks[{x,y}]->RenderEntities(target);
+			}
+		}
 	}
 	void Planet::Save()
 	{
@@ -95,6 +103,13 @@ namespace cc
 			out.write(reinterpret_cast<const char *>(bytes.data()), bytes.size());
 			out.close();
 		}
+		//save entities
+		nlohmann::json entityData;
+		for (auto& e : entities)
+		{
+			entityData.push_back(e->ToJson());
+		}
+		SaveManager::WriteData(path + "/entities.json",entityData.dump(2));
 		//misc variables get saved in planet json
 		SaveManager::WriteData(path + "/planet.json",ToJson().dump(2));
 	}
@@ -125,8 +140,31 @@ namespace cc
 			chunks[vec] = std::make_unique<Chunk>(vec);
 			chunks[vec]->FromBytes(bytes);
 		}
+		//load entities
+		nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
+		for (auto& e : entityData)
+		{
+			Entity* entity;
+			Entity::EntityType type = (Entity::EntityType)(e["type"]);
+			if (type == Entity::NONE)
+			{
+				entity = new Entity();
+			}
+			entity->FromJson(e);
+			AddEntity(entity);
+		}
 		// load misc data
 		FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
+	}
+	void Planet::AddEntity(Entity* entity)
+	{
+		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
+		entities.push_back(std::unique_ptr<Entity>(entity));
+		if (!chunks.contains(chunkPos))
+		{
+			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+		}
+		chunks[chunkPos]->AddEntity(entity);
 	}
 	void Planet::DrawInfoGUI(double dt)
 	{
@@ -216,6 +254,35 @@ namespace cc
 	}
 	void Planet::Tick()
 	{
+		std::vector<Entity*> entitiesToMove;
+		std::vector<sf::Vector2i> oldPoses;
+		std::vector<sf::Vector2i> newPoses;
+
+		for (auto& e : entities)
+		{
+			sf::Vector2i currChunkPos = TileToChunkPos(e->position);
+			e->Tick();
+			sf::Vector2i newChunkPos = TileToChunkPos(e->position);
+			if (newChunkPos != currChunkPos)
+			{
+				entitiesToMove.push_back(e.get());
+				oldPoses.push_back(currChunkPos);
+				newPoses.push_back(newChunkPos);
+			}
+		}
+		for (int i = 0; i < entitiesToMove.size(); i ++)
+		{
+			MoveEntity(entitiesToMove[i],oldPoses[i],newPoses[i]);
+		}
+	}
+	void Planet::MoveEntity(Entity* entity, sf::Vector2i oldPos, sf::Vector2i newPos)
+	{
+		chunks[oldPos]->RemoveEntity(entity);
+		if (!chunks.contains(newPos))
+		{
+			chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
+		}
+		chunks[newPos]->AddEntity(entity);
 	}
 	std::pair<std::vector<sf::Vertex>,bool> Planet::GetVertices(sf::Vector2i tilePosition)
 	{
