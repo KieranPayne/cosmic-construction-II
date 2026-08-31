@@ -23,25 +23,30 @@ namespace cc
         sf::Vector2f size = {1.f,1.f};
         virtual std::vector<sf::Vertex> GetVerts()
         {
-            static sf::Vector2f offsets[6] = {
-            {0, 0},
-            {TILE_SIZE * size.x, 0},
-            {TILE_SIZE * size.x, TILE_SIZE * size.y},
-            {0, 0},
-            {TILE_SIZE * size.x, TILE_SIZE * size.y},
-            {0, TILE_SIZE * size.y}};
+            sf::Vector2f offsets[6] = {
+                {0, 0},
+                {TILE_SIZE * size.x, 0},
+                {TILE_SIZE * size.x, TILE_SIZE * size.y},
+                {0, 0},
+                {TILE_SIZE * size.x, TILE_SIZE * size.y},
+                {0, TILE_SIZE * size.y}
+            };
 
             sf::Vector2f texCoords = GetTexCoords();
             std::vector<sf::Vertex> verts;
-            for (int i = 0; i < 6; i ++)
+
+            for (int i = 0; i < 6; i++)
             {
                 sf::Vertex v;
-                v.position = position * (float)TILE_SIZE - size * (TILE_SIZE / 2.f) + offsets[i];
+
+                v.position = position * (float)TILE_SIZE + offsets[i];
                 v.texCoords = texCoords + offsets[i];
+
                 verts.push_back(v);
             }
+
             return verts;
-        };
+        }
         virtual sf::Vector2f GetTexCoords()
         {
             return JsonAsVector(EntityInfo::texturesJson["Entity"]);

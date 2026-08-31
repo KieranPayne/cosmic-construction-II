@@ -47,13 +47,13 @@ int main()
 	cc::EntityInfo::Init();
 	// Civitron::ItemInfo::Init();
 	cc::EntityInfo::Build();
-	auto &io = ImGui::GetIO();
-	io.Fonts->Clear();
-	ImFont *font = io.Fonts->AddFontFromFileTTF("content/resources/fonts/default font.ttf", 30.f);
-	if (!ImGui::SFML::UpdateFontTexture())
-	{
-		window->close();
-	};
+	// auto &io = ImGui::GetIO();
+	// io.Fonts->Clear();
+	// ImFont *font = io.Fonts->AddFontFromFileTTF("content/resources/fonts/default font.ttf", 20.f);
+	// if (!ImGui::SFML::UpdateFontTexture())
+	// {
+		// window->close();
+	// };
 	macro.active = false;
 	// macro.ParseFile("content/resources/macro2.txt");
 

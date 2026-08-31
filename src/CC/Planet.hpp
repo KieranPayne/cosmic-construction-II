@@ -5,6 +5,7 @@
 #include "Generator.hpp"
 #include "../json.hpp"
 #include "Entity.hpp"
+#include "JsonEditor.hpp"
 namespace cc
 {
 	class Planet
@@ -17,6 +18,7 @@ namespace cc
 		Camera camera;
 		int index;
 		uint64_t seed = 0;
+		JsonEditor jsonEditor;
 
 		// for display
 		double currFps;

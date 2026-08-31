@@ -8,6 +8,7 @@
 #include "../Main.hpp"
 #include <queue>
 #include "Human.hpp"
+#include "JsonEditor.hpp"
 namespace cc
 {
 	Planet::Planet()
@@ -26,6 +27,14 @@ namespace cc
 		GenerateChunksInView(target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
+		for (int i = 0; i < entities.size(); i ++)
+		{
+			nlohmann::json j = entities[i]->ToJson();
+			if (jsonEditor.Draw(j,("entity " +  std::to_string(i)).c_str()))
+			{
+				entities[i]->FromJson(j);
+			}		
+		}
 	}
 	void Planet::GenerateChunksInView(sf::RenderTarget *target)
 	{
@@ -33,8 +42,8 @@ namespace cc
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
 		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
-		topLeft -= {1,1};
-		bottomRight += {1,1};
+		topLeft -= {1, 1};
+		bottomRight += {1, 1};
 		for (int x = topLeft.x; x <= bottomRight.x; x++)
 		{
 			for (int z = topLeft.y; z <= bottomRight.y; z++)
@@ -58,23 +67,23 @@ namespace cc
 		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
 		std::vector<sf::Vertex> vertices;
-		for (int x = topLeft.x; x <= bottomRight.x; x ++)
+		for (int x = topLeft.x; x <= bottomRight.x; x++)
 		{
-			for (int y = topLeft.y; y <= bottomRight.y; y ++)
+			for (int y = topLeft.y; y <= bottomRight.y; y++)
 			{
-				if (!tileVertices.contains({x,y}))
+				if (!tileVertices.contains({x, y}))
 				{
-					GetTileVertices({x,y});
+					GetTileVertices({x, y});
 				}
-				target->draw(tileVertices[{x,y}],states);
+				target->draw(tileVertices[{x, y}], states);
 			}
 		}
-		//draw entities
-		for (int x = topLeft.x - 1; x <= bottomRight.x + 1; x ++)
+		// draw entities
+		for (int x = topLeft.x - 1; x <= bottomRight.x + 1; x++)
 		{
-			for (int y = topLeft.y - 1; y <= bottomRight.y + 1; y ++)
+			for (int y = topLeft.y - 1; y <= bottomRight.y + 1; y++)
 			{
-				chunks[{x,y}]->RenderEntities(target);
+				chunks[{x, y}]->RenderEntities(target);
 			}
 		}
 	}
@@ -104,15 +113,15 @@ namespace cc
 			out.write(reinterpret_cast<const char *>(bytes.data()), bytes.size());
 			out.close();
 		}
-		//save entities
+		// save entities
 		nlohmann::json entityData;
-		for (auto& e : entities)
+		for (auto &e : entities)
 		{
 			entityData.push_back(e->ToJson());
 		}
-		SaveManager::WriteData(path + "/entities.json",entityData.dump(2));
-		//misc variables get saved in planet json
-		SaveManager::WriteData(path + "/planet.json",ToJson().dump(2));
+		SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
+		// misc variables get saved in planet json
+		SaveManager::WriteData(path + "/planet.json", ToJson().dump(2));
 	}
 	void Planet::Load()
 	{
@@ -141,16 +150,17 @@ namespace cc
 			chunks[vec] = std::make_unique<Chunk>(vec);
 			chunks[vec]->FromBytes(bytes);
 		}
-		//load entities
+		// load entities
 		nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
-		for (auto& e : entityData)
+		for (auto &e : entityData)
 		{
-			Entity* entity;
+			Entity *entity;
 			Entity::EntityType type = (Entity::EntityType)(e["type"]);
 			if (type == Entity::NONE)
 			{
 				entity = new Entity();
-			}else if (type == Entity::HUMAN)
+			}
+			else if (type == Entity::HUMAN)
 			{
 				entity = new Human();
 			}
@@ -160,7 +170,7 @@ namespace cc
 		// load misc data
 		FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
 	}
-	void Planet::AddEntity(Entity* entity)
+	void Planet::AddEntity(Entity *entity)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entities.push_back(std::unique_ptr<Entity>(entity));
@@ -182,11 +192,11 @@ namespace cc
 		currFps += (fps - currFps) * dt * 3;
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
 		// ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
-		
+
 		static float t = 0.1f;
-		ImGui::SliderFloat("Time Per Tick",&t, 0.f, 1.f);
-		((State*)state)->timePerTick = t;
-		
+		ImGui::SliderFloat("Time Per Tick", &t, 0.f, 1.f);
+		((State *)state)->timePerTick = t;
+
 		// bgTile += "Colour: " + std::to_string()
 		const char *currentLabel = "None";
 		switch (currentView)
@@ -216,7 +226,7 @@ namespace cc
 		else if (currentView == 1)
 		{
 			std::string result = "";
-			for (auto& e : entities)
+			for (auto &e : entities)
 			{
 				result += e->ToJson().dump(2) + "\n";
 			}
@@ -245,18 +255,18 @@ namespace cc
 		chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
 		if (tileVertices.contains(chunkPos))
 		{
-			//erase the vertices since they're no longer accurate
-			//note: erase instead of rebuilding since these may not necessarily be visible, so this would be wasted effort.
+			// erase the vertices since they're no longer accurate
+			// note: erase instead of rebuilding since these may not necessarily be visible, so this would be wasted effort.
 			tileVertices.erase(chunkPos);
 		}
 	}
 	void Planet::Tick()
 	{
-		std::vector<Entity*> entitiesToMove;
+		std::vector<Entity *> entitiesToMove;
 		std::vector<sf::Vector2i> oldPoses;
 		std::vector<sf::Vector2i> newPoses;
 
-		for (auto& e : entities)
+		for (auto &e : entities)
 		{
 			sf::Vector2i currChunkPos = TileToChunkPos(e->position);
 			e->Tick();
@@ -268,12 +278,12 @@ namespace cc
 				newPoses.push_back(newChunkPos);
 			}
 		}
-		for (int i = 0; i < entitiesToMove.size(); i ++)
+		for (int i = 0; i < entitiesToMove.size(); i++)
 		{
-			MoveEntity(entitiesToMove[i],oldPoses[i],newPoses[i]);
+			MoveEntity(entitiesToMove[i], oldPoses[i], newPoses[i]);
 		}
 	}
-	void Planet::MoveEntity(Entity* entity, sf::Vector2i oldPos, sf::Vector2i newPos)
+	void Planet::MoveEntity(Entity *entity, sf::Vector2i oldPos, sf::Vector2i newPos)
 	{
 		chunks[oldPos]->RemoveEntity(entity);
 		if (!chunks.contains(newPos))
@@ -282,7 +292,7 @@ namespace cc
 		}
 		chunks[newPos]->AddEntity(entity);
 	}
-	std::pair<std::vector<sf::Vertex>,bool> Planet::GetVertices(sf::Vector2i tilePosition)
+	std::pair<std::vector<sf::Vertex>, bool> Planet::GetVertices(sf::Vector2i tilePosition)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(tilePosition);
 		Chunk *chunk = chunks[chunkPos].get();
@@ -306,9 +316,9 @@ namespace cc
 			{
 				vertices.push_back({worldPos + offsets[i], sf::Color(alpha, alpha, alpha, 255), texPos + offsets[i]});
 			}
-			return {vertices,true};
+			return {vertices, true};
 		}
-		return {{},false};
+		return {{}, false};
 	}
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
@@ -319,7 +329,7 @@ namespace cc
 		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
 		sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
 		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;
-		BackgroundTile* bgT = &chunks[worldChunkPos]->backgroundTiles[subChunkPos.x][subChunkPos.y];
+		BackgroundTile *bgT = &chunks[worldChunkPos]->backgroundTiles[subChunkPos.x][subChunkPos.y];
 		bgTile += "Colour: " + std::to_string(bgT->color.r) + " " + std::to_string(bgT->color.g) + " " + std::to_string(bgT->color.b) + "\n";
 		bgTile += "Type: " + std::to_string(bgT->type);
 		ImGui::Text(bgTile.c_str());
@@ -376,65 +386,67 @@ namespace cc
 		}
 		ImGui::End();
 	}
-	nlohmann::json Planet::ToJson(){
+	nlohmann::json Planet::ToJson()
+	{
 		nlohmann::json j;
 		j["camera"] = camera.ToJson();
 		j["seed"] = seed;
 		j["generator"] = generator.ToJson();
 		return j;
 	}
-	void Planet::FromJson(nlohmann::json j){
+	void Planet::FromJson(nlohmann::json j)
+	{
 		camera.FromJson(j["camera"]);
 		generator.FromJson(j["generator"]);
 	}
-	void Planet::GetTileVertices (sf::Vector2i chunkPos)
+	void Planet::GetTileVertices(sf::Vector2i chunkPos)
 	{
-		sf::VertexArray arr(sf::PrimitiveType::Triangles,CHUNK_SIZE * CHUNK_SIZE * 6 * 2);
-		//get background tile vertices
+		sf::VertexArray arr(sf::PrimitiveType::Triangles, CHUNK_SIZE * CHUNK_SIZE * 6 * 2);
+		// get background tile vertices
 		static sf::Vector2f offsets[6] = {
-		{0, 0},
-		{TILE_SIZE, 0},
-		{TILE_SIZE, TILE_SIZE},
-		{0, 0},
-		{TILE_SIZE, TILE_SIZE},
-		{0, TILE_SIZE}};
-		int i = 0; 
-		Chunk* c = chunks[chunkPos].get();
-		for (int x = 0; x < CHUNK_SIZE; x ++)
+			{0, 0},
+			{TILE_SIZE, 0},
+			{TILE_SIZE, TILE_SIZE},
+			{0, 0},
+			{TILE_SIZE, TILE_SIZE},
+			{0, TILE_SIZE}};
+		int i = 0;
+		Chunk *c = chunks[chunkPos].get();
+		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
-			for (int y = 0; y < CHUNK_SIZE; y ++)
+			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				for (int j = 0; j < 6; j ++)
+				for (int j = 0; j < 6; j++)
 				{
 					sf::Vertex v;
-					v.position = (sf::Vector2f)(chunkPos * CHUNK_SIZE * TILE_SIZE) + sf::Vector2f{x * TILE_SIZE,y * TILE_SIZE} + offsets[j];
+					v.position = (sf::Vector2f)(chunkPos * CHUNK_SIZE * TILE_SIZE) + sf::Vector2f{x * TILE_SIZE, y * TILE_SIZE} + offsets[j];
 					v.color = c->backgroundTiles[x][y].color;
-					
+
 					arr[i] = v;
-					i ++; 
-				}	
+					i++;
+				}
 			}
 		}
-		for (int x = 0; x < CHUNK_SIZE; x ++)
+		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
-			for (int y = 0; y < CHUNK_SIZE; y ++)
+			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				Tile* t = &c->tiles[x][y];
+				Tile *t = &c->tiles[x][y];
 
-				//air tile; forgive the magic number pls
+				// air tile; forgive the magic number pls
 				if (t->type == 0)
 				{
 					continue;
 				}
 				sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].position;
-				for (int j = 0; j < 6; j ++)
+				for (int j = 0; j < 6; j++)
 				{
 					sf::Vertex v;
-					v.position = (sf::Vector2f)(chunkPos * CHUNK_SIZE * TILE_SIZE) + sf::Vector2f{x * TILE_SIZE,y * TILE_SIZE} + offsets[j];
+					v.position = (sf::Vector2f)(chunkPos * CHUNK_SIZE * TILE_SIZE) + sf::Vector2f{x * TILE_SIZE, y * TILE_SIZE} + offsets[j];
 					v.texCoords = texPos + offsets[j];
 					arr[i] = v;
-					i ++; 
-				}	
+					i++;
+				}
 			}
 		}
 		arr.resize(i);
@@ -445,4 +457,5 @@ namespace cc
 		this->seed = seed;
 		generator.SetSeed(seed);
 	}
+	
 }
