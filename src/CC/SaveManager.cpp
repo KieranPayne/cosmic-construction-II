@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <chrono>
+#include "Human.hpp"
 namespace cc
 {
 	namespace SaveManager
@@ -61,6 +62,9 @@ namespace cc
 			// LoadStartingChunks(s);
 			s->renderTarget = window.get();
 			s->planets[0].AddEntity(new Entity());
+			Human* h = new Human();		
+			h->position = {1.f,0.f};	
+			s->planets[0].AddEntity(h);
 			InputState inputState;
 			s->Update(inputState,0);
 			delete state;

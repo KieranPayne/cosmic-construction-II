@@ -7,6 +7,7 @@
 #include "../imgui/imgui.h"
 #include "../Main.hpp"
 #include <queue>
+#include "Human.hpp"
 namespace cc
 {
 	Planet::Planet()
@@ -149,6 +150,9 @@ namespace cc
 			if (type == Entity::NONE)
 			{
 				entity = new Entity();
+			}else if (type == Entity::HUMAN)
+			{
+				entity = new Human();
 			}
 			entity->FromJson(e);
 			AddEntity(entity);
@@ -179,8 +183,6 @@ namespace cc
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
 		// ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
 		
-		ImGui::SliderInt("Overlay Alpha", &overlayAlpha, 0, 255);
-		ImGui::SliderInt("View Depth", &viewDepth, 0, 15);
 		static float t = 0.1f;
 		ImGui::SliderFloat("Time Per Tick",&t, 0.f, 1.f);
 		((State*)state)->timePerTick = t;
@@ -195,9 +197,6 @@ namespace cc
 		case 1:
 			currentLabel = "Entities";
 			break;
-		case 2:
-			currentLabel = "Populations";
-			break;
 		}
 		if (ImGui::BeginCombo("##", currentLabel))
 		{
@@ -207,8 +206,6 @@ namespace cc
 				currentView = 0;
 			if (ImGui::Selectable("Entities", currentView == 1))
 				currentView = 1;
-			if (ImGui::Selectable("Populations", currentView == 2))
-				currentView = 2;
 			ImGui::EndCombo();
 		}
 		ImGui::Separator();
@@ -219,9 +216,10 @@ namespace cc
 		else if (currentView == 1)
 		{
 			std::string result = "";
-			ImGui::Text(result.c_str());
-		}else if(currentView == 2){
-			std::string result = "";
+			for (auto& e : entities)
+			{
+				result += e->ToJson().dump(2) + "\n";
+			}
 			ImGui::Text(result.c_str());
 		}
 		ImGui::End();
@@ -380,16 +378,12 @@ namespace cc
 	}
 	nlohmann::json Planet::ToJson(){
 		nlohmann::json j;
-		j["overlayAlpha"] = overlayAlpha;
-		j["viewDepth"] = viewDepth;
 		j["camera"] = camera.ToJson();
 		j["seed"] = seed;
 		j["generator"] = generator.ToJson();
 		return j;
 	}
 	void Planet::FromJson(nlohmann::json j){
-		overlayAlpha = j["overlayAlpha"];
-		viewDepth = j["viewDepth"];
 		camera.FromJson(j["camera"]);
 		generator.FromJson(j["generator"]);
 	}

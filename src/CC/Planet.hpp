@@ -16,8 +16,6 @@ namespace cc
 		Generator generator;
 		Camera camera;
 		int index;
-		int viewDepth = 10;
-		int overlayAlpha = 76;
 		uint64_t seed = 0;
 
 		// for display
