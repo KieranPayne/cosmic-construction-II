@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <chrono>
+#include "Item.hpp"
 #include "Human.hpp"
 namespace cc
 {
@@ -65,6 +66,9 @@ namespace cc
 			Human* h = new Human();		
 			h->position = {1.f,0.f};	
 			s->planets[0].AddEntity(h);
+			Item* item = new Item();
+			item->position = {2.f,0.f};
+			s->planets[0].AddEntity(item);
 			InputState inputState;
 			s->Update(inputState,0);
 			delete state;

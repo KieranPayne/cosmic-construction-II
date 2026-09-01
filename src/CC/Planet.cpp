@@ -9,6 +9,7 @@
 #include <queue>
 #include "Human.hpp"
 #include "JsonEditor.hpp"
+#include "Item.hpp"
 namespace cc
 {
 	Planet::Planet()
@@ -163,6 +164,9 @@ namespace cc
 			else if (type == Entity::HUMAN)
 			{
 				entity = new Human();
+			}else if (type == Entity::ITEM)
+			{
+				entity = new Item();
 			}
 			entity->FromJson(e);
 			AddEntity(entity);
@@ -173,6 +177,7 @@ namespace cc
 	void Planet::AddEntity(Entity *entity)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
+		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
 		if (!chunks.contains(chunkPos))
 		{
@@ -268,29 +273,28 @@ namespace cc
 
 		for (auto &e : entities)
 		{
-			sf::Vector2i currChunkPos = TileToChunkPos(e->position);
 			e->Tick();
 			sf::Vector2i newChunkPos = TileToChunkPos(e->position);
-			if (newChunkPos != currChunkPos)
+			if (newChunkPos != e->chunkPos)
 			{
 				entitiesToMove.push_back(e.get());
-				oldPoses.push_back(currChunkPos);
 				newPoses.push_back(newChunkPos);
 			}
 		}
 		for (int i = 0; i < entitiesToMove.size(); i++)
 		{
-			MoveEntity(entitiesToMove[i], oldPoses[i], newPoses[i]);
+			MoveEntity(entitiesToMove[i], newPoses[i]);
 		}
 	}
-	void Planet::MoveEntity(Entity *entity, sf::Vector2i oldPos, sf::Vector2i newPos)
+	void Planet::MoveEntity(Entity *entity, sf::Vector2i newPos)
 	{
-		chunks[oldPos]->RemoveEntity(entity);
+		chunks[entity->chunkPos]->RemoveEntity(entity);
 		if (!chunks.contains(newPos))
 		{
 			chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
 		}
 		chunks[newPos]->AddEntity(entity);
+		entity->chunkPos = newPos;
 	}
 	std::pair<std::vector<sf::Vertex>, bool> Planet::GetVertices(sf::Vector2i tilePosition)
 	{

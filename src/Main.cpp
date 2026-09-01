@@ -15,8 +15,8 @@
 // a unique pointer to the window object; this is unique to prevent accidentally creating multiple windows
 std::unique_ptr<sf::RenderWindow> window;
 // width and height of the window
-int width = 960;
-int height = 540;
+int width = 1280;
+int height = 720;
 Kosmic::State *state = nullptr;
 
 Kosmic::Macro macro;
@@ -25,7 +25,7 @@ Kosmic::Macro macro;
 int main()
 {
 	srand(time(NULL));
-	window = std::make_unique<sf::RenderWindow>(sf::VideoMode({(unsigned int)width, (unsigned int)height}), "Civitron");
+	window = std::make_unique<sf::RenderWindow>(sf::VideoMode({(unsigned int)width, (unsigned int)height}), "Cosmic Construction II");
 	window->setFramerateLimit(9999);
 	window->setVerticalSyncEnabled(false);
 	// set the icon image that is displayed in the corner of the window

@@ -34,7 +34,8 @@ namespace cc
 		void Save();
 		void Load();
 		void GetTileVertices(sf::Vector2i chunkPos);
-		void MoveEntity(Entity* entity, sf::Vector2i oldPos, sf::Vector2i newPos);
+		//NOTE: THIS IS MOVING CHUNKS, NOT JUST MOVING IN GENERAL.
+		void MoveEntity(Entity* entity, sf::Vector2i newPos);
 		void AddEntity(Entity* entity);
 		// like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
 		void GenerateLayerVertices(sf::Vector2i pos);

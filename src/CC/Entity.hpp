@@ -13,12 +13,14 @@ namespace cc
         enum EntityType
         {
             NONE = 0,
-            HUMAN
+            HUMAN,
+            ITEM
         };
         Entity()
         {
         };
         EntityType type = NONE;
+        sf::Vector2i chunkPos;
         sf::Vector2f position = {0.f,0.f};
         sf::Vector2f size = {1.f,1.f};
         virtual std::vector<sf::Vertex> GetVerts()
@@ -63,7 +65,7 @@ namespace cc
             j["size"] = {size.x,size.y};
             return j;
         }
-        void FromJson(nlohmann::json j)
+        virtual void FromJson(nlohmann::json& j)
         {
             type = (EntityType)(j["type"]);
             position = {j["position"][0],j["position"][1]};

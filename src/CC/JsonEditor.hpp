@@ -142,10 +142,11 @@ private:
         {
             int64_t number = value.get<int64_t>();
 
-            if (ImGui::InputScalar(
+            if (ImGui::DragScalar(
                 label,
                 ImGuiDataType_S64,
-                &number
+                &number,
+                0.05f
             ))
             {
                 value = number;
@@ -159,10 +160,11 @@ private:
         {
             uint64_t number = value.get<uint64_t>();
 
-            if (ImGui::InputScalar(
+            if (ImGui::DragScalar(
                 label,
                 ImGuiDataType_U64,
-                &number
+                &number,
+                0.05f
             ))
             {
                 value = number;

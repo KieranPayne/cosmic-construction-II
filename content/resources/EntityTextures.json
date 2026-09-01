@@ -1,4 +1,9 @@
 {
     "Entity":"images/entity.png",
-    "Human":"images/human 2.png"
+    "Human":"images/human 2.png",
+    "Item":
+    [
+        "images/wood.png",
+        "images/human.png"
+    ]
 }
