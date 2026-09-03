@@ -107,12 +107,9 @@ namespace cc
 		// save chunks
 		for (auto &c : chunks)
 		{
-			auto bytes = c.second->ToBytes();
 			std::string chunkPath = path + "/chunks/";
 			chunkPath += std::to_string(c.second->position.x) + " " + std::to_string(c.second->position.y);
-			std::ofstream out(chunkPath + ".txt", std::ios::binary);
-			out.write(reinterpret_cast<const char *>(bytes.data()), bytes.size());
-			out.close();
+			c.second->WriteData(chunkPath + ".txt");
 		}
 		// save entities
 		nlohmann::json entityData;
@@ -145,11 +142,8 @@ namespace cc
 			// remove file extension
 			coords[1] = coords[1].substr(0, coords[1].size() - 4);
 			sf::Vector2i vec{std::stoi(coords[0]), std::stoi(coords[1])};
-			std::array<uint8_t, CHUNK_NUM_BYTES> bytes = {};
-			std::ifstream in(f, std::ios::binary);
-			in.read(reinterpret_cast<char *>(bytes.data()), bytes.size());
 			chunks[vec] = std::make_unique<Chunk>(vec);
-			chunks[vec]->FromBytes(bytes);
+			chunks[vec]->ReadData(f);
 		}
 		// load entities
 		nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));

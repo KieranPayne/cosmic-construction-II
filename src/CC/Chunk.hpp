@@ -2,6 +2,7 @@
 #include "../PCH.hpp"
 #include "Tile.hpp"
 #include "Entity.hpp"
+#include "TileEntity.hpp"
 namespace cc
 {
 #define CHUNK_SIZE 32
@@ -13,14 +14,22 @@ constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 4);
 		BackgroundTile backgroundTiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 		sf::Vector2i position;
 		std::vector<Entity*> entities;
+		std::unordered_map<uint16_t,std::unique_ptr<TileEntity>> tileEntities;
 		Chunk(sf::Vector2i position);
 		Chunk();
-		std::array<uint8_t,CHUNK_NUM_BYTES> ToBytes();
-		void FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>&);
+		std::vector<uint8_t> GetByteData();
+		void LoadByteData(std::vector<uint8_t>& bytes);
+		std::string GetStringData();
+		void LoadStringData(std::string& data);
+		void WriteData(std::string path);
+		void ReadData(std::string path);
+		// std::array<uint8_t,CHUNK_NUM_BYTES> ToBytes();
+		// void FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>&);
 		void RenderEntities(sf::RenderTarget* target);
 		void AddEntity(Entity* entity);
 		void RemoveEntity(Entity* entity);
 		void RemoveEntity(int index);
+		uint16_t TileEntityIndex(sf::Vector2i pos);
 	};
 
 	struct ChunkHash
