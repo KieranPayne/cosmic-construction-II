@@ -28,8 +28,7 @@ namespace cc
 			std::string name;
 			sf::Vector2i position;
 			uint16_t id;
-			bool solid;
-			bool walkable;
+			bool isTileEntity;
 		};
 		extern Atlas atlas;
 		extern std::vector<TileData> tileRegistry;

@@ -97,7 +97,7 @@ namespace cc
 		return bytes;
 	}
 
-	void Chunk::LoadByteData(std::vector<uint8_t>& bytes)
+	void Chunk::LoadByteData(std::vector<uint8_t> &bytes)
 	{
 		size_t index = 0;
 
@@ -110,10 +110,10 @@ namespace cc
 					static_cast<uint16_t>(bytes[index++]);
 
 				tiles[x][y].type = type;
-				uint8_t r = bytes[index ++];
-				uint8_t g = bytes[index ++];
-				uint8_t b = bytes[index ++];
-				backgroundTiles[x][y].color = sf::Color(r,g,b);
+				uint8_t r = bytes[index++];
+				uint8_t g = bytes[index++];
+				uint8_t b = bytes[index++];
+				backgroundTiles[x][y].color = sf::Color(r, g, b);
 				backgroundTiles[x][y].type = (BackgroundTile::BackgroundTileType)bytes[index++];
 			}
 		}
@@ -122,7 +122,7 @@ namespace cc
 	std::string Chunk::GetStringData()
 	{
 		nlohmann::json arr;
-		for (auto& e : tileEntities)
+		for (auto &e : tileEntities)
 		{
 			nlohmann::json j;
 			j["key"] = e.first;
@@ -132,14 +132,14 @@ namespace cc
 		return arr.dump(2);
 	}
 
-	void Chunk::LoadStringData(std::string& data)
+	void Chunk::LoadStringData(std::string &data)
 	{
 		nlohmann::json arr = nlohmann::json::parse(data);
-		for (auto& j : arr)
+		for (auto &j : arr)
 		{
 			uint16_t key = j["key"];
 			uint16_t type = j["value"]["type"];
-			TileEntity* entity = CreateTileEntityFromType(type);
+			TileEntity *entity = CreateTileEntityFromType(type);
 			tileEntities[key] = std::unique_ptr<TileEntity>(entity);
 		}
 	}
@@ -185,5 +185,29 @@ namespace cc
 	uint16_t Chunk::TileEntityIndex(sf::Vector2i pos)
 	{
 		return pos.y * CHUNK_SIZE + pos.x;
+	}
+	void Chunk::SetTile(sf::Vector2i pos, Tile tile, TileEntity *tileEntity)
+	{
+		if (tileEntities.contains(TileEntityIndex(pos)))
+		{
+			RemoveTileEntity(TileEntityIndex(pos));
+		}
+		tiles[pos.x][pos.y] = tile;
+		if (TileInfo::tileRegistry[tile.type].isTileEntity)
+		{
+			if (tileEntity != nullptr)
+			{
+				tileEntities[TileEntityIndex(pos)] = std::unique_ptr<TileEntity>(tileEntity);
+			}
+			else
+			{
+				tileEntities[TileEntityIndex(pos)] = std::unique_ptr<TileEntity>(CreateTileEntityFromType(tile.type));
+			}
+		}
+	}
+	void Chunk::RemoveTileEntity(uint16_t index)
+	{
+		// TODO: add some sort of ondelete function. this would be used if a container holding items gets destroyed for example
+		tileEntities.erase(index);
 	}
 }

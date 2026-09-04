@@ -37,7 +37,7 @@ namespace cc
 				auto result = Split(line, '|');
 				TileData data;
 				data.name = result[0];
-				data.walkable = result[2] == "true";
+				data.isTileEntity = result[2] == "true";
 				// data.color = HexToColor(result[1]);
 				data.path = "content/resources/images/" + result[1];
 				data.id = (uint16_t)(tileRegistry.size());
@@ -57,7 +57,7 @@ namespace cc
 				{
 					std::cout << "failed to build atlas" << std::endl;
 				}
-				t.solid = ImageIsSolid(i);
+				// t.solid = ImageIsSolid(i);
 				sf::Texture texture;
 				if (!texture.loadFromImage(i))
 				{

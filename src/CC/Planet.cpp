@@ -233,6 +233,7 @@ namespace cc
 		}
 		ImGui::End();
 	}
+	//TODO: make this return a pair that also returns the tile entity if there is one here
 	Tile *Planet::GetTileAt(sf::Vector2i position)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
@@ -243,7 +244,7 @@ namespace cc
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
 	}
-	void Planet::SetTileAt(sf::Vector2i position, Tile tile)
+	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
@@ -251,7 +252,8 @@ namespace cc
 			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
+		chunks[chunkPos]->SetTile(subChunkPos,tile, tileEntity);
+		// chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
 		if (tileVertices.contains(chunkPos))
 		{
 			// erase the vertices since they're no longer accurate

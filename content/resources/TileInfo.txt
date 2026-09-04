@@ -1,8 +1,9 @@
-Name|File|Walkable
+Name|File|Is tile entity?
 Air|dirt.png|false
-Dirt|dirt.png|true
-Grass|grass.png|true
-Stone|stone.png|true
-Log|log.png|true
-TestTile|testTile.png|true
-Leaves|leaves.png|true
+Dirt|dirt.png|false
+Grass|grass.png|false
+Stone|stone.png|false
+Log|log.png|false
+TestTile|testTile.png|false
+Leaves|leaves.png|false
+Stockpile|stockpile.png|true

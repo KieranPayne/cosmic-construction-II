@@ -6,6 +6,7 @@
 #include "../json.hpp"
 #include "Entity.hpp"
 #include "JsonEditor.hpp"
+#include "TileEntity.hpp"
 namespace cc
 {
 	class Planet
@@ -41,7 +42,7 @@ namespace cc
 		void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
 		Tile *GetTileAt(sf::Vector2i position);
-		void SetTileAt(sf::Vector2i position, Tile tile);
+		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr);
 		nlohmann::json ToJson();
 		void FromJson(nlohmann::json j);
 		void SetSeed(uint64_t seed);
