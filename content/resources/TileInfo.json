@@ -1,0 +1,17 @@
+[
+{
+    "name":"Air",
+    "textures":[""],
+    "isTileEntity":false
+},
+{
+    "name":"Stone",
+    "textures":["stone.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Stockpile",
+    "textures":["stockpile.png", "stockpile 2.png"],
+    "isTileEntity":true
+}
+]

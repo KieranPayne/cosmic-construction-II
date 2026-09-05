@@ -195,14 +195,18 @@ namespace cc
 		tiles[pos.x][pos.y] = tile;
 		if (TileInfo::tileRegistry[tile.type].isTileEntity)
 		{
+			int index = TileEntityIndex(pos);
 			if (tileEntity != nullptr)
 			{
-				tileEntities[TileEntityIndex(pos)] = std::unique_ptr<TileEntity>(tileEntity);
+				tileEntities[index] = std::unique_ptr<TileEntity>(tileEntity);
 			}
 			else
 			{
-				tileEntities[TileEntityIndex(pos)] = std::unique_ptr<TileEntity>(CreateTileEntityFromType(tile.type));
+				tileEntities[index] = std::unique_ptr<TileEntity>(CreateTileEntityFromType(tile.type));
 			}
+			tileEntities[index]->position = pos;
+			tileEntities[index]->chunk = this;
+			
 		}
 	}
 	void Chunk::RemoveTileEntity(uint16_t index)

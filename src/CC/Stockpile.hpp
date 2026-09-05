@@ -11,5 +11,7 @@ namespace cc
             static int myType = TileInfo::nameLookup["Stockpile"]->id;
             type = myType;
         }
+        void GetVertices(sf::VertexArray& arr, int& index);
+
     };
 }

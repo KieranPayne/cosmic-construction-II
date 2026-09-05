@@ -311,7 +311,7 @@ namespace cc
 				{TILE_SIZE, TILE_SIZE},
 				{0, TILE_SIZE}};
 			sf::Vector2f worldPos = {(float)(tilePosition.x * TILE_SIZE), (float)(tilePosition.y * TILE_SIZE)};
-			sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].position;
+			sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].positions[0];
 			for (int i = 0; i < 6; i++)
 			{
 				vertices.push_back({worldPos + offsets[i], sf::Color(alpha, alpha, alpha, 255), texPos + offsets[i]});
@@ -438,7 +438,12 @@ namespace cc
 				{
 					continue;
 				}
-				sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].position;
+				if (TileInfo::tileRegistry[t->type].isTileEntity)
+				{
+					c->tileEntities[c->TileEntityIndex({x,y})]->GetVertices(arr,i);
+					continue;
+				}
+				sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].positions[0];
 				for (int j = 0; j < 6; j++)
 				{
 					sf::Vertex v;

@@ -24,9 +24,10 @@ namespace cc
 
 		struct TileData
 		{
-			std::string path;
+			// std::string path;
 			std::string name;
-			sf::Vector2i position;
+			std::vector<sf::Vector2i> positions;
+			std::vector<std::string> paths;
 			uint16_t id;
 			bool isTileEntity;
 		};
