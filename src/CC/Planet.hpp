@@ -5,8 +5,8 @@
 #include "Generator.hpp"
 #include "../json.hpp"
 #include "Entity.hpp"
-#include "JsonEditor.hpp"
 #include "TileEntity.hpp"
+#include "JsonEditor.hpp"
 namespace cc
 {
 	class Planet

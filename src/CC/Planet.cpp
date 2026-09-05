@@ -28,14 +28,17 @@ namespace cc
 		GenerateChunksInView(target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
-		for (int i = 0; i < entities.size(); i ++)
-		{
-			nlohmann::json j = entities[i]->ToJson();
-			if (jsonEditor.Draw(j,("entity " +  std::to_string(i)).c_str()))
-			{
-				entities[i]->FromJson(j);
-			}		
-		}
+		jsonEditor.Draw(this);
+		// ImGui::Begin("test");
+		// for (int i = 0; i < entities.size(); i ++)
+		// {
+		// 	nlohmann::json j = entities[i]->ToJson();
+		// 	if (jsonEditor.Draw(j,("entity " +  std::to_string(i)).c_str()))
+		// 	{
+		// 		entities[i]->FromJson(j);
+		// 	}		
+		// }
+		// ImGui::End();
 	}
 	void Planet::GenerateChunksInView(sf::RenderTarget *target)
 	{
@@ -149,19 +152,20 @@ namespace cc
 		nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
 		for (auto &e : entityData)
 		{
-			Entity *entity;
 			Entity::EntityType type = (Entity::EntityType)(e["type"]);
-			if (type == Entity::NONE)
-			{
-				entity = new Entity();
-			}
-			else if (type == Entity::HUMAN)
-			{
-				entity = new Human();
-			}else if (type == Entity::ITEM)
-			{
-				entity = new Item();
-			}
+			Entity *entity = CreateEntityFromType(type);
+			
+			// if (type == Entity::NONE)
+			// {
+			// 	entity = new Entity();
+			// }
+			// else if (type == Entity::HUMAN)
+			// {
+			// 	entity = new Human();
+			// }else if (type == Entity::ITEM)
+			// {
+			// 	entity = new Item();
+			// }
 			entity->FromJson(e);
 			AddEntity(entity);
 		}
@@ -186,6 +190,8 @@ namespace cc
 			return;
 		}
 		static int currentView = -1;
+		ImGui::SetNextWindowPos(ImVec2(321,4),ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(362,183),ImGuiCond_FirstUseEver);
 		ImGui::Begin("World Info");
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
@@ -322,6 +328,8 @@ namespace cc
 	}
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
+		ImGui::SetNextWindowPos(ImVec2(4,316),ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(231,196),ImGuiCond_FirstUseEver);
 		ImGui::Begin("Tool Menu");
 		ImGui::Text("Hovering over:");
 		std::string bgTile = "Background Tile:\n";

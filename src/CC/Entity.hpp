@@ -72,4 +72,5 @@ namespace cc
             size = {j["size"][0],j["size"][1]};
         }
     };
+    Entity* CreateEntityFromType(Entity::EntityType type);
 }
