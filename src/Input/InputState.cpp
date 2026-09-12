@@ -96,8 +96,8 @@ void InputState::DrawToWindow()
 	{
 		return;
 	}
-	ImGui::SetNextWindowPos(ImVec2(5,514),ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(227,186),ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(685,7),ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(227,186),ImGuiCond_Once);
 	ImGui::Begin("input");
 	nlohmann::json j;
 	j["mouse pos"] = {mousePosition.x, mousePosition.y};

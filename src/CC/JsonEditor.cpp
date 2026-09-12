@@ -4,8 +4,8 @@ namespace cc
 {
     void JsonEditor::Draw(Planet *p)
     {
-        ImGui::SetNextWindowPos(ImVec2(3,4),ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(315,311),ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(3,4),ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(315,311),ImGuiCond_Once);
         ImGui::Begin("Entity Editor");
         if (addingEntity)
         {

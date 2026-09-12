@@ -190,8 +190,8 @@ namespace cc
 			return;
 		}
 		static int currentView = -1;
-		ImGui::SetNextWindowPos(ImVec2(321,4),ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(362,183),ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(321,4),ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(362,183),ImGuiCond_Once);
 		ImGui::Begin("World Info");
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
@@ -240,7 +240,7 @@ namespace cc
 		ImGui::End();
 	}
 	//TODO: make this return a pair that also returns the tile entity if there is one here
-	Tile *Planet::GetTileAt(sf::Vector2i position)
+	std::pair<Tile*,TileEntity*> Planet::GetTileAt(sf::Vector2i position)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
@@ -248,7 +248,8 @@ namespace cc
 			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
+		// return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
+		return chunks[chunkPos]->GetTile(subChunkPos);
 	}
 	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity)
 	{
@@ -328,8 +329,8 @@ namespace cc
 	}
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
-		ImGui::SetNextWindowPos(ImVec2(4,316),ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(231,196),ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(4,316),ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(231,400),ImGuiCond_Once);
 		ImGui::Begin("Tool Menu");
 		ImGui::Text("Hovering over:");
 		std::string bgTile = "Background Tile:\n";
@@ -342,7 +343,13 @@ namespace cc
 		bgTile += "Type: " + std::to_string(bgT->type);
 		ImGui::Text(bgTile.c_str());
 		std::string tile = "Tile:\n";
-		tile += "Type: " + TileInfo::tileRegistry[GetTileAt(worldTilePos)->type].name;
+		auto t = GetTileAt(worldTilePos);
+		tile += "Type: " + TileInfo::tileRegistry[t.first->type].name;
+		if (t.second != nullptr)
+		{
+			tile += "\nTile Entity data:\n";
+			tile += t.second->ToJson().dump(2);
+		}
 		ImGui::Text(tile.c_str());
 		static int currentView = 0;
 		std::vector<std::string> names = {"Add Tile", "Add Entity", "blah blahh blahhhhoiahsdfoj"};

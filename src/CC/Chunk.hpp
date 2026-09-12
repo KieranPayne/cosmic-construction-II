@@ -30,6 +30,7 @@ constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 4);
 		void RemoveEntity(Entity* entity);
 		void RemoveEntity(int index);
 		void SetTile(sf::Vector2i pos, Tile tile, TileEntity* tileEntity = nullptr);
+		std::pair<Tile*, TileEntity*> GetTile(sf::Vector2i pos);
 		uint16_t TileEntityIndex(sf::Vector2i pos);
 		void RemoveTileEntity(uint16_t index);
 	};

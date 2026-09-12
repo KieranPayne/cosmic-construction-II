@@ -214,4 +214,14 @@ namespace cc
 		// TODO: add some sort of ondelete function. this would be used if a container holding items gets destroyed for example
 		tileEntities.erase(index);
 	}
+	std::pair<Tile*, TileEntity*> Chunk::GetTile(sf::Vector2i pos)
+	{
+		Tile* t = &tiles[pos.x][pos.y];
+		TileEntity* e = nullptr;
+		if (TileInfo::tileRegistry[t->type].isTileEntity)
+		{
+			e = tileEntities[TileEntityIndex(pos)].get();
+		}
+		return {t,e};
+	}
 }

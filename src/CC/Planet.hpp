@@ -41,7 +41,7 @@ namespace cc
 		// like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
 		void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
-		Tile *GetTileAt(sf::Vector2i position);
+		std::pair<Tile*,TileEntity*> GetTileAt(sf::Vector2i position);
 		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr);
 		nlohmann::json ToJson();
 		void FromJson(nlohmann::json j);

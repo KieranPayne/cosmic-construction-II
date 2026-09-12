@@ -6,6 +6,61 @@
 #include "PerlinNoise.hpp"
 namespace cc
 {
+	PartialChunk::PartialChunk(Generator *generator, sf::Vector2i position)
+	{
+		this->generator = generator;
+		nextStage = GenerationStage::WATER_AND_STONE;
+		this->position = position;
+	}
+	void PartialChunk::GenerateNextStage()
+	{
+		if (nextStage == GenerationStage::WATER_AND_STONE)
+		{
+			chunk = std::make_unique<Chunk>(position);
+			siv::PerlinNoise perlin(generator->seed);
+
+			const double noiseScale = 0.03;
+			for (int x = 0; x < CHUNK_SIZE; x++)
+			{
+				for (int y = 0; y < CHUNK_SIZE; y++)
+				{
+					int worldX = position.x * CHUNK_SIZE + x;
+					int worldY = position.y * CHUNK_SIZE + y;
+
+					double noise = perlin.octave2D_01(
+						worldX * noiseScale,
+						worldY * noiseScale,
+						3, 0.2);
+					float bounds[2] = {
+						0.35f,
+						0.8f};
+					chunk->backgroundTiles[x][y].type = BackgroundTileType::WATER;
+					for (int i = 0; i < 2; i++)
+					{
+						if (noise < bounds[i])
+						{
+							chunk->backgroundTiles[x][y].type = (BackgroundTileType)(i);
+							// col = colours[i];
+							break;
+						}
+					}
+				}
+			}
+		}else if (nextStage == GenerationStage::REMOVE_SMALL_AREAS)
+		{
+			for (int x = 0; x < CHUNK_SIZE; x ++)
+			{
+				for (int y = 0; y < CHUNK_SIZE; y ++)
+				{
+					if (chunk->backgroundTiles[x][y].type == BackgroundTileType::WATER)
+					{
+
+					}
+				}
+			}
+		}
+	}
+
 	Generator::Generator()
 	{
 	}
@@ -47,7 +102,7 @@ namespace cc
 				double noise = perlin.octave2D_01(
 					worldX * noiseScale,
 					worldY * noiseScale,
-					4);
+					3, 0.2);
 
 				int numColours = 4;
 				sf::Color colours[numColours] = {
@@ -57,17 +112,17 @@ namespace cc
 					{80, 84, 80}};
 
 				float bounds[numColours - 1] = {
-					0.3f,
-					0.33f,
+					0.35f,
+					0.4f,
 					0.8f};
 
 				sf::Color col = colours[numColours - 1];
-				c->backgroundTiles[x][y].type = (BackgroundTile::BackgroundTileType)(numColours - 1);
+				c->backgroundTiles[x][y].type = (BackgroundTileType)(numColours - 1);
 				for (int i = 0; i < numColours - 1; i++)
 				{
 					if (noise < bounds[i])
 					{
-						c->backgroundTiles[x][y].type = (BackgroundTile::BackgroundTileType)(i);
+						c->backgroundTiles[x][y].type = (BackgroundTileType)(i);
 						col = colours[i];
 						break;
 					}
@@ -84,7 +139,7 @@ namespace cc
 				c->backgroundTiles[x][y].color = col;
 			}
 		}
-		
+
 		return c;
 	}
 
@@ -101,5 +156,18 @@ namespace cc
 	void Generator::FromJson(nlohmann::json j)
 	{
 		seed = j["seed"];
+	}
+	void Generator::Save(std::string path)
+	{
+		nlohmann::json j = ToJson();
+		SaveManager::WriteData(path + "/generator.json", j.dump());
+		// TODO: SAVE PARTIAL CHUNKS
+	}
+	void Generator::Load(std::string path)
+	{
+		std::string data = SaveManager::ReadData(path + "/generator.json");
+		nlohmann::json j = nlohmann::json::parse(data);
+		FromJson(j);
+		// TODO: LOAD PARTIAL CHUNKS
 	}
 }
