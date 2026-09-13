@@ -7,9 +7,7 @@ namespace cc
 {
 	enum class GenerationStage : uint16_t
 	{
-		WATER_AND_STONE,
-		REMOVE_SMALL_AREAS,
-		SAND,
+		SET_TYPES = 0,
 		SET_TILE_COLORS,
 		FINISHED
 	};
@@ -25,14 +23,21 @@ namespace cc
 		void GenerateNextStage();
 		//the stage passed in is what the next stage should be when done.
 		void GenerateToStage(GenerationStage stage);
+		//should be passed in as "/partial chunks/"
 		void Save(std::string path);
 		void Load(std::string path);
-		bool hasCompletedStage(GenerationStage stage);
+		nlohmann::json ToJson();
+		void FromJson(nlohmann::json& j);
+		//whether next stage is 
+		bool NextStageGreaterOrEqual(GenerationStage stage);
+		// std::vector<sf::Vector2i> GetConnectedTiles(sf::Vector2i startPos, BackgroundTileType type);
 	};
+	class Planet;
 	class Generator
 	{
 	public:
-		std::unordered_map<sf::Vector2i, std::unique_ptr<PartialChunk>,ChunkHash> partialChunks;
+		std::unordered_map<sf::Vector2i, std::unique_ptr<PartialChunk>,ChunkHash> partialChunks = {};
+		Planet* planet;
 		uint64_t seed;
 		Generator();
 		void SetSeed(uint64_t seed);
@@ -40,7 +45,10 @@ namespace cc
 		void FromJson(nlohmann::json j);
 		void Save(std::string path);
 		void Load(std::string path);
+		void AddPartialChunk(PartialChunk* p);
 		Chunk *GenerateChunk(sf::Vector2i position);
+		// BackgroundTile* GetBackgroundTileAt(sf::Vector2i position, GenerationStage minStage);
+		// void SetBackgroundTileAt(sf::Vector2i position, BackgroundTile backgroundTile);
 	};
 
 }

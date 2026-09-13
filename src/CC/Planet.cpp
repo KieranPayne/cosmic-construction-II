@@ -18,6 +18,7 @@ namespace cc
 		// chunks.clear();
 		// camera = Camera();
 		currFps = 0;
+		generator.planet = this;
 	}
 	void Planet::Update(double dt)
 	{
@@ -123,6 +124,7 @@ namespace cc
 		SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
 		// misc variables get saved in planet json
 		SaveManager::WriteData(path + "/planet.json", ToJson().dump(2));
+		generator.Save(path);
 	}
 	void Planet::Load()
 	{
@@ -171,6 +173,7 @@ namespace cc
 		}
 		// load misc data
 		FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
+		generator.Load(path);
 	}
 	void Planet::AddEntity(Entity *entity)
 	{
@@ -340,7 +343,7 @@ namespace cc
 		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;
 		BackgroundTile *bgT = &chunks[worldChunkPos]->backgroundTiles[subChunkPos.x][subChunkPos.y];
 		bgTile += "Colour: " + std::to_string(bgT->color.r) + " " + std::to_string(bgT->color.g) + " " + std::to_string(bgT->color.b) + "\n";
-		bgTile += "Type: " + std::to_string(bgT->type);
+		bgTile += "Type: " + std::to_string((uint8_t) bgT->type);
 		ImGui::Text(bgTile.c_str());
 		std::string tile = "Tile:\n";
 		auto t = GetTileAt(worldTilePos);
@@ -406,13 +409,13 @@ namespace cc
 		nlohmann::json j;
 		j["camera"] = camera.ToJson();
 		j["seed"] = seed;
-		j["generator"] = generator.ToJson();
+		// j["generator"] = generator.ToJson();
 		return j;
 	}
 	void Planet::FromJson(nlohmann::json j)
 	{
 		camera.FromJson(j["camera"]);
-		generator.FromJson(j["generator"]);
+		// generator.FromJson(j["generator"]);
 	}
 	void Planet::GetTileVertices(sf::Vector2i chunkPos)
 	{

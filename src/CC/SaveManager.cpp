@@ -62,13 +62,13 @@ namespace cc
 			}
 			// LoadStartingChunks(s);
 			s->renderTarget = window.get();
-			s->planets[0].AddEntity(new Entity());
+			s->planets[0]->AddEntity(new Entity());
 			Human* h = new Human();		
 			h->position = {1.f,0.f};	
-			s->planets[0].AddEntity(h);
+			s->planets[0]->AddEntity(h);
 			Item* item = new Item();
 			item->position = {2.f,0.f};
-			s->planets[0].AddEntity(item);
+			s->planets[0]->AddEntity(item);
 			InputState inputState;
 			s->Update(inputState,0);
 			delete state;
@@ -89,13 +89,13 @@ namespace cc
 			s->SetSeed(j["seed"]);
 			InputState inputState;
 			s->renderTarget = window.get();
-			s->planets[0].Load();
+			s->planets[0]->Load();
 			s->Update(inputState,0);
 			state = s;
 		}
 		void Save(State *state)
 		{
-			state->planets[0].Save();
+			state->planets[0]->Save();
 			WriteMetadata(state);
 		}
 		void WriteMetadata(State* state)
@@ -362,7 +362,7 @@ namespace cc
 		int range = 10;
 		for (int x = -range; x <= range; x ++){
 			for (int z = -range; z <= range; z ++){
-				state->planets[0].chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0].generator.GenerateChunk({x, z}));
+				state->planets[0]->chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0]->generator.GenerateChunk({x, z}));
 			}
 		}
 	}

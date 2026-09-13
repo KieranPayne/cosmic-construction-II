@@ -90,7 +90,7 @@ namespace cc
 				bytes.push_back(backgroundTiles[x][y].color.r);
 				bytes.push_back(backgroundTiles[x][y].color.g);
 				bytes.push_back(backgroundTiles[x][y].color.b);
-				bytes.push_back(backgroundTiles[x][y].type);
+				bytes.push_back((uint8_t) backgroundTiles[x][y].type);
 			}
 		}
 
@@ -114,7 +114,7 @@ namespace cc
 				uint8_t g = bytes[index++];
 				uint8_t b = bytes[index++];
 				backgroundTiles[x][y].color = sf::Color(r, g, b);
-				backgroundTiles[x][y].type = (BackgroundTile::BackgroundTileType)bytes[index++];
+				backgroundTiles[x][y].type = (BackgroundTileType)bytes[index++];
 			}
 		}
 	}

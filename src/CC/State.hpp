@@ -11,7 +11,7 @@ namespace cc
 	class State : public Kosmic::State
 	{
 	public:
-		std::vector<Planet> planets;
+		std::vector<std::unique_ptr<Planet>> planets;
 		int activePlanet;
 		int viewHeight;
 		uint64_t seed;

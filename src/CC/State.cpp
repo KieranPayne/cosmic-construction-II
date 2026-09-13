@@ -10,8 +10,8 @@ namespace cc
 	{
 		seed = 0;
 		activePlanet = 0;
-		planets.push_back(Planet());
-		planets[0].index = 0;
+		planets.push_back(std::make_unique<Planet>());
+		planets[0]->index = 0;
 		viewHeight = 15;
 		paused = false;
 		doTick = false;
@@ -43,28 +43,28 @@ namespace cc
 				timeSinceTick = 0;
 				for (auto &p : planets)
 				{
-					p.Tick();
+					p->Tick();
 				}
 			}
 		}
 		if (inputState.Pressed(sf::Keyboard::Key::K)){
 			for (auto &p : planets)
 			{
-				p.Tick();
+				p->Tick();
 			}
 		}
 
 		for (auto &p : planets)
 		{
-			p.Update(deltaTime);
+			p->Update(deltaTime);
 		}
-		planets[activePlanet].VisibleUpdate(renderTarget, inputState, deltaTime);
+		planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 	}
 	void State::DerivedRender()
 	{
 		sf::View original = renderTarget->getView();
-		planets[activePlanet].camera.SetView(renderTarget);
-		planets[activePlanet].Render(renderTarget);
+		planets[activePlanet]->camera.SetView(renderTarget);
+		planets[activePlanet]->Render(renderTarget);
 		renderTarget->setView(original);
 	}
 	void State::DisplayPauseMenu()
@@ -99,6 +99,6 @@ namespace cc
 	void State::SetSeed(uint64_t seed)
 	{
 		this->seed = seed;
-		planets[0].SetSeed(seed);
+		planets[0]->SetSeed(seed);
 	}
 }
