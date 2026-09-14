@@ -16,9 +16,12 @@ namespace cc
 	enum class BackgroundTileType : uint8_t
 	{
 		WATER = 0,
+		WATERY_SAND,
 		SAND,
 		GRASS,
-		STONE
+		GRASSY_STONE,
+		STONE,
+		TALL_STONE
 	};
 	struct BackgroundTile
 	{
