@@ -1,5 +1,6 @@
 #pragma once
-#include "State.hpp"
+// #include "State.hpp"
+#include "Server.hpp"
 namespace cc
 {
     namespace SaveManager
@@ -7,11 +8,11 @@ namespace cc
         extern std::string saveName;
         extern std::string savePath;
         // extern uint64_t seed;
-        void Save(State *state);
+        void SaveServer(Server* server);
         void CreateSave(std::string name, std::string seed);
-        void Load(int index);
-        void WriteMetadata(State* state);
-        void LoadStartingChunks(State* state);
+        void LoadServer(int index);
+        void WriteServerMetadata(Server* server);
+        // void LoadStartingChunks(State* state);
         bool CreateDirectory(std::string path);
         bool DirExists(std::string path);
         std::vector<std::string> ListFiles(std::string path);

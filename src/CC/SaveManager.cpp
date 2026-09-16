@@ -47,35 +47,35 @@ namespace cc
 			}
 			savePath = dir + "/" + std::to_string(maxIndex);
 			CreateDirectory(savePath);
-			State *s = new State();
+			server = std::make_unique<Server>();
 			
 			const bool randomize = false;
 			if (seed == "" && randomize)
 			{
-				s->SetSeed(rand());
+				server->SetSeed(rand());
 				// SaveManager::seed = rand();
 			}
 			else
 			{
-				s->SetSeed(HashFromString(seed));
+				server->SetSeed(HashFromString(seed));
 				// SaveManager::seed = HashFromString(seed);
 			}
 			// LoadStartingChunks(s);
-			s->renderTarget = window.get();
-			s->planets[0]->AddEntity(new Entity());
+			// s->renderTarget = window.get();
+			server->planets[0]->AddEntity(new Entity());
 			Human* h = new Human();		
 			h->position = {1.f,0.f};	
-			s->planets[0]->AddEntity(h);
+			server->planets[0]->AddEntity(h);
 			Item* item = new Item();
 			item->position = {2.f,0.f};
-			s->planets[0]->AddEntity(item);
-			InputState inputState;
-			s->Update(inputState,0);
-			delete state;
-			state = s;
-			Save(s);
+			server->planets[0]->AddEntity(item);
+			// InputState inputState;
+			// s->Update(inputState,0);
+			// delete state;
+			// state = s;
+			SaveServer(server.get());
 		}
-		void Load(int index)
+		void LoadServer(int index)
 		{
 			std::cout << index << std::endl;
 			playTimeTimer.restart();
@@ -85,20 +85,27 @@ namespace cc
 
 			nlohmann::json j = nlohmann::json::parse(ReadData(savePath + "/metadata.json"));
 			saveName = j["saveName"];
-			State *s = new State();
-			s->SetSeed(j["seed"]);
+			// Server *s = new Server();
+			server = std::make_unique<Server>();
+			server->SetSeed(j["seed"]);
 			InputState inputState;
-			s->renderTarget = window.get();
-			s->planets[0]->Load();
-			s->Update(inputState,0);
-			state = s;
+			// server->renderTarget = window.get();
+			for (auto& p : server->planets)
+			{
+				p->Load();
+			}
+			// server->Update(inputState,0);
 		}
-		void Save(State *state)
+		void SaveServer(Server* server)
 		{
-			state->planets[0]->Save();
-			WriteMetadata(state);
+			for (auto& p : server->planets)
+			{
+				p->Save();
+			}
+			// state->planets[0]->Save();
+			WriteServerMetadata(server);
 		}
-		void WriteMetadata(State* state)
+		void WriteServerMetadata(Server* server)
 		{
 			struct stat buffer;   
   			bool exists = (stat ((savePath + "/metadata.json").c_str(), &buffer) == 0); 
@@ -116,7 +123,7 @@ namespace cc
 			auto duration = now.time_since_epoch();
 			auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
 			j["modified"] = seconds;
-			j["seed"] = state->seed;
+			j["seed"] = server->GetSeed();
 			WriteData(savePath + "/metadata.json", j.dump(2));
 		}
 		void WriteData(std::string path, std::string string)
@@ -358,12 +365,12 @@ namespace cc
 			return data;
 		}
 	}
-	void SaveManager::LoadStartingChunks(State* state){
-		int range = 10;
-		for (int x = -range; x <= range; x ++){
-			for (int z = -range; z <= range; z ++){
-				state->planets[0]->chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0]->generator.GenerateChunk({x, z}));
-			}
-		}
-	}
+	// void SaveManager::LoadStartingChunks(State* state){
+	// 	int range = 10;
+	// 	for (int x = -range; x <= range; x ++){
+	// 		for (int z = -range; z <= range; z ++){
+	// 			state->planets[0]->chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0]->generator.GenerateChunk({x, z}));
+	// 		}
+	// 	}
+	// }
 }

@@ -17,8 +17,8 @@ std::unique_ptr<sf::RenderWindow> window;
 // width and height of the window
 int width = 1280;
 int height = 720;
-Kosmic::State *state = nullptr;
-
+std::unique_ptr<Kosmic::State> state;
+std::unique_ptr<cc::Server> server;
 Kosmic::Macro macro;
 
 // the main procedure that runs the program
@@ -40,7 +40,7 @@ int main()
 		return -1;
 	Input input;
 	// state = new Civitron::State();
-	state = new cc::MainMenu();
+	state = std::unique_ptr<Kosmic::State>(new cc::MainMenu());
 	state->renderTarget = window.get();
 	sf::Clock deltaClock;
 	cc::TileInfo::Init();
@@ -76,7 +76,7 @@ int main()
 		inputState.DrawToWindow();
 		if (macro.active)
 		{
-			macro.Execute(state);
+			macro.Execute(state.get());
 			InputState copy = InputState(macro.inputState);
 			inputState = copy;
 		}
