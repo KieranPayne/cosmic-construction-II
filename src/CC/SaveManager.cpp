@@ -12,6 +12,7 @@
 #include <chrono>
 #include "Item.hpp"
 #include "Human.hpp"
+#include "Client.hpp"
 namespace cc
 {
 	namespace SaveManager
@@ -53,15 +54,11 @@ namespace cc
 			if (seed == "" && randomize)
 			{
 				server->SetSeed(rand());
-				// SaveManager::seed = rand();
 			}
 			else
 			{
 				server->SetSeed(HashFromString(seed));
-				// SaveManager::seed = HashFromString(seed);
 			}
-			// LoadStartingChunks(s);
-			// s->renderTarget = window.get();
 			server->planets[0]->AddEntity(new Entity());
 			Human* h = new Human();		
 			h->position = {1.f,0.f};	
@@ -69,11 +66,11 @@ namespace cc
 			Item* item = new Item();
 			item->position = {2.f,0.f};
 			server->planets[0]->AddEntity(item);
-			// InputState inputState;
-			// s->Update(inputState,0);
-			// delete state;
-			// state = s;
 			SaveServer(server.get());
+			Client* client = new Client(state->renderTarget);
+			InputState inputState;
+			client->Update(inputState,0);
+			state = std::unique_ptr<Kosmic::State>(client);
 		}
 		void LoadServer(int index)
 		{
@@ -95,6 +92,10 @@ namespace cc
 				p->Load();
 			}
 			// server->Update(inputState,0);
+			Client* client = new Client(state->renderTarget);
+			InputState inputState;
+			client->Update(inputState,0);
+			state = std::unique_ptr<Kosmic::State>(client);
 		}
 		void SaveServer(Server* server)
 		{
@@ -365,12 +366,4 @@ namespace cc
 			return data;
 		}
 	}
-	// void SaveManager::LoadStartingChunks(State* state){
-	// 	int range = 10;
-	// 	for (int x = -range; x <= range; x ++){
-	// 		for (int z = -range; z <= range; z ++){
-	// 			state->planets[0]->chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0]->generator.GenerateChunk({x, z}));
-	// 		}
-	// 	}
-	// }
 }

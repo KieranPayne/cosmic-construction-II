@@ -39,15 +39,29 @@ namespace cc
 		{
 			paused = false;
 		}
-		if (ImGui::Button("save and quit"))
+		if (server.get() != nullptr)
 		{
-			SaveManager::SaveServer(server.get());
-			state = std::unique_ptr<Kosmic::State>(new MainMenu());
-			InputState inputState;
-			state->renderTarget = renderTarget;
-			state->Update(inputState,0);
-			delete this;
+			if (ImGui::Button("save and quit"))
+			{
+				SaveManager::SaveServer(server.get());
+				state = std::unique_ptr<Kosmic::State>(new MainMenu());
+				InputState inputState;
+				state->renderTarget = renderTarget;
+				state->Update(inputState,0);
+				delete this;
+			}
+		}else
+		{
+			if (ImGui::Button("disconnect"))
+			{
+				state = std::unique_ptr<Kosmic::State>(new MainMenu());
+				InputState inputState;
+				state->renderTarget = renderTarget;
+				state->Update(inputState,0);
+				delete this;
+			}
 		}
+		
 		ImGui::End();
     }
 }
