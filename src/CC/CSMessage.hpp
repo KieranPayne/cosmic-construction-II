@@ -21,14 +21,4 @@ namespace cc
 
         REQUEST_RESULT
     };
-    class CSMessage
-    {
-        public:
-        CSMessageType type;
-        protected:
-        void ToPacket(sf::Packet& packet);
-        void FromPacket(sf::Packet& packet);
-    };
-    void CSMessageToPacket(CSMessage* message, sf::Packet& packet);
-    CSMessage* CSMessageFromPacket(sf::Packet& packet);
 }
