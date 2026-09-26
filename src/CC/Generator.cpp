@@ -206,28 +206,41 @@ namespace cc
 	{
 		std::string coords = std::to_string(position.x) + " " + std::to_string(position.y);
 		chunk->WriteData(path + coords + ".txt");
-		SaveManager::WriteData(path + coords + ".json", ToJson().dump());
+		Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serialize(s);
+		SaveManager::WriteSerializerToFile(s,path + coords);
+		// SaveManager::WriteData(path + coords + ".txt", s.json().dump());
 	}
 	void PartialChunk::Load(std::string path)
 	{
 		chunk = std::make_unique<Chunk>(position);
 		std::string coords = std::to_string(position.x) + " " + std::to_string(position.y);
 		chunk->ReadData(path + coords + ".txt");
-		nlohmann::json j = nlohmann::json::parse(SaveManager::ReadData(path + coords + ".json"));
-		FromJson(j);
+		// Serializer s(Serializer::Mode::READ,SaveManager::saveFormat);
+		Serializer s = SaveManager::LoadSerializerFromFile(path + coords);
+		// nlohmann::json j = nlohmann::json::parse(SaveManager::ReadData(path + coords + ".json"));
+		Serialize(s);
+		// FromJson(j);
 	}
-	nlohmann::json PartialChunk::ToJson()
+	void PartialChunk::Serialize(Serializer& s)
 	{
-		nlohmann::json j;
-		j["position"] = {position.x, position.y};
-		j["nextStage"] = (uint16_t)nextStage;
-		return j;
+		s.field("position",position);
+		uint16_t n = (uint16_t)nextStage;
+		s.field("nextStage",n);
+		nextStage = (GenerationStage)n;
 	}
-	void PartialChunk::FromJson(nlohmann::json &j)
-	{
-		position = {j["position"][0], j["position"][1]};
-		nextStage = (GenerationStage)j["nextStage"];
-	}
+	// nlohmann::json PartialChunk::ToJson()
+	// {
+	// 	nlohmann::json j;
+	// 	j["position"] = {position.x, position.y};
+	// 	j["nextStage"] = (uint16_t)nextStage;
+	// 	return j;
+	// }
+	// void PartialChunk::FromJson(nlohmann::json &j)
+	// {
+	// 	position = {j["position"][0], j["position"][1]};
+	// 	nextStage = (GenerationStage)j["nextStage"];
+	// }
 	bool PartialChunk::NextStageGreaterOrEqual(GenerationStage stage)
 	{
 		return ((uint16_t)nextStage >= (uint16_t)stage);
@@ -317,20 +330,27 @@ namespace cc
 	{
 		this->seed = seed;
 	}
-	nlohmann::json Generator::ToJson()
+	void Generator::Serialize(Serializer& s)
 	{
-		nlohmann::json j;
-		j["seed"] = seed;
-		return j;
+		s.field("seed",seed);
 	}
-	void Generator::FromJson(nlohmann::json j)
-	{
-		seed = j["seed"];
-	}
+	// nlohmann::json Generator::ToJson()
+	// {
+	// 	nlohmann::json j;
+	// 	j["seed"] = seed;
+	// 	return j;
+	// }
+	// void Generator::FromJson(nlohmann::json j)
+	// {
+	// 	seed = j["seed"];
+	// }
 	void Generator::Save(std::string path)
 	{
-		nlohmann::json j = ToJson();
-		SaveManager::WriteData(path + "/generator.json", j.dump());
+		Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serialize(s);
+		SaveManager::WriteSerializerToFile(s,path + "/generator");
+		// nlohmann::json j = ToJson();
+		// SaveManager::WriteData(path + "/generator.json", j.dump());
 		if (!SaveManager::DirExists(path + "/partial chunks"))
 		{
 			SaveManager::CreateDirectory(path + "/partial chunks");
@@ -342,9 +362,11 @@ namespace cc
 	}
 	void Generator::Load(std::string path)
 	{
-		std::string data = SaveManager::ReadData(path + "/generator.json");
-		nlohmann::json j = nlohmann::json::parse(data);
-		FromJson(j);
+		Serializer s = SaveManager::LoadSerializerFromFile(path + "/generator");
+		Serialize(s);
+		// std::string data = SaveManager::ReadData(path + "/generator.json");
+		// nlohmann::json j = nlohmann::json::parse(data);
+		// FromJson(j);
 		std::string chunkPath = path + "/partial chunks";
 		auto files = SaveManager::ListFiles(chunkPath);
 		for (auto &f : files)

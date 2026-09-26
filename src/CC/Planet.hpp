@@ -7,6 +7,7 @@
 #include "Entity.hpp"
 #include "TileEntity.hpp"
 #include "JsonEditor.hpp"
+#include "Serializer.hpp"
 namespace cc
 {
 	class Planet
@@ -43,8 +44,9 @@ namespace cc
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
 		std::pair<Tile*,TileEntity*> GetTileAt(sf::Vector2i position);
 		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr);
-		nlohmann::json ToJson();
-		void FromJson(nlohmann::json j);
+		void Serialize(Serializer& s);
+		// nlohmann::json ToJson();
+		// void FromJson(nlohmann::json j);
 		void SetSeed(uint64_t seed);
 		// some nonsense to allow having a vector of unique ptrs
 		Planet(const Planet &) = delete;

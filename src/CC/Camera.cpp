@@ -85,20 +85,26 @@ namespace cc
 		target->setView(view);
 	}
 
-	nlohmann::json Camera::ToJson()
+	void Camera::Serialize(Serializer& s)
 	{
-		nlohmann::json j;
-		j["position"] = {position.x, position.y};
-		j["targetZoom"] = targetZoom;
-		return j;
+		s.field("position",position);
+		s.field("targetZoom",targetZoom);
 	}
 
-	void Camera::FromJson(nlohmann::json j)
-	{
-		targetZoom = j["targetZoom"];
-		zoom = j["targetZoom"];
-		position = {j["position"][0], j["position"][1]};
-	}
+	// nlohmann::json Camera::ToJson()
+	// {
+	// 	nlohmann::json j;
+	// 	j["position"] = {position.x, position.y};
+	// 	j["targetZoom"] = targetZoom;
+	// 	return j;
+	// }
+
+	// void Camera::FromJson(nlohmann::json j)
+	// {
+	// 	targetZoom = j["targetZoom"];
+	// 	zoom = j["targetZoom"];
+	// 	position = {j["position"][0], j["position"][1]};
+	// }
 
 	Camera::~Camera()
 	{

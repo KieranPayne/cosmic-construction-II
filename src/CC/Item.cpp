@@ -10,15 +10,20 @@ namespace cc
     {
         return JsonAsVector(EntityInfo::texturesJson["Item"][(uint16_t)itemData.type]);
     }
-    nlohmann::json Item::ToJson()
+    void Item::Serialize(Serializer& s)
     {
-        nlohmann::json j = Entity::ToJson();
-        j["itemData"] = itemData.ToJson();
-        return j;
+        Entity::Serialize(s);
+        s.field("itemData",itemData);
     }
-    void Item::FromJson(nlohmann::json& j)
-    {
-        Entity::FromJson(j);
-        itemData.FromJson(j["itemData"]);
-    }
+    // nlohmann::json Item::ToJson()
+    // {
+    //     nlohmann::json j = Entity::ToJson();
+    //     j["itemData"] = itemData.ToJson();
+    //     return j;
+    // }
+    // void Item::FromJson(nlohmann::json& j)
+    // {
+    //     Entity::FromJson(j);
+    //     itemData.FromJson(j["itemData"]);
+    // }
 }
