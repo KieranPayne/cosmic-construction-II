@@ -67,7 +67,10 @@ namespace cc
 			item->position = {2.f,0.f};
 			server->planets[0]->AddEntity(item);
 			SaveServer(server.get());
+			server->Start(5000);
 			Client* client = new Client(state->renderTarget);
+			sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			client->ConnectToServer(ip,5000);
 			InputState inputState;
 			client->Update(inputState,0);
 			state = std::unique_ptr<Kosmic::State>(client);
@@ -85,7 +88,7 @@ namespace cc
 			// Server *s = new Server();
 			server = std::make_unique<Server>();
 			server->SetSeed(j["seed"]);
-			InputState inputState;
+			// InputState inputState;
 			// server->renderTarget = window.get();
 			for (auto& p : server->planets)
 			{

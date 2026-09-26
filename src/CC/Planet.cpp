@@ -26,20 +26,9 @@ namespace cc
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
 		camera.Update(dt, inputState);
-		GenerateChunksInView(target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
 		jsonEditor.Draw(this);
-		// ImGui::Begin("test");
-		// for (int i = 0; i < entities.size(); i ++)
-		// {
-		// 	nlohmann::json j = entities[i]->ToJson();
-		// 	if (jsonEditor.Draw(j,("entity " +  std::to_string(i)).c_str()))
-		// 	{
-		// 		entities[i]->FromJson(j);
-		// 	}		
-		// }
-		// ImGui::End();
 	}
 	void Planet::GenerateChunksInView(sf::RenderTarget *target)
 	{
@@ -76,6 +65,10 @@ namespace cc
 		{
 			for (int y = topLeft.y; y <= bottomRight.y; y++)
 			{
+				if (!chunks.contains({x,y}))
+				{
+					continue;
+				}
 				if (!tileVertices.contains({x, y}))
 				{
 					GetTileVertices({x, y});
@@ -88,6 +81,10 @@ namespace cc
 		{
 			for (int y = topLeft.y - 1; y <= bottomRight.y + 1; y++)
 			{
+				if (!chunks.contains({x,y}))
+				{
+					continue;
+				}
 				chunks[{x, y}]->RenderEntities(target);
 			}
 		}
@@ -201,9 +198,6 @@ namespace cc
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
 		// ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
 
-		static float t = 0.1f;
-		ImGui::SliderFloat("Time Per Tick", &t, 0.f, 1.f);
-		((State *)state)->timePerTick = t;
 
 		// bgTile += "Colour: " + std::to_string()
 		const char *currentLabel = "None";

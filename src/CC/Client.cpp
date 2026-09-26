@@ -8,15 +8,15 @@ namespace cc
 	{
 		this->renderTarget = target;
 		activePlanet = 0;
-		planets.push_back(std::unique_ptr<Planet>());
+		planets.push_back(std::make_unique<Planet>());
 	}
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
-		for (auto &p : planets)
-		{
-			p->VisibleUpdate(renderTarget, inputState, deltaTime);
-		}
+		// for (auto &p : planets)
+		// {
+		// 	p->VisibleUpdate(renderTarget, inputState, deltaTime);
+		// }
 	}
 	void Client::DerivedRender()
 	{

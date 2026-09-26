@@ -2,6 +2,18 @@
 
 namespace cc
 {
+    void Server::Start(unsigned short port)
+    {
+        if (listener.listen(port) != sf::Socket::Status::Done)
+        {
+            std::cerr << "Failed to listen on port " << port << '\n';
+            return;
+        }
+
+        listener.setBlocking(false);
+
+        std::cout << "Server listening on port " << port << '\n';
+    }
     Server::Server()
     {
         planets.push_back(std::make_unique<Planet>());
@@ -58,7 +70,7 @@ namespace cc
             }
         }
     }
-    void Server::Broadcast(sf::Packet &packet, std::vector<uint64_t> exclusions = {})
+    void Server::Broadcast(sf::Packet &packet, std::vector<uint64_t> exclusions)
     {
         for (auto &client : clients)
         {

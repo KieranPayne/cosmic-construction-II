@@ -28,6 +28,7 @@ namespace cc
         uint64_t GetSeed();
 
         //networking functions
+        void Start(unsigned short port);
         void SendToClient(uint64_t clientId, sf::Packet& packet);
         void Broadcast(sf::Packet& packet, std::vector<uint64_t> exclusions = {});
         void AcceptClients();
