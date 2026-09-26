@@ -10,6 +10,7 @@
 #include "Human.hpp"
 #include "JsonEditor.hpp"
 #include "Item.hpp"
+#include "Serializer.hpp"
 namespace cc
 {
 	Planet::Planet()
@@ -119,7 +120,10 @@ namespace cc
 		nlohmann::json entityData;
 		for (auto &e : entities)
 		{
-			entityData.push_back(e->ToJson());
+			Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+			// JsonWriter j;
+			e->Serialize(s);
+			entityData.push_back(s.json());
 		}
 		SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
 		// misc variables get saved in planet json
@@ -168,7 +172,10 @@ namespace cc
 			// {
 			// 	entity = new Item();
 			// }
-			entity->FromJson(e);
+			Serializer s(Serializer::Mode::READ,Serializer::Format::JSON,e);
+			// JsonReader j(e);
+
+			entity->Serialize(s);
 			AddEntity(entity);
 		}
 		// load misc data
@@ -236,7 +243,9 @@ namespace cc
 			std::string result = "";
 			for (auto &e : entities)
 			{
-				result += e->ToJson().dump(2) + "\n";
+				Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+				e->Serialize(s);
+				result += s.json().dump(2) + "\n";
 			}
 			ImGui::Text(result.c_str());
 		}

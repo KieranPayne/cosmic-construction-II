@@ -1,5 +1,6 @@
 #include "JsonEditor.hpp"
 #include "Planet.hpp"
+#include "Serializer.hpp"
 namespace cc
 {
     void JsonEditor::Draw(Planet *p)
@@ -22,7 +23,11 @@ namespace cc
                 return;
             }
             ImGui::Separator();
-            nlohmann::json j = entity->ToJson();
+            // JsonWriter jw;
+            Serializer sw(Serializer::Mode::WRITE,Serializer::Format::JSON);
+            entity->Serialize(sw);
+            nlohmann::json j = sw.json();
+            // nlohmann::json j = entity->ToJson();
             int currType = j["type"];
             if (DrawEntity(j,"entity"))
             {
@@ -32,7 +37,8 @@ namespace cc
                     entity = CreateEntityFromType((Entity::EntityType)j["type"]);
                 }else
                 {
-                    entity->FromJson(j);
+                    Serializer sr(Serializer::Mode::READ,Serializer::Format::JSON,j);
+                    entity->Serialize(sr);
                 }
             }
             ImGui::End();
@@ -48,10 +54,13 @@ namespace cc
             ImGui::Separator();
             for (int i = 0; i < p->entities.size(); i++)
             {
-                nlohmann::json j = p->entities[i]->ToJson();
+                Serializer sw(Serializer::Mode::WRITE,Serializer::Format::JSON);
+                p->entities[i]->Serialize(sw);
+                nlohmann::json j = sw.json();
                 if (DrawEntity(j, ("entity " + std::to_string(i)).c_str()))
                 {
-                    p->entities[i]->FromJson(j);
+                    Serializer sr(Serializer::Mode::READ,Serializer::Format::JSON,j);
+                    p->entities[i]->Serialize(sr);
                 }
             }
             ImGui::End();
