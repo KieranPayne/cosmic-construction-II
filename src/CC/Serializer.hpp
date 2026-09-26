@@ -120,13 +120,13 @@ namespace cc
                     value->Serialize(sub);
                     j_[name] = sub.json();
                 }
-            }
-            else
-            {
-                if (!value)
+                else
+                {
+                    if (!value)
                     value = new T();
-                Serializer sub(mode,format,j_.at(name));
-                value->Serialize(sub);
+                    Serializer sub(mode,format,j_.at(name));
+                    value->Serialize(sub);
+                }
             }
         }
 
@@ -177,8 +177,23 @@ namespace cc
                 }
             }
         }
+        void field(const std::string name, std::size_t& value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    j_[name] = value;
+                }
+                else
+                {
+                    value = j_.at(name).get<std::size_t>();
+                }
+            }
+        }
 
         nlohmann::json json() const { return j_; }
+        std::vector<uint8_t> binary() const {return b_;}
 
     private:
         nlohmann::json j_;

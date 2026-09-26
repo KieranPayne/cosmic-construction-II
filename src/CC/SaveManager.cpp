@@ -16,6 +16,7 @@ namespace cc
 {
 	namespace SaveManager
 	{
+        Serializer::Format saveFormat = Serializer::Format::JSON;
 		std::string saveName;
 		std::string savePath;
 		// uint64_t seed;
@@ -365,5 +366,53 @@ namespace cc
 				state->planets[0]->chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0]->generator.GenerateChunk({x, z}));
 			}
 		}
+	}
+
+	void SaveManager::WriteSerializerToFile(Serializer& s, std::string path)
+	{
+		if (saveFormat == Serializer::Format::JSON)
+		{
+			path += ".json";
+			WriteData(path,s.json().dump());
+		}else
+		{
+			path += ".txt";
+			WriteBinaryData(path,s.binary());
+		}
+	}
+	Serializer SaveManager::LoadSerializerFromFile(std::string path)
+	{
+		if (saveFormat == Serializer::Format::JSON)
+		{
+			path += ".json";
+			std::string data = ReadData(path);
+			nlohmann::json j = nlohmann::json::parse(data);
+			// std::cout << j.dump() << std::endl;
+			return Serializer(Serializer::Mode::READ,saveFormat,j);
+		}else
+		{
+			path += ".txt";
+			std::vector<uint8_t> data = ReadBinaryData(path);
+			return Serializer(Serializer::Mode::READ,saveFormat,{},data);
+		}
+	}
+	void SaveManager::WriteBinaryData(std::string path, std::vector<uint8_t> data)
+	{
+		std::ofstream file(path,std::ios::binary);
+		uint64_t size = data.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		file.write(reinterpret_cast<const char *>(data.data()), data.size());
+		file.close();
+	}
+	std::vector<uint8_t> SaveManager::ReadBinaryData(std::string path)
+	{
+		std::ifstream file(path, std::ios::binary);
+		uint64_t size;
+		file.read(reinterpret_cast<char*>(&size),sizeof(size));
+		std::vector<uint8_t> data;
+		data.resize(size);
+		file.read(reinterpret_cast<char*>(data.data()),data.size());
+		file.close();
+		return data;
 	}
 }

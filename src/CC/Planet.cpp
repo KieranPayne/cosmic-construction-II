@@ -117,17 +117,23 @@ namespace cc
 			c.second->WriteData(chunkPath + ".txt");
 		}
 		// save entities
-		nlohmann::json entityData;
-		for (auto &e : entities)
+		Serializer entityData(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		int n = entities.size();
+		entityData.field("n",n);
+		// nlohmann::json entityData;
+		for (int i = 0; i < n; i ++)
 		{
-			Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
-			// JsonWriter j;
-			e->Serialize(s);
-			entityData.push_back(s.json());
+			uint16_t type = (uint16_t)entities[i]->type;
+			entityData.field(std::to_string(i) + " type",type);
+			entityData.field(std::to_string(i),entities[i].get());
 		}
-		SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
+		SaveManager::WriteSerializerToFile(entityData, path + "/entities");
+		// SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
 		// misc variables get saved in planet json
-		SaveManager::WriteData(path + "/planet.json", ToJson().dump(2));
+		Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serialize(s);
+		SaveManager::WriteSerializerToFile(s,path + "/planet");
+		// SaveManager::WriteData(path + "/planet.json", ToJson().dump(2));
 		generator.Save(path);
 	}
 	void Planet::Load()
@@ -155,31 +161,22 @@ namespace cc
 			chunks[vec]->ReadData(f);
 		}
 		// load entities
-		nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
-		for (auto &e : entityData)
+		Serializer entityData = SaveManager::LoadSerializerFromFile(path + "/entities");
+		int n;
+		entityData.field("n",n);
+		// nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
+		for (int i = 0; i < n; i ++)
 		{
-			Entity::EntityType type = (Entity::EntityType)(e["type"]);
-			Entity *entity = CreateEntityFromType(type);
-			
-			// if (type == Entity::NONE)
-			// {
-			// 	entity = new Entity();
-			// }
-			// else if (type == Entity::HUMAN)
-			// {
-			// 	entity = new Human();
-			// }else if (type == Entity::ITEM)
-			// {
-			// 	entity = new Item();
-			// }
-			Serializer s(Serializer::Mode::READ,Serializer::Format::JSON,e);
-			// JsonReader j(e);
-
-			entity->Serialize(s);
-			AddEntity(entity);
+			uint16_t type;
+			entityData.field(std::to_string(i) + " type",type);
+			Entity* e = CreateEntityFromType((Entity::EntityType)type);
+			entityData.field(std::to_string(i),e);
+			AddEntity(e);
 		}
 		// load misc data
-		FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
+		Serializer s = SaveManager::LoadSerializerFromFile(path +"/planet");
+		Serialize(s);
+		// FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
 		generator.Load(path);
 	}
 	void Planet::AddEntity(Entity *entity)
@@ -236,7 +233,9 @@ namespace cc
 		ImGui::Separator();
 		if (currentView == 0)
 		{
-			ImGui::Text(camera.ToJson().dump(2).c_str());
+			Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+			camera.Serialize(s);
+			ImGui::Text(s.json().dump(2).c_str());
 		}
 		else if (currentView == 1)
 		{
@@ -413,19 +412,25 @@ namespace cc
 		}
 		ImGui::End();
 	}
-	nlohmann::json Planet::ToJson()
+	void Planet::Serialize(Serializer& s)
 	{
-		nlohmann::json j;
-		j["camera"] = camera.ToJson();
-		j["seed"] = seed;
-		// j["generator"] = generator.ToJson();
-		return j;
+		s.field("camera",camera);
+		s.field("seed",seed);
+		// s.field("generator",generator);
 	}
-	void Planet::FromJson(nlohmann::json j)
-	{
-		camera.FromJson(j["camera"]);
-		// generator.FromJson(j["generator"]);
-	}
+	// nlohmann::json Planet::ToJson()
+	// {
+	// 	nlohmann::json j;
+	// 	j["camera"] = camera.ToJson();
+	// 	j["seed"] = seed;
+	// 	// j["generator"] = generator.ToJson();
+	// 	return j;
+	// }
+	// void Planet::FromJson(nlohmann::json j)
+	// {
+	// 	camera.FromJson(j["camera"]);
+	// 	// generator.FromJson(j["generator"]);
+	// }
 	void Planet::GetTileVertices(sf::Vector2i chunkPos)
 	{
 		sf::VertexArray arr(sf::PrimitiveType::Triangles, CHUNK_SIZE * CHUNK_SIZE * 6 * 2);
