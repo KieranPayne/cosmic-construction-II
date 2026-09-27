@@ -84,6 +84,9 @@ namespace cc
 		if (type == CSMessageType::JOIN_DATA)
 		{
 			LoadJoinData(packet);
+		}else if (type == CSMessageType::PLAYER_JOINED)
+		{
+			
 		}
 	}
 
@@ -241,5 +244,23 @@ namespace cc
 		packet << (uint16_t)CSMessageType::SEND_USERNAME;
 		packet << SaveManager::username;
 		SendPacket(packet);
+	}
+	void Client::NewPlayerJoined(sf::Packet& packet)
+	{
+		uint64_t n;
+		packet >> n;
+		std::vector<uint8_t> data;
+		data.reserve(n);
+		for (int i = 0; i < n; i ++)
+		{
+			uint8_t byte;
+			packet >> byte;
+			data.push_back(byte);
+		}
+		Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+		PlayerData p;
+		s.field("player",p);
+		otherPlayers.push_back(p);
+		std::cout << "player connected: " << p.username << std::endl;
 	}
 }

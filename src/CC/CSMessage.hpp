@@ -6,6 +6,7 @@ namespace cc
     enum class CSMessageType : uint16_t
     {
         SEND_USERNAME,
-        JOIN_DATA
+        JOIN_DATA,
+        PLAYER_JOINED
     };
 }

@@ -139,7 +139,7 @@ namespace cc
     }
     void Server::HandlePacket(std::uint64_t clientId, sf::Packet &packet)
     {
-        std::cout << "Handling packet" << std::endl;
+        std::cout << "SERVER: Handling packet" << std::endl;
         uint16_t t;
         packet >> t;
         CSMessageType type = (CSMessageType)t;
@@ -166,7 +166,7 @@ namespace cc
         //REGISTERING PLAYER
         std::string username;
         usernamePacket >> username;
-        std::cout << "Received username: " << username << std::endl;
+        std::cout << "SERVER: Received username: " << username << std::endl;
         PlayerData p;
         for (int i = 0; i < allPlayers.size(); i ++)
         {
@@ -178,7 +178,7 @@ namespace cc
         }
         if (p.username == "")
         {
-            std::cout << "new player registered" << std::endl;
+            std::cout << "SERVER: new player registered" << std::endl;
             p.username = username;
             allPlayers.push_back(p);
         }
@@ -229,6 +229,14 @@ namespace cc
             }
         }        
         SendToClient(clientId,packet);
-        //TODO: send to other players that a new player has been added
+        //let every other player know a new player has joined
+        sf::Packet newPlayerPacket;
+        newPlayerPacket << (uint16_t)CSMessageType::PLAYER_JOINED;
+        Serializer s2(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+        s2.field("player",p);
+        auto b = s2.binary();
+        newPlayerPacket << (uint64_t)b.size();
+        newPlayerPacket.append(b.data(),b.size());
+        Broadcast(newPlayerPacket,{clientId});
     }
 }

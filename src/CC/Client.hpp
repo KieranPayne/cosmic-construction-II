@@ -25,6 +25,7 @@ namespace cc
         void ProcessPacket(sf::Packet& packet);
         void SendPacket(sf::Packet& packet);
         void LoadJoinData(sf::Packet& packet);
+        void NewPlayerJoined(sf::Packet& packet);
         bool ConnectToServer(sf::IpAddress& ip, unsigned short port);
         bool IsConnected()
         {
