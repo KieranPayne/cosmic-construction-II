@@ -4,6 +4,7 @@
 #include "../imgui/imgui.h"
 #include "SaveManager.hpp"
 #include "Utils.hpp"
+#include "Client.hpp"
 namespace cc
 {
 	MainMenu::MainMenu()
@@ -339,10 +340,11 @@ namespace cc
 	}
 	void MainMenu::ConnectToHost()
 	{
-		// TODO: hook this up to your actual networking/client-connect code.
-		// e.g. NetworkManager::ConnectToServer(ipAddress);
-		// Set connectError to a message if the connection fails,
-		// or transition currentState (e.g. to a lobby/loading state) on success.
+		auto ipResult = sf::IpAddress::resolve(ipAddress);
+		//TODO: deal with case where not valid ip address
+		Client* c = new Client(state->renderTarget);
+		c->ConnectToServer(ipResult.value(),5000);
+		state = std::unique_ptr<Kosmic::State>(c);
 	}
 
 	MainMenu::~MainMenu()
