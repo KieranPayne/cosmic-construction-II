@@ -1,5 +1,6 @@
 #include "Main.hpp"
 #include "CC/MainMenu.hpp"
+#include "CC/UsernameMenu.hpp"
 // #include "CC/State.hpp"
 #include "CC/TileInfo.hpp"
 // #include "Civitron/ItemInfo.hpp"
@@ -40,7 +41,15 @@ int main()
 		return -1;
 	Input input;
 	// state = new Civitron::State();
-	state = std::unique_ptr<Kosmic::State>(new cc::MainMenu());
+	cc::UsernameMenu* usernameMenu = new cc::UsernameMenu();
+	if (usernameMenu->CheckForExisting())
+	{
+		delete usernameMenu;
+		state = std::unique_ptr<Kosmic::State>(new cc::MainMenu());
+	}else
+	{
+		state = std::unique_ptr<Kosmic::State>(usernameMenu);
+	}
 	state->renderTarget = window.get();
 	sf::Clock deltaClock;
 	cc::TileInfo::Init();

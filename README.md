@@ -18,10 +18,10 @@ to do:
 
 
 MULTIPLAYER TODO
-- [x] add client and server
-- [x] change save and quit behaviour based on singleplayer or not
-    - [x] can check whether server is null or not to check if singleplayer
-- [x] make create save and load functions spawn client and server
-- [ ] ability to send packets between client and server (just on same machine for now)
-- [ ] add option to register a different ip as server
-- [ ] sending and receiving packets to this server instead
+- [ ] send client join data
+    - [ ] have list of player datas stored in file
+        - [ ] camera position etc.
+    - [ ] client enters username before joining
+    - [ ] look up username when client joins
+    - [ ] send player data and other join data
+    - [ ] client has loading screen until join data received

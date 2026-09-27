@@ -7,6 +7,7 @@ namespace cc
     {
         extern std::string saveName;
         extern std::string savePath;
+        extern std::string username;
         // extern uint64_t seed;
         void SaveServer(Server* server);
         void CreateSave(std::string name, std::string seed);
@@ -22,5 +23,8 @@ namespace cc
         void WriteData(std::string path, std::string string);
         std::string ReadData(std::string path);
         std::string GetSavedataDir();
+        std::string GetUsername();
+        void WriteUsername(std::string username);
+        bool FileExists(std::string path);
     }
 }

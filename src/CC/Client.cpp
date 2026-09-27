@@ -114,6 +114,7 @@ namespace cc
 		socket.setBlocking(false);
 		connected = true;
 		std::cout << "CONNECTED" << std::endl;
+
 		return true;
 	}
 

@@ -17,6 +17,7 @@ namespace cc
 {
 	namespace SaveManager
 	{
+		std::string username = "";
 		std::string saveName;
 		std::string savePath;
 		// uint64_t seed;
@@ -49,7 +50,7 @@ namespace cc
 			savePath = dir + "/" + std::to_string(maxIndex);
 			CreateDirectory(savePath);
 			server = std::make_unique<Server>();
-			
+
 			const bool randomize = false;
 			if (seed == "" && randomize)
 			{
@@ -60,19 +61,19 @@ namespace cc
 				server->SetSeed(HashFromString(seed));
 			}
 			server->planets[0]->AddEntity(new Entity());
-			Human* h = new Human();		
-			h->position = {1.f,0.f};	
+			Human *h = new Human();
+			h->position = {1.f, 0.f};
 			server->planets[0]->AddEntity(h);
-			Item* item = new Item();
-			item->position = {2.f,0.f};
+			Item *item = new Item();
+			item->position = {2.f, 0.f};
 			server->planets[0]->AddEntity(item);
 			SaveServer(server.get());
 			server->Start(5000);
-			Client* client = new Client(state->renderTarget);
+			Client *client = new Client(state->renderTarget);
 			sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
-			client->ConnectToServer(ip,5000);
+			client->ConnectToServer(ip, 5000);
 			InputState inputState;
-			client->Update(inputState,0);
+			client->Update(inputState, 0);
 			state = std::unique_ptr<Kosmic::State>(client);
 		}
 		void LoadServer(int index)
@@ -90,32 +91,33 @@ namespace cc
 			server->SetSeed(j["seed"]);
 			// InputState inputState;
 			// server->renderTarget = window.get();
-			for (auto& p : server->planets)
+			for (auto &p : server->planets)
 			{
 				p->Load();
 			}
 			// server->Update(inputState,0);
-			Client* client = new Client(state->renderTarget);
+			Client *client = new Client(state->renderTarget);
 			InputState inputState;
-			client->Update(inputState,0);
+			client->Update(inputState, 0);
 			state = std::unique_ptr<Kosmic::State>(client);
 		}
-		void SaveServer(Server* server)
+		void SaveServer(Server *server)
 		{
-			for (auto& p : server->planets)
+			for (auto &p : server->planets)
 			{
 				p->Save();
 			}
 			// state->planets[0]->Save();
 			WriteServerMetadata(server);
 		}
-		void WriteServerMetadata(Server* server)
+		void WriteServerMetadata(Server *server)
 		{
-			struct stat buffer;   
-  			bool exists = (stat ((savePath + "/metadata.json").c_str(), &buffer) == 0); 
+			struct stat buffer;
+			bool exists = (stat((savePath + "/metadata.json").c_str(), &buffer) == 0);
 			nlohmann::json j;
 			int playTime = 0;
-			if (exists){
+			if (exists)
+			{
 				std::string existing = ReadData(savePath + "/metadata.json");
 				j = nlohmann::json::parse(existing);
 				playTime = j["playTime"];
@@ -368,5 +370,28 @@ namespace cc
 			file.close();
 			return data;
 		}
+	}
+	std::string SaveManager::GetUsername()
+	{
+		std::string path = GetSavedataDir() + "/username.txt";
+		if (!FileExists(path))
+		{
+			return "";
+		}else
+		{
+			return ReadData(path);
+		}
+	}
+	void SaveManager::WriteUsername(std::string username)
+	{
+		std::string path = GetSavedataDir() + "/username.txt";
+		WriteData(path,username);
+	}
+	bool SaveManager::FileExists(std::string path)
+	{
+		struct stat info;
+		if (stat(path.c_str(), &info) != 0)
+			return false;
+		return (info.st_mode & S_IFREG) != 0;
 	}
 }
