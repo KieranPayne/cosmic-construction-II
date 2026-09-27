@@ -66,7 +66,7 @@ namespace cc
 		{
 			for (int y = topLeft.y; y <= bottomRight.y; y++)
 			{
-				if (!chunks.contains({x,y}))
+				if (!chunks.contains({x, y}))
 				{
 					continue;
 				}
@@ -82,7 +82,7 @@ namespace cc
 		{
 			for (int y = topLeft.y - 1; y <= bottomRight.y + 1; y++)
 			{
-				if (!chunks.contains({x,y}))
+				if (!chunks.contains({x, y}))
 				{
 					continue;
 				}
@@ -114,22 +114,22 @@ namespace cc
 			c.second->WriteData(chunkPath + ".txt");
 		}
 		// save entities
-		Serializer entityData(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serializer entityData(Serializer::Mode::WRITE, SaveManager::saveFormat);
 		int n = entities.size();
-		entityData.field("n",n);
+		entityData.field("n", n);
 		// nlohmann::json entityData;
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			uint16_t type = (uint16_t)entities[i]->type;
-			entityData.field(std::to_string(i) + " type",type);
-			entityData.field(std::to_string(i),entities[i].get());
+			entityData.field(std::to_string(i) + " type", type);
+			entityData.field(std::to_string(i), entities[i].get());
 		}
 		SaveManager::WriteSerializerToFile(entityData, path + "/entities");
 		// SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
 		// misc variables get saved in planet json
-		Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serializer s(Serializer::Mode::WRITE, SaveManager::saveFormat);
 		Serialize(s);
-		SaveManager::WriteSerializerToFile(s,path + "/planet");
+		SaveManager::WriteSerializerToFile(s, path + "/planet");
 		// SaveManager::WriteData(path + "/planet.json", ToJson().dump(2));
 		generator.Save(path);
 	}
@@ -160,18 +160,18 @@ namespace cc
 		// load entities
 		Serializer entityData = SaveManager::LoadSerializerFromFile(path + "/entities");
 		int n;
-		entityData.field("n",n);
+		entityData.field("n", n);
 		// nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			uint16_t type;
-			entityData.field(std::to_string(i) + " type",type);
-			Entity* e = CreateEntityFromType((Entity::EntityType)type);
-			entityData.field(std::to_string(i),e);
+			entityData.field(std::to_string(i) + " type", type);
+			Entity *e = CreateEntityFromType((Entity::EntityType)type);
+			entityData.field(std::to_string(i), e);
 			AddEntity(e);
 		}
 		// load misc data
-		Serializer s = SaveManager::LoadSerializerFromFile(path +"/planet");
+		Serializer s = SaveManager::LoadSerializerFromFile(path + "/planet");
 		Serialize(s);
 		// FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
 		generator.Load(path);
@@ -194,14 +194,13 @@ namespace cc
 			return;
 		}
 		static int currentView = -1;
-		ImGui::SetNextWindowPos(ImVec2(321,4),ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(362,183),ImGuiCond_Once);
+		ImGui::SetNextWindowPos(ImVec2(321, 4), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(362, 183), ImGuiCond_Once);
 		ImGui::Begin("World Info");
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
 		// ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
-
 
 		// bgTile += "Colour: " + std::to_string()
 		const char *currentLabel = "None";
@@ -227,7 +226,7 @@ namespace cc
 		ImGui::Separator();
 		if (currentView == 0)
 		{
-			Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
 			camera.Serialize(s);
 			ImGui::Text(s.json().dump(2).c_str());
 		}
@@ -236,7 +235,7 @@ namespace cc
 			std::string result = "";
 			for (auto &e : entities)
 			{
-				Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+				Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
 				e->Serialize(s);
 				result += s.json().dump(2) + "\n";
 			}
@@ -244,8 +243,8 @@ namespace cc
 		}
 		ImGui::End();
 	}
-	//TODO: make this return a pair that also returns the tile entity if there is one here
-	std::pair<Tile*,TileEntity*> Planet::GetTileAt(sf::Vector2i position)
+	// TODO: make this return a pair that also returns the tile entity if there is one here
+	std::pair<Tile *, TileEntity *> Planet::GetTileAt(sf::Vector2i position)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
@@ -256,7 +255,7 @@ namespace cc
 		// return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
 		return chunks[chunkPos]->GetTile(subChunkPos);
 	}
-	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity)
+	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
@@ -264,7 +263,7 @@ namespace cc
 			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		chunks[chunkPos]->SetTile(subChunkPos,tile, tileEntity);
+		chunks[chunkPos]->SetTile(subChunkPos, tile, tileEntity);
 		// chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
 		if (tileVertices.contains(chunkPos))
 		{
@@ -334,18 +333,24 @@ namespace cc
 	}
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
-		ImGui::SetNextWindowPos(ImVec2(4,316),ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(231,400),ImGuiCond_Once);
+		ImGui::SetNextWindowPos(ImVec2(4, 316), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(231, 400), ImGuiCond_Once);
 		ImGui::Begin("Tool Menu");
-		ImGui::Text("Hovering over:");
-		std::string bgTile = "Background Tile:\n";
 		sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
 		sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
+		if (!chunks.contains(worldChunkPos))
+		{
+			ImGui::End();
+			return;
+		}
+		ImGui::Text("Hovering over:");
+		std::string bgTile = "Background Tile:\n";
+
 		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;
 		BackgroundTile *bgT = &chunks[worldChunkPos]->backgroundTiles[subChunkPos.x][subChunkPos.y];
 		bgTile += "Colour: " + std::to_string(bgT->color.r) + " " + std::to_string(bgT->color.g) + " " + std::to_string(bgT->color.b) + "\n";
-		bgTile += "Type: " + std::to_string((uint8_t) bgT->type);
+		bgTile += "Type: " + std::to_string((uint8_t)bgT->type);
 		ImGui::Text(bgTile.c_str());
 		std::string tile = "Tile:\n";
 		auto t = GetTileAt(worldTilePos);
@@ -353,7 +358,9 @@ namespace cc
 		if (t.second != nullptr)
 		{
 			tile += "\nTile Entity data:\n";
-			tile += t.second->ToJson().dump(2);
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
+			s.field("Tile Entity", t.second);
+			tile += s.json().dump(2);
 		}
 		ImGui::Text(tile.c_str());
 		static int currentView = 0;
@@ -406,10 +413,10 @@ namespace cc
 		}
 		ImGui::End();
 	}
-	void Planet::Serialize(Serializer& s)
+	void Planet::Serialize(Serializer &s)
 	{
-		s.field("camera",camera);
-		s.field("seed",seed);
+		s.field("camera", camera);
+		s.field("seed", seed);
 		// s.field("generator",generator);
 	}
 	// nlohmann::json Planet::ToJson()
@@ -466,7 +473,7 @@ namespace cc
 				}
 				if (TileInfo::tileRegistry[t->type].isTileEntity)
 				{
-					c->tileEntities[c->TileEntityIndex({x,y})]->GetVertices(arr,i);
+					c->tileEntities[c->TileEntityIndex({x, y})]->GetVertices(arr, i);
 					continue;
 				}
 				sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].positions[0];
@@ -488,5 +495,8 @@ namespace cc
 		this->seed = seed;
 		generator.SetSeed(seed);
 	}
-	
+	void Planet::GenerateChunk(sf::Vector2i position)
+	{
+		chunks[position] = std::unique_ptr<Chunk>(generator.GenerateChunk(position));
+	}
 }

@@ -145,25 +145,7 @@ namespace cc
         CSMessageType type = (CSMessageType)t;
         if (type == CSMessageType::SEND_USERNAME)
         {
-            std::string username;
-            packet >> username;
-            std::cout << "Received username: " << username << std::endl;
-            PlayerData p;
-            for (int i = 0; i < allPlayers.size(); i ++)
-            {
-                if (allPlayers[i].username == username)
-                {
-                    p = allPlayers[i];
-                    break;
-                }
-            }
-            if (p.username == "")
-            {
-                std::cout << "new player registered" << std::endl;
-                p.username = username;
-                allPlayers.push_back(p);
-            }
-            currPlayers.push_back(p);
+            SendJoinData(clientId,packet);
         }
     }
     void Server::RegisterCurrentPlayers()
@@ -178,5 +160,75 @@ namespace cc
                 }
             }
         }
+    }
+    void Server::SendJoinData(uint64_t clientId, sf::Packet& usernamePacket)
+    {
+        //REGISTERING PLAYER
+        std::string username;
+        usernamePacket >> username;
+        std::cout << "Received username: " << username << std::endl;
+        PlayerData p;
+        for (int i = 0; i < allPlayers.size(); i ++)
+        {
+            if (allPlayers[i].username == username)
+            {
+                p = allPlayers[i];
+                break;
+            }
+        }
+        if (p.username == "")
+        {
+            std::cout << "new player registered" << std::endl;
+            p.username = username;
+            allPlayers.push_back(p);
+        }
+        currPlayers.push_back(p);
+        
+        //ASSEMBLING PACKET TO SEND BACK
+        sf::Packet packet;
+        packet << (uint16_t)CSMessageType::JOIN_DATA;
+        //first bit of data is every other player currently in server
+        //start by serializing the list of current players
+        Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+        int n = currPlayers.size();
+        s.field("n",n);
+        for (int i = 0; i < currPlayers.size(); i ++)
+        {
+            s.field(std::to_string(i),currPlayers[i]);
+        }
+        auto data = s.binary();
+        //put number of bytes in packet
+        packet << data.size();
+        //put bytes into packet
+        packet.append(data.data(),data.size());
+        //next, want to send all the chunks visible to the player
+        sf::Vector2f targetResolution {3840.f,2160.f};
+        int minX = floor((p.cameraPosition.x - targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
+        int maxX = ceil((p.cameraPosition.x + targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
+        int minY = floor((p.cameraPosition.y - targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
+        int maxY = ceil((p.cameraPosition.y + targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
+        //add number of chunks to packet
+        packet << (int)((maxX- minX + 1) * (maxY - minY + 1));
+        Planet* planet = planets[p.planet].get();
+        for (int x = minX; x <= maxX; x ++)
+        {
+            for (int y = minY; y <= maxY; y ++)
+            {
+                if (!planet->chunks.contains({x,y}))
+                {
+                    planet->GenerateChunk({x,y});
+                }
+                Chunk* c = planet->chunks[{x,y}].get();
+                //put chunk position into packet
+                packet << c->position.x << c->position.y;
+                auto b = c->GetByteData();
+                //put size of bytes into packet
+                packet << b.size();
+                //put chunk data into packet
+                packet.append(b.data(),b.size());
+            }
+        }        
+        SendToClient(clientId,packet);
+        //TODO: send to other players that a new player has been added
     }
 }

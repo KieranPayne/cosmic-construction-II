@@ -40,11 +40,11 @@ namespace cc
 		// STR_LEN STR BIN_LEN BIN
 		std::ofstream file(path, std::ios::binary);
 		// writing string
-		std::string stringData = GetStringData();
-		// std::cout << stringData << std::endl;
-		uint32_t strSize = stringData.size();
-		file.write(reinterpret_cast<const char *>(&strSize), sizeof(strSize));
-		file.write(stringData.data(), stringData.size());
+		// std::string stringData = GetStringData();
+		// // std::cout << stringData << std::endl;
+		// uint32_t strSize = stringData.size();
+		// file.write(reinterpret_cast<const char *>(&strSize), sizeof(strSize));
+		// file.write(stringData.data(), stringData.size());
 		// writing binary
 		std::vector<uint8_t> binaryData = GetByteData();
 		uint32_t binarySize = binaryData.size();
@@ -55,11 +55,11 @@ namespace cc
 	void Chunk::ReadData(std::string path)
 	{
 		std::ifstream file(path, std::ios::binary);
-		uint32_t textSize;
-		file.read(reinterpret_cast<char *>(&textSize), sizeof(textSize));
-		std::string text;
-		text.resize(textSize);
-		file.read(text.data(), textSize);
+		// uint32_t textSize;
+		// file.read(reinterpret_cast<char *>(&textSize), sizeof(textSize));
+		// std::string text;
+		// // text.resize(textSize);
+		// file.read(text.data(), textSize);
 
 		std::vector<uint8_t> binaryData;
 		std::uint32_t binarySize;
@@ -67,7 +67,7 @@ namespace cc
 		binaryData.resize(binarySize);
 		file.read(reinterpret_cast<char *>(binaryData.data()), binarySize);
 
-		LoadStringData(text);
+		// LoadStringData(text);
 		LoadByteData(binaryData);
 		file.close();
 	}
@@ -75,6 +75,24 @@ namespace cc
 	{
 		std::vector<uint8_t> bytes;
 		bytes.reserve(CHUNK_SIZE * CHUNK_SIZE * 6);
+		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		int n = tileEntities.size();
+		s.field("n",n);
+		int i = 0;
+		for (auto& e : tileEntities)
+		{
+			std::string index = std::to_string(i);
+			s.field(index + " type",e.second->type);
+			uint16_t key = e.first;
+			s.field(index + " key",key);
+			s.field(index + " value",e.second.get());
+			i ++;
+		}
+		auto data = s.binary();
+		uint32_t size = (uint32_t)data.size();
+		uint8_t* sizeBytes = reinterpret_cast<uint8_t*>(&size);
+		bytes.insert(bytes.end(),sizeBytes,sizeBytes + sizeof(uint32_t));
+		bytes.insert(bytes.end(),data.begin(),data.end());
 
 		size_t index = 0;
 
@@ -99,7 +117,35 @@ namespace cc
 
 	void Chunk::LoadByteData(std::vector<uint8_t> &bytes)
 	{
-		size_t index = 0;
+		// Read the 4-byte length prefix from the start
+		uint32_t size;
+		std::memcpy(&size, bytes.data(), sizeof(uint32_t));
+
+		// Pull out exactly that many bytes right after the prefix
+		std::vector<uint8_t> data(
+			bytes.begin() + sizeof(uint32_t),
+			bytes.begin() + sizeof(uint32_t) + size
+		);
+
+		int bytesRead = sizeof(uint32_t) + size;
+
+		Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+		int n;
+		s.field("n",n);
+		for (int i = 0; i < n; i ++)
+		{
+			std::string index = std::to_string(i);
+			uint16_t type;
+			s.field(index + " type",type);
+			auto* e = CreateTileEntityFromType(type);
+			uint16_t key;
+			s.field(index + " key",key);
+			s.field(index + " value",e);
+			tileEntities[key] = std::unique_ptr<TileEntity>(e);
+		}
+
+		
+		size_t index = bytesRead;
 
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
@@ -119,30 +165,30 @@ namespace cc
 		}
 	}
 
-	std::string Chunk::GetStringData()
-	{
-		nlohmann::json arr;
-		for (auto &e : tileEntities)
-		{
-			nlohmann::json j;
-			j["key"] = e.first;
-			j["value"] = e.second->ToJson();
-			arr.push_back(j);
-		}
-		return arr.dump(2);
-	}
+	// std::string Chunk::GetStringData()
+	// {
+	// 	nlohmann::json arr;
+	// 	for (auto &e : tileEntities)
+	// 	{
+	// 		nlohmann::json j;
+	// 		j["key"] = e.first;
+	// 		j["value"] = e.second->ToJson();
+	// 		arr.push_back(j);
+	// 	}
+	// 	return arr.dump(2);
+	// }
 
-	void Chunk::LoadStringData(std::string &data)
-	{
-		nlohmann::json arr = nlohmann::json::parse(data);
-		for (auto &j : arr)
-		{
-			uint16_t key = j["key"];
-			uint16_t type = j["value"]["type"];
-			TileEntity *entity = CreateTileEntityFromType(type);
-			tileEntities[key] = std::unique_ptr<TileEntity>(entity);
-		}
-	}
+	// void Chunk::LoadStringData(std::string &data)
+	// {
+	// 	nlohmann::json arr = nlohmann::json::parse(data);
+	// 	for (auto &j : arr)
+	// 	{
+	// 		uint16_t key = j["key"];
+	// 		uint16_t type = j["value"]["type"];
+	// 		TileEntity *entity = CreateTileEntityFromType(type);
+	// 		tileEntities[key] = std::unique_ptr<TileEntity>(entity);
+	// 	}
+	// }
 
 	void Chunk::RenderEntities(sf::RenderTarget *target)
 	{

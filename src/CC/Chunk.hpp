@@ -19,10 +19,12 @@ constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 4);
 		Chunk();
 		std::vector<uint8_t> GetByteData();
 		void LoadByteData(std::vector<uint8_t>& bytes);
-		std::string GetStringData();
-		void LoadStringData(std::string& data);
+		// std::string GetStringData();
+		// void LoadStringData(std::string& data);
+		public:
 		void WriteData(std::string path);
 		void ReadData(std::string path);
+
 		// std::array<uint8_t,CHUNK_NUM_BYTES> ToBytes();
 		// void FromBytes(std::array<uint8_t,CHUNK_NUM_BYTES>&);
 		void RenderEntities(sf::RenderTarget* target);

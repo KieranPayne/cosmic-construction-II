@@ -14,6 +14,7 @@ namespace cc
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
+		planets[activePlanet]->VisibleUpdate(renderTarget,inputState,deltaTime);
 		// for (auto &p : planets)
 		// {
 		// 	p->VisibleUpdate(renderTarget, inputState, deltaTime);
@@ -76,15 +77,23 @@ namespace cc
 
 	void Client::ProcessPacket(sf::Packet &packet)
 	{
+		uint16_t t;
+		packet >> t;
+		std::cout << "received message of type " << std::to_string(t) << std::endl;
+		CSMessageType type = (CSMessageType)t;
+		if (type == CSMessageType::JOIN_DATA)
+		{
+			LoadJoinData(packet);
+		}
 	}
 
 	void Client::SendPacket(sf::Packet &packet)
 	{
-		if (server.get() != nullptr)
-		{
-			server->HandlePacket(id, packet);
-			return;
-		}
+		// if (server.get() != nullptr)
+		// {
+		// 	server->HandlePacket(id, packet);
+		// 	return;
+		// }
 		if (!IsConnected())
 		{
 			return;
@@ -99,6 +108,74 @@ namespace cc
 
 	void Client::LoadJoinData(sf::Packet &packet)
 	{
+		// --- Read list of current players ---
+
+		// NOTE: `packet << data.size()` on the sending side pushes a std::size_t,
+		// which on a 64-bit build resolves to sf::Packet's Uint64 overload.
+		// Reading it back needs a matching type or the stream will misalign.
+		uint64_t playerDataSize;
+		packet >> playerDataSize;
+
+		// sf::Packet has no built-in "extract N raw bytes mid-stream" call,
+		// so pull them out one byte at a time via the Uint8 overload.
+		std::vector<uint8_t> playerData;
+		playerData.reserve(playerDataSize);
+		for (uint64_t i = 0; i < playerDataSize; i++)
+		{
+			uint8_t byte;
+			packet >> byte;
+			playerData.push_back(byte);
+		}
+
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, playerData);
+
+		int n;
+		s.field("n", n);
+		for (int i = 0; i < n; i++)
+		{
+			PlayerData p;
+			s.field(std::to_string(i), p);
+			if (p.username == SaveManager::username)
+			{
+				activePlanet = p.planet;
+				planets[activePlanet]->camera.position = p.cameraPosition;
+				planets[activePlanet]->camera.targetZoom = p.cameraZoom;
+				continue;
+			}
+			otherPlayers.push_back(p);
+		}
+
+		// --- Read chunk data ---
+
+		int numChunks;
+		packet >> numChunks;
+
+		for (int i = 0; i < numChunks; i++)
+		{
+			int posX, posY;
+			packet >> posX >> posY;
+
+			uint64_t chunkByteSize; // same Uint64 assumption as above
+			packet >> chunkByteSize;
+
+			std::vector<uint8_t> chunkData;
+			chunkData.reserve(chunkByteSize);
+			for (uint64_t j = 0; j < chunkByteSize; j++)
+			{
+				uint8_t byte;
+				packet >> byte;
+				chunkData.push_back(byte);
+			}
+			Chunk *c = new Chunk({posX, posY});
+			c->LoadByteData(chunkData);
+			planets[activePlanet]->chunks[{posX,posY}] = std::unique_ptr<Chunk>(c);
+			// GUESS: not sure how Chunk is constructed/inserted client-side.
+			// Something like:
+			// auto chunk = std::make_unique<Chunk>();
+			// chunk->position = {posX, posY};
+			// chunk->LoadFromByteData(chunkData); // mirror of GetByteData()
+			// planets[activePlanet]->chunks[{posX, posY}] = std::move(chunk);
+		}
 	}
 
 	bool Client::ConnectToServer(sf::IpAddress &ip, unsigned short port)
@@ -138,6 +215,7 @@ namespace cc
 
 			if (status == sf::Socket::Status::Done)
 			{
+				std::cout << "RECEIVED PACKET" << std::endl;
 				ProcessPacket(packet);
 			}
 			else if (status == sf::Socket::Status::NotReady)

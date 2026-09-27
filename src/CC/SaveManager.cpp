@@ -71,11 +71,12 @@ namespace cc
 			SaveServer(server.get());
 			server->Start(5000);
 			Client *client = new Client(state->renderTarget);
-			sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
-			client->ConnectToServer(ip, 5000);
-			InputState inputState;
-			client->Update(inputState, 0);
+			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
 			state = std::unique_ptr<Kosmic::State>(client);
+			client->ConnectToServer(ip, 5000);
+			// InputState inputState;
+			// client->Update(inputState, 0);
 		}
 		void LoadServer(int index)
 		{
@@ -102,7 +103,8 @@ namespace cc
 			// server->Update(inputState,0);
 			Client *client = new Client(state->renderTarget);
 			state = std::unique_ptr<Kosmic::State>(client);
-			sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
 			client->ConnectToServer(ip, 5000);
 		}
 		void SaveServer(Server *server)

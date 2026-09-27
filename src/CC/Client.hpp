@@ -2,6 +2,7 @@
 #include "../PCH.hpp"
 #include "Planet.hpp"
 #include "../State.hpp"
+#include "PlayerData.hpp"
 namespace cc
 {
     class Client : public Kosmic::State
@@ -12,6 +13,7 @@ namespace cc
         sf::TcpSocket socket;
         uint64_t id;
         // sf::RenderTarget* target;
+        std::vector<PlayerData> otherPlayers;
         std::vector<std::unique_ptr<Planet>> planets;
         int activePlanet;
         void DerivedUpdate();

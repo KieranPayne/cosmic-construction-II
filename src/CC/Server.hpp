@@ -39,6 +39,7 @@ namespace cc
         void AcceptClients();
         void ReceivePackets();
         void HandlePacket(uint64_t clientId, sf::Packet& packet);
+        void SendJoinData(uint64_t clientId, sf::Packet& usernamePacket);
         //enters up to date information on all current players in to the all players list
         void RegisterCurrentPlayers();
     };
