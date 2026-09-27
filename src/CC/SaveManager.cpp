@@ -89,6 +89,8 @@ namespace cc
 			saveName = j["saveName"];
 			// Server *s = new Server();
 			server = std::make_unique<Server>();
+			Serializer s = LoadSerializerFromFile(savePath + "/players");
+			s.field("players",server->allPlayers);
 			server->SetSeed(j["seed"]);
 			// InputState inputState;
 			// server->renderTarget = window.get();
@@ -96,11 +98,12 @@ namespace cc
 			{
 				p->Load();
 			}
+			server->Start(5000);
 			// server->Update(inputState,0);
 			Client *client = new Client(state->renderTarget);
-			InputState inputState;
-			client->Update(inputState, 0);
 			state = std::unique_ptr<Kosmic::State>(client);
+			sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			client->ConnectToServer(ip, 5000);
 		}
 		void SaveServer(Server *server)
 		{
@@ -108,7 +111,10 @@ namespace cc
 			{
 				p->Save();
 			}
-			// state->planets[0]->Save();
+			Serializer s(Serializer::Mode::WRITE,saveFormat);
+			server->RegisterCurrentPlayers();
+			s.field("players",server->allPlayers);
+			WriteSerializerToFile(s,savePath + "/players");
 			WriteServerMetadata(server);
 		}
 		void WriteServerMetadata(Server *server)

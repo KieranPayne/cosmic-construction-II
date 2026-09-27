@@ -104,18 +104,9 @@ namespace cc
             // client.id = clients.size();
 
             client.socket.setBlocking(false);
-
-            // sf::Packet packet;
-            // packet << (uint8_t)CSMessageType::JOIN_DATA;
-            // AddNewPlayer(packet);
             client.id = GetNextClientId();
             clients.push_back(std::move(client));
-            // clients.back().id = players.back().id;
             std::cout << "ServerClient connected: " << clients.back().id << '\n';
-            // Tell the new client its ID
-            // packet << static_cast<std::uint32_t>(clients.back().id);
-
-            // clients.back().socket.send(packet);
         }
     }
     void Server::ReceivePackets()
@@ -157,6 +148,35 @@ namespace cc
             std::string username;
             packet >> username;
             std::cout << "Received username: " << username << std::endl;
+            PlayerData p;
+            for (int i = 0; i < allPlayers.size(); i ++)
+            {
+                if (allPlayers[i].username == username)
+                {
+                    p = allPlayers[i];
+                    break;
+                }
+            }
+            if (p.username == "")
+            {
+                std::cout << "new player registered" << std::endl;
+                p.username = username;
+                allPlayers.push_back(p);
+            }
+            currPlayers.push_back(p);
+        }
+    }
+    void Server::RegisterCurrentPlayers()
+    {
+        for (int i = 0; i < currPlayers.size(); i ++)
+        {
+            for (int j = 0; j < allPlayers.size(); j ++)
+            {
+                if (allPlayers[i].username == currPlayers[i].username)
+                {
+                    allPlayers[i] = currPlayers[i];
+                }
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ namespace cc
     {
         public:
         bool paused = false;
-        bool connected;
+        bool connected = false;
         sf::TcpSocket socket;
         uint64_t id;
         // sf::RenderTarget* target;

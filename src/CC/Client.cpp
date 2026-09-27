@@ -18,6 +18,14 @@ namespace cc
 		// {
 		// 	p->VisibleUpdate(renderTarget, inputState, deltaTime);
 		// }
+		if (inputState.Pressed(sf::Keyboard::Key::Escape))
+		{
+			paused = !paused;
+		}
+		if (paused)
+		{
+			DisplayPauseMenu();
+		}
 	}
 	void Client::DerivedRender()
 	{
@@ -50,7 +58,6 @@ namespace cc
 				InputState inputState;
 				state->renderTarget = renderTarget;
 				state->Update(inputState, 0);
-				delete this;
 			}
 		}
 		else
@@ -61,7 +68,6 @@ namespace cc
 				InputState inputState;
 				state->renderTarget = renderTarget;
 				state->Update(inputState, 0);
-				delete this;
 			}
 		}
 

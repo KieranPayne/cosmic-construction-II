@@ -1,6 +1,7 @@
 #pragma once
 #include "../PCH.hpp"
 #include "Planet.hpp"
+#include "PlayerData.hpp"
 namespace cc
 {
     class Server
@@ -15,6 +16,10 @@ namespace cc
             uint64_t id;
         };
         sf::TcpListener listener;
+        //every player that has joined this save
+        std::vector<PlayerData> allPlayers = {};
+        std::vector<PlayerData> currPlayers = {};
+
         std::vector<ServerClient> clients;
         uint64_t currClientId = 0;
         uint64_t GetNextClientId();
@@ -34,5 +39,7 @@ namespace cc
         void AcceptClients();
         void ReceivePackets();
         void HandlePacket(uint64_t clientId, sf::Packet& packet);
+        //enters up to date information on all current players in to the all players list
+        void RegisterCurrentPlayers();
     };
 }
