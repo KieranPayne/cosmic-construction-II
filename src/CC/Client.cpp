@@ -2,6 +2,7 @@
 #include "../Main.hpp"
 #include "SaveManager.hpp"
 #include "MainMenu.hpp"
+#include "CSMessage.hpp"
 namespace cc
 {
 	Client::Client(sf::RenderTarget *target)
@@ -113,8 +114,8 @@ namespace cc
 
 		socket.setBlocking(false);
 		connected = true;
-		std::cout << "CONNECTED" << std::endl;
-
+		std::cout << "CONNECTED, SENDING USERNAME" << std::endl;
+		SendUsername();
 		return true;
 	}
 
@@ -150,5 +151,12 @@ namespace cc
 				break;
 			}
 		}
+	}
+	void Client::SendUsername()
+	{
+		sf::Packet packet;
+		packet << (uint16_t)CSMessageType::SEND_USERNAME;
+		packet << SaveManager::username;
+		SendPacket(packet);
 	}
 }

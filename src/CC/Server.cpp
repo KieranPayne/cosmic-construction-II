@@ -1,5 +1,5 @@
 #include "Server.hpp"
-
+#include "CSMessage.hpp"
 namespace cc
 {
     void Server::Start(unsigned short port)
@@ -149,5 +149,14 @@ namespace cc
     void Server::HandlePacket(std::uint64_t clientId, sf::Packet &packet)
     {
         std::cout << "Handling packet" << std::endl;
+        uint16_t t;
+        packet >> t;
+        CSMessageType type = (CSMessageType)t;
+        if (type == CSMessageType::SEND_USERNAME)
+        {
+            std::string username;
+            packet >> username;
+            std::cout << "Received username: " << username << std::endl;
+        }
     }
 }

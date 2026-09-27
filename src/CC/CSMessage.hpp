@@ -3,7 +3,7 @@
 namespace cc
 {
     //types of messages sent between clients and servers
-    enum class CSMessageType
+    enum class CSMessageType : uint16_t
     {
         REQUEST_ADD_ENTITY,
         REQUEST_SET_TILE,
@@ -12,6 +12,7 @@ namespace cc
         REQUEST_GET_CHUNK,
         REQUEST_UPDATE_PLAYER_DATA,
 
+        SEND_USERNAME,
         ADD_ENTITY,
         SET_TILE,
         REMOVE_ENTITY,

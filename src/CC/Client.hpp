@@ -30,6 +30,6 @@ namespace cc
         }
 
         void ReceivePackets();
-
+        void SendUsername();
     };
 }
