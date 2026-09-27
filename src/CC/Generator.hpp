@@ -3,6 +3,7 @@
 #include "Chunk.hpp"
 #include "PerlinNoise.hpp"
 #include "../json.hpp"
+#include "Serializer.hpp"
 namespace cc
 {
 	enum class GenerationStage : uint16_t
@@ -26,8 +27,9 @@ namespace cc
 		//should be passed in as "/partial chunks/"
 		void Save(std::string path);
 		void Load(std::string path);
-		nlohmann::json ToJson();
-		void FromJson(nlohmann::json& j);
+		void Serialize(Serializer& s);
+		// nlohmann::json ToJson();
+		// void FromJson(nlohmann::json& j);
 		//whether next stage is 
 		bool NextStageGreaterOrEqual(GenerationStage stage);
 		// std::vector<sf::Vector2i> GetConnectedTiles(sf::Vector2i startPos, BackgroundTileType type);
@@ -41,8 +43,9 @@ namespace cc
 		uint64_t seed;
 		Generator();
 		void SetSeed(uint64_t seed);
-		nlohmann::json ToJson();
-		void FromJson(nlohmann::json j);
+		void Serialize(Serializer& s);
+		// nlohmann::json ToJson();
+		// void FromJson(nlohmann::json j);
 		void Save(std::string path);
 		void Load(std::string path);
 		void AddPartialChunk(PartialChunk* p);

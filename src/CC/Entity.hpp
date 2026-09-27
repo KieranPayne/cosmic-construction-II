@@ -4,13 +4,14 @@
 #include "EntityInfo.hpp"
 #include "Utils.hpp"
 #include "Tile.hpp"
+#include "Serializer.hpp"
 namespace cc
 {
 
     class Entity
     {
         public:
-        enum EntityType
+        enum EntityType : uint16_t
         {
             NONE = 0,
             HUMAN,
@@ -57,20 +58,28 @@ namespace cc
         {
             // position += {0.1f,0.f};
         };
-        virtual nlohmann::json ToJson()
+        virtual void Serialize(Serializer& s)
         {
-            nlohmann::json j;
-            j["type"] = (int)type;
-            j["position"] = {position.x,position.y};
-            j["size"] = {size.x,size.y};
-            return j;
+            uint16_t t = (uint16_t)type;
+            s.field("type",t);
+            type = (EntityType)t;
+            s.field("position", position);
+            s.field("size",size);
         }
-        virtual void FromJson(nlohmann::json& j)
-        {
-            type = (EntityType)(j["type"]);
-            position = {j["position"][0],j["position"][1]};
-            size = {j["size"][0],j["size"][1]};
-        }
+        // virtual nlohmann::json ToJson()
+        // {
+        //     nlohmann::json j;
+        //     j["type"] = (int)type;
+        //     j["position"] = {position.x,position.y};
+        //     j["size"] = {size.x,size.y};
+        //     return j;
+        // }
+        // virtual void FromJson(nlohmann::json& j)
+        // {
+        //     type = (EntityType)(j["type"]);
+        //     position = {j["position"][0],j["position"][1]};
+        //     size = {j["size"][0],j["size"][1]};
+        // }
     };
     Entity* CreateEntityFromType(Entity::EntityType type);
 }

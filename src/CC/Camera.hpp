@@ -2,6 +2,7 @@
 #include "../Input/Input.hpp"
 #include "../PCH.hpp"
 #include "../json.hpp"
+#include "Serializer.hpp"
 namespace cc
 {
 	class Camera
@@ -23,7 +24,8 @@ namespace cc
 		void Update(float dt, InputState &input);
 		sf::FloatRect toFloatRect(sf::RenderTarget *target);
 		void SetView(sf::RenderTarget *target);
-		nlohmann::json ToJson();
-		void FromJson(nlohmann::json j);
+		void Serialize(Serializer& s);
+		// nlohmann::json ToJson();
+		// void FromJson(nlohmann::json j);
 	};
 }

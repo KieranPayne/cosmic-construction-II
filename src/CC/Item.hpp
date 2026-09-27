@@ -9,7 +9,8 @@ namespace cc
         ItemData itemData;
         Item();
         sf::Vector2f GetTexCoords();
-        nlohmann::json ToJson();
-        void FromJson(nlohmann::json& j);
+        void Serialize(Serializer& s);
+        // nlohmann::json ToJson();
+        // void FromJson(nlohmann::json& j);
     };
 }

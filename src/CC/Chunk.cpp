@@ -41,7 +41,7 @@ namespace cc
 		std::ofstream file(path, std::ios::binary);
 		// writing string
 		std::string stringData = GetStringData();
-		std::cout << stringData << std::endl;
+		// std::cout << stringData << std::endl;
 		uint32_t strSize = stringData.size();
 		file.write(reinterpret_cast<const char *>(&strSize), sizeof(strSize));
 		file.write(stringData.data(), stringData.size());
