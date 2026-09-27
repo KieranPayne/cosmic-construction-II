@@ -86,7 +86,7 @@ namespace cc
 			LoadJoinData(packet);
 		}else if (type == CSMessageType::PLAYER_JOINED)
 		{
-			
+			NewPlayerJoined(packet);
 		}
 	}
 
