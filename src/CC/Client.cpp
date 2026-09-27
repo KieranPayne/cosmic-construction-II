@@ -169,12 +169,11 @@ namespace cc
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX,posY}] = std::unique_ptr<Chunk>(c);
-			// GUESS: not sure how Chunk is constructed/inserted client-side.
-			// Something like:
-			// auto chunk = std::make_unique<Chunk>();
-			// chunk->position = {posX, posY};
-			// chunk->LoadFromByteData(chunkData); // mirror of GetByteData()
-			// planets[activePlanet]->chunks[{posX, posY}] = std::move(chunk);
+		}
+		std::cout << "join data processed. other players:" << std::endl; 
+		for (auto& p : otherPlayers)
+		{
+			std::cout << p.username << std::endl;
 		}
 	}
 
