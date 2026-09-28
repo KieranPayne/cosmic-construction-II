@@ -156,6 +156,19 @@ namespace cc
             std::string message;
             packet >> message;
             BroadcastChatLog(message,clientId);
+        }else if (type == CSMessageType::REQUEST_CHUNKS)
+        {
+            uint64_t n;
+            packet >> n;
+            std::vector<sf::Vector2i> positions;
+            positions.reserve(n);
+            for (int i = 0; i < n; i ++)
+            {
+                sf::Vector2i pos;
+                packet >> pos.x >> pos.y;
+                positions.push_back(pos);
+            }
+            SendChunks(clientId,positions);
         }
     }
     void Server::RegisterCurrentPlayers()
@@ -275,5 +288,28 @@ namespace cc
         p << currPlayers[GetIndexOfId(clientId)].username;
         p << message;
         Broadcast(p,{clientId});
+    }
+    void Server::SendChunks(uint64_t clientId, std::vector<sf::Vector2i>& positions)
+    {
+        sf::Packet p;
+        p << (uint16_t)CSMessageType::CHUNK_DATA;
+        p << (uint64_t)positions.size();
+        Planet* planet = planets[currPlayers[GetIndexOfId(clientId)].planet].get();
+        for (int i = 0; i < positions.size(); i ++)
+        {
+            if (!planet->chunks.contains(positions[i]))
+            {
+                planet->GenerateChunk(positions[i]);
+            }
+            Chunk* c = planet->chunks[positions[i]].get();
+            //put chunk position into packet
+            p << c->position.x << c->position.y;
+            auto b = c->GetByteData();
+            //put size of bytes into packet
+            p << b.size();
+            //put chunk data into packet
+            p.append(b.data(),b.size());
+        }
+        SendToClient(clientId,p);
     }
 }

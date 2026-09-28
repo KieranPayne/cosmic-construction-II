@@ -10,6 +10,8 @@ namespace cc
         PLAYER_JOINED,
         PLAYER_LEFT,
         SERVER_MESSAGE,
-        CHAT_MESSAGE
+        CHAT_MESSAGE,
+        REQUEST_CHUNKS,
+        CHUNK_DATA //result from requesting chunks
     };
 }

@@ -45,5 +45,6 @@ namespace cc
         void BroadcastServerLog(std::string message);
         void BroadcastChatLog(std::string message, uint64_t clientId);
         int GetIndexOfId(uint64_t id);
+        void SendChunks(uint64_t clientId, std::vector<sf::Vector2i>& positions);
     };
 }

@@ -29,7 +29,7 @@ namespace cc
 		void VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt);
 		void Update(double dt);
 		void Tick();
-		void GenerateChunksInView(sf::RenderTarget *target);
+		std::vector<sf::Vector2i> GetChunksToRequest(sf::RenderTarget *target);
 		void Render(sf::RenderTarget *target);
 		void DrawInfoGUI(double dt);
 		void DrawToolGUI(InputState &inputState);

@@ -33,6 +33,18 @@ namespace cc
 		else
 		{
 			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
+			auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
+			if (chunks.size() > 0)
+			{
+				sf::Packet p;
+				p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
+				p << (uint64_t)chunks.size();
+				for (auto& c : chunks)
+				{
+					p << c.x << c.y;
+				}
+				SendPacket(p);
+			}
 			DrawLogWindow();
 		}
 	}
@@ -88,7 +100,7 @@ namespace cc
 	{
 		uint16_t t;
 		packet >> t;
-		LogMessage("Received message of type " + std::to_string(t));
+		// LogMessage("Received message of type " + std::to_string(t));
 		CSMessageType type = (CSMessageType)t;
 		if (type == CSMessageType::JOIN_DATA)
 		{
@@ -123,6 +135,9 @@ namespace cc
 			std::string username, message;
 			packet >> username >> message;
 			LogMessage(message, MessageOrigin::PLAYER,username);
+		}else if (type == CSMessageType::CHUNK_DATA)
+		{
+			LoadChunks(packet);
 		}
 	}
 
@@ -375,6 +390,31 @@ namespace cc
 		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
 		p << text;
 		SendPacket(p);
+	}
+	void Client::LoadChunks(sf::Packet& packet)
+	{
+		uint64_t n;
+		packet >> n;
+		for (int i = 0; i < n; i ++)
+		{
+			int posX, posY;
+			packet >> posX >> posY;
+
+			uint64_t chunkByteSize; // same Uint64 assumption as above
+			packet >> chunkByteSize;
+
+			std::vector<uint8_t> chunkData;
+			chunkData.reserve(chunkByteSize);
+			for (uint64_t j = 0; j < chunkByteSize; j++)
+			{
+				uint8_t byte;
+				packet >> byte;
+				chunkData.push_back(byte);
+			}
+			Chunk *c = new Chunk({posX, posY});
+			c->LoadByteData(chunkData);
+			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
+		}
 	}
 
 

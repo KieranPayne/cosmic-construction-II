@@ -31,7 +31,7 @@ namespace cc
 		DrawToolGUI(inputState);
 		jsonEditor.Draw(this);
 	}
-	void Planet::GenerateChunksInView(sf::RenderTarget *target)
+	std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
 	{
 		sf::FloatRect view = camera.toFloatRect(target);
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
@@ -39,6 +39,7 @@ namespace cc
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
 		topLeft -= {1, 1};
 		bottomRight += {1, 1};
+		std::vector<sf::Vector2i> positions = {};
 		for (int x = topLeft.x; x <= bottomRight.x; x++)
 		{
 			for (int z = topLeft.y; z <= bottomRight.y; z++)
@@ -46,12 +47,11 @@ namespace cc
 
 				if (!chunks.contains({x, z}))
 				{
-
-					chunks[{x, z}] = std::unique_ptr<Chunk>(generator.GenerateChunk({x, z}));
+					positions.push_back({x,z});
 				}
-				sf::Vector2i pos(x, z);
 			}
 		}
+		return positions;
 	}
 	void Planet::Render(sf::RenderTarget *target)
 	{
