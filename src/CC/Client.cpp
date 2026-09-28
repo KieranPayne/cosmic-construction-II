@@ -160,7 +160,7 @@ namespace cc
                 e = CreateTileEntityFromType(tileType);
                 e->Serialize(s);
             }
-            planets[activePlanet]->SetTileAt(position,Tile(tileType),e);
+            planets[activePlanet]->SetTileAt(position,Tile(tileType),e,true);
 		}
 	}
 

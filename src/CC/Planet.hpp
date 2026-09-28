@@ -45,7 +45,7 @@ namespace cc
 		void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
 		std::pair<Tile*,TileEntity*> GetTileAt(sf::Vector2i position);
-		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr);
+		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr, bool sentByServer = false);
 		void Serialize(Serializer& s);
 		// nlohmann::json ToJson();
 		// void FromJson(nlohmann::json j);

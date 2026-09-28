@@ -257,7 +257,7 @@ namespace cc
 		// return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
 		return chunks[chunkPos]->GetTile(subChunkPos);
 	}
-	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity)
+	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity, bool sentByServer)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
@@ -286,7 +286,7 @@ namespace cc
 			}
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		if (client != nullptr)
+		if (client != nullptr && !sentByServer)
 		{
 			sf::Packet p;
 			p << (uint16_t)CSMessageType::REQUEST_SET_TILE;
