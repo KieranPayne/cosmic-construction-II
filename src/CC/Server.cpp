@@ -106,7 +106,7 @@ namespace cc
             client.socket.setBlocking(false);
             client.id = GetNextClientId();
             clients.push_back(std::move(client));
-            std::cout << "ServerClient connected: " << clients.back().id << '\n';
+            BroadcastServerLog("Client connected: " + std::to_string(clients.back().id));
         }
     }
     void Server::ReceivePackets()
@@ -130,8 +130,7 @@ namespace cc
             else
             {
                 // Disconnected / error
-                std::cout << "ServerClient disconnected: "
-                          << clients[i].id << '\n';
+                BroadcastServerLog("Client disconnected: " + std::to_string(clients[i].id));
 
                 clients.erase(clients.begin() + i);
                 std::string username = currPlayers[i].username;
@@ -146,13 +145,17 @@ namespace cc
     }
     void Server::HandlePacket(std::uint64_t clientId, sf::Packet &packet)
     {
-        std::cout << "SERVER: Handling packet" << std::endl;
         uint16_t t;
         packet >> t;
         CSMessageType type = (CSMessageType)t;
         if (type == CSMessageType::SEND_USERNAME)
         {
             SendJoinData(clientId,packet);
+        }else if (type == CSMessageType::CHAT_MESSAGE)
+        {
+            std::string message;
+            packet >> message;
+            BroadcastChatLog(message,clientId);
         }
     }
     void Server::RegisterCurrentPlayers()
@@ -173,19 +176,20 @@ namespace cc
         //REGISTERING PLAYER
         std::string username;
         usernamePacket >> username;
-        std::cout << "SERVER: Received username: " << username << std::endl;
+        BroadcastServerLog("Received username: " + username);
         PlayerData p;
         for (int i = 0; i < allPlayers.size(); i ++)
         {
             if (allPlayers[i].username == username)
             {
+                BroadcastServerLog("Player is existing. retrieving saved data");
                 p = allPlayers[i];
                 break;
             }
         }
         if (p.username == "")
         {
-            std::cout << "SERVER: new player registered" << std::endl;
+            BroadcastServerLog("New player registered");
             p.username = username;
             allPlayers.push_back(p);
         }
@@ -245,5 +249,31 @@ namespace cc
         newPlayerPacket << (uint64_t)b.size();
         newPlayerPacket.append(b.data(),b.size());
         Broadcast(newPlayerPacket,{clientId});
+    }
+    void Server::BroadcastServerLog(std::string message)
+    {
+        sf::Packet p;
+        p << (uint16_t)CSMessageType::SERVER_MESSAGE;
+        p << message;
+        Broadcast(p);
+    }
+    int Server::GetIndexOfId(uint64_t id)
+    {
+        for (int i = 0; i < clients.size(); i ++)
+        {
+            if (clients[i].id == id)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+    void Server::BroadcastChatLog(std::string message, uint64_t clientId)
+    {
+        sf::Packet p;
+        p << (uint16_t)CSMessageType::CHAT_MESSAGE;
+        p << currPlayers[GetIndexOfId(clientId)].username;
+        p << message;
+        Broadcast(p,{clientId});
     }
 }

@@ -18,7 +18,6 @@ namespace cc
 		{
 			return;
 		}
-		planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 		// for (auto &p : planets)
 		// {
 		// 	p->VisibleUpdate(renderTarget, inputState, deltaTime);
@@ -30,6 +29,11 @@ namespace cc
 		if (paused)
 		{
 			DisplayPauseMenu();
+		}
+		else
+		{
+			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
+			DrawLogWindow();
 		}
 	}
 	void Client::DerivedRender()
@@ -84,7 +88,7 @@ namespace cc
 	{
 		uint16_t t;
 		packet >> t;
-		std::cout << "received message of type " << std::to_string(t) << std::endl;
+		LogMessage("Received message of type " + std::to_string(t));
 		CSMessageType type = (CSMessageType)t;
 		if (type == CSMessageType::JOIN_DATA)
 		{
@@ -98,7 +102,7 @@ namespace cc
 		{
 			std::string username;
 			packet >> username;
-			std::cout << "player " << username << " disconnected" << std::endl;
+			LogMessage("Player " + username + " disconnected.");
 			for (int i = 0; i < otherPlayers.size(); i++)
 			{
 				if (otherPlayers[i].username == username)
@@ -107,6 +111,18 @@ namespace cc
 					break;
 				}
 			}
+		}
+		else if (type == CSMessageType::SERVER_MESSAGE)
+		{
+			std::string message;
+			packet >> message;
+			LogMessage(message, MessageOrigin::SERVER);
+		}
+		else if (type == CSMessageType::CHAT_MESSAGE)
+		{
+			std::string username, message;
+			packet >> username >> message;
+			LogMessage(message, MessageOrigin::PLAYER);
 		}
 	}
 
@@ -193,11 +209,12 @@ namespace cc
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
 		}
-		std::cout << "join data processed. other players:" << std::endl;
+		std::string msg = "Join data processed. Other players:";
 		for (auto &p : otherPlayers)
 		{
-			std::cout << p.username << std::endl;
+			msg += "\n" + p.username;
 		}
+		LogMessage(msg);
 	}
 
 	bool Client::ConnectToServer(sf::IpAddress &ip, unsigned short port)
@@ -219,7 +236,7 @@ namespace cc
 
 		socket.setBlocking(false);
 		connected = true;
-		std::cout << "CONNECTED, SENDING USERNAME" << std::endl;
+		LogMessage("Connected, sending username");
 		SendUsername();
 		return true;
 	}
@@ -237,7 +254,6 @@ namespace cc
 
 			if (status == sf::Socket::Status::Done)
 			{
-				std::cout << "RECEIVED PACKET" << std::endl;
 				ProcessPacket(packet);
 			}
 			else if (status == sf::Socket::Status::NotReady)
@@ -281,7 +297,7 @@ namespace cc
 		PlayerData p;
 		s.field("player", p);
 		otherPlayers.push_back(p);
-		std::cout << "player connected: " << p.username << std::endl;
+		LogMessage("Player Connected: " + p.username);
 	}
 	void Client::OnServerClosed()
 	{
@@ -292,4 +308,74 @@ namespace cc
 		state->renderTarget = renderTarget;
 		state->Update(inputState, 0);
 	}
+	void Client::LogMessage(std::string message, MessageOrigin origin, std::string username)
+	{
+		if (origin == MessageOrigin::SELF)
+		{
+			chatLog.push_back("> " + message);
+		}
+		else if (origin == MessageOrigin::SERVER)
+		{
+			chatLog.push_back("<SERVER> " + message);
+		}
+		else
+		{
+			chatLog.push_back("<" + username + "> " + message);
+		}
+		chatLogScrollToBottom = true;
+	}
+	void Client::DrawLogWindow()
+	{
+		ImGui::SetNextWindowPos({897, 3}, ImGuiCond_Once);
+		ImGui::SetNextWindowSize({379, 189}, ImGuiCond_Once);
+		ImGui::Begin("Chat Log");
+
+		// Reserve space at the bottom for the separator + input row
+		const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+
+		ImGui::BeginChild("ChatScrollRegion", ImVec2(0, -footerHeight), false);
+		for (auto &m : chatLog)
+		{
+			ImGui::TextWrapped("%s", m.c_str());
+		}
+		if (chatLogScrollToBottom)
+		{
+			ImGui::SetScrollHereY(1.f);
+			chatLogScrollToBottom = false;
+		}
+		ImGui::EndChild();
+
+		ImGui::Separator();
+
+		bool send = false;
+		ImGui::SetNextItemWidth(-60);
+		if (ImGui::InputText("##ChatInput", chatInput, sizeof(chatInput), ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			send = true;
+			ImGui::SetKeyboardFocusHere(-1); // keep the field focused after pressing Enter
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Send"))
+		{
+			send = true;
+		}
+
+		if (send && chatInput[0] != '\0')
+		{
+			SendChatMessage(chatInput);
+			chatInput[0] = '\0';
+		}
+
+		ImGui::End();
+	}
+	void Client::SendChatMessage(const std::string& text)
+	{
+		LogMessage(text,MessageOrigin::PLAYER,SaveManager::username);
+		sf::Packet p;
+		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
+		p << text;
+		SendPacket(p);
+	}
+
+
 }

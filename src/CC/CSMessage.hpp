@@ -8,6 +8,8 @@ namespace cc
         SEND_USERNAME,
         JOIN_DATA,
         PLAYER_JOINED,
-        PLAYER_LEFT
+        PLAYER_LEFT,
+        SERVER_MESSAGE,
+        CHAT_MESSAGE
     };
 }

@@ -7,26 +7,27 @@ namespace cc
 {
     class Client : public Kosmic::State
     {
-        public:
+        private:
+        bool chatLogScrollToBottom = false;
         bool paused = false;
         bool connected = false;
         sf::TcpSocket socket;
-        uint64_t id;
-        // sf::RenderTarget* target;
-        std::vector<PlayerData> otherPlayers;
-        std::vector<std::unique_ptr<Planet>> planets;
+        std::vector<PlayerData> otherPlayers = {};
+        std::vector<std::unique_ptr<Planet>> planets = {};
+        std::vector<std::string> chatLog = {};
         int activePlanet;
+        void DisplayPauseMenu();
+        public:
         void DerivedUpdate();
         void DerivedRender();
-        void DisplayPauseMenu();
         Client(sf::RenderTarget* target);
-    
+        bool ConnectToServer(sf::IpAddress& ip, unsigned short port);
+        private:
         //NETWORKING STUFF
         void ProcessPacket(sf::Packet& packet);
         void SendPacket(sf::Packet& packet);
         void LoadJoinData(sf::Packet& packet);
         void NewPlayerJoined(sf::Packet& packet);
-        bool ConnectToServer(sf::IpAddress& ip, unsigned short port);
         bool IsConnected()
         {
             return connected;
@@ -34,5 +35,15 @@ namespace cc
         void OnServerClosed();
         void ReceivePackets();
         void SendUsername();
+        enum class MessageOrigin
+        {
+            SELF,
+            SERVER,
+            PLAYER
+        };
+        char chatInput[256] = "";
+        void SendChatMessage(const std::string& text);
+        void LogMessage(std::string message, MessageOrigin origin = MessageOrigin::SELF, std::string username = "");
+        void DrawLogWindow();
     };
 }

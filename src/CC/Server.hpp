@@ -42,5 +42,8 @@ namespace cc
         void SendJoinData(uint64_t clientId, sf::Packet& usernamePacket);
         //enters up to date information on all current players in to the all players list
         void RegisterCurrentPlayers();
+        void BroadcastServerLog(std::string message);
+        void BroadcastChatLog(std::string message, uint64_t clientId);
+        int GetIndexOfId(uint64_t id);
     };
 }
