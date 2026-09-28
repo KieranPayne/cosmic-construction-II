@@ -134,6 +134,13 @@ namespace cc
                           << clients[i].id << '\n';
 
                 clients.erase(clients.begin() + i);
+                std::string username = currPlayers[i].username;
+                sf::Packet p;
+                p << (uint16_t)CSMessageType::PLAYER_LEFT;
+                p << username;
+                Broadcast(p);
+                RegisterCurrentPlayers();
+                currPlayers.erase(currPlayers.begin() + i);
             }
         }
     }

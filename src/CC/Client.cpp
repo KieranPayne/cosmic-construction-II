@@ -87,6 +87,19 @@ namespace cc
 		}else if (type == CSMessageType::PLAYER_JOINED)
 		{
 			NewPlayerJoined(packet);
+		}else if (type == CSMessageType::PLAYER_LEFT)
+		{
+			std::string username;
+			packet >> username;
+			std::cout << "player " << username << " disconnected" << std::endl;
+			for (int i = 0; i < otherPlayers.size(); i ++)
+			{
+				if (otherPlayers[i].username == username)
+				{
+					otherPlayers.erase(otherPlayers.begin() + i);
+					break;
+				}
+			}
 		}
 	}
 
@@ -105,7 +118,7 @@ namespace cc
 
 		if (status == sf::Socket::Status::Disconnected)
 		{
-			connected = false;
+			OnServerClosed();
 		}
 	}
 
@@ -227,7 +240,7 @@ namespace cc
 			}
 			else if (status == sf::Socket::Status::Disconnected)
 			{
-				connected = false;
+				OnServerClosed();
 				break;
 			}
 			else
@@ -262,5 +275,11 @@ namespace cc
 		s.field("player",p);
 		otherPlayers.push_back(p);
 		std::cout << "player connected: " << p.username << std::endl;
+	}
+	void Client::OnServerClosed()
+	{
+		connected = false;
+		std::cout << "Server closed, returning to main menu" << std::endl;
+		state = std::unique_ptr<Kosmic::State>(new MainMenu());
 	}
 }

@@ -31,7 +31,7 @@ namespace cc
         {
             return connected;
         }
-
+        void OnServerClosed();
         void ReceivePackets();
         void SendUsername();
     };

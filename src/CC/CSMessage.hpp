@@ -7,6 +7,7 @@ namespace cc
     {
         SEND_USERNAME,
         JOIN_DATA,
-        PLAYER_JOINED
+        PLAYER_JOINED,
+        PLAYER_LEFT
     };
 }
