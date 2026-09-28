@@ -55,10 +55,9 @@ namespace cc
 			if (ImGui::Button("save and quit"))
 			{
 				SaveManager::SaveServer(server.get());
+				server.reset(nullptr);
 				state = std::unique_ptr<Kosmic::State>(new MainMenu());
-				InputState inputState;
 				state->renderTarget = renderTarget;
-				state->Update(inputState, 0);
 			}
 		}
 		else
@@ -66,9 +65,7 @@ namespace cc
 			if (ImGui::Button("disconnect"))
 			{
 				state = std::unique_ptr<Kosmic::State>(new MainMenu());
-				InputState inputState;
 				state->renderTarget = renderTarget;
-				state->Update(inputState, 0);
 			}
 		}
 
