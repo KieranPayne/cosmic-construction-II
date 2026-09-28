@@ -40,7 +40,7 @@ namespace cc
 		void GetTileVertices(sf::Vector2i chunkPos);
 		//NOTE: THIS IS MOVING CHUNKS, NOT JUST MOVING IN GENERAL.
 		void MoveEntity(Entity* entity, sf::Vector2i newPos);
-		void AddEntity(Entity* entity);
+		void AddEntity(Entity* entity, bool sentByServer = false);
 		// like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
 		void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);

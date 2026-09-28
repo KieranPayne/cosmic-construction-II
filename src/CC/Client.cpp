@@ -160,6 +160,16 @@ namespace cc
                 e->Serialize(s);
             }
             planets[activePlanet]->SetTileAt(position,Tile(tileType),e,true);
+		}else if (type == CSMessageType::ADD_ENTITY)
+		{
+			uint16_t t;
+            packet >> t;
+            Entity::EntityType type = (Entity::EntityType)t;
+            Entity *e = CreateEntityFromType(type);
+            std::vector<uint8_t> data2 = ReadBytesFromPacket(packet);
+            Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
+            e->Serialize(s);
+            planets[activePlanet]->AddEntity(e, true);
 		}
 	}
 

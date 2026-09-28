@@ -151,40 +151,43 @@ namespace cc
         CSMessageType type = (CSMessageType)t;
         if (type == CSMessageType::SEND_USERNAME)
         {
-            SendJoinData(clientId,packet);
-        }else if (type == CSMessageType::CHAT_MESSAGE)
+            SendJoinData(clientId, packet);
+        }
+        else if (type == CSMessageType::CHAT_MESSAGE)
         {
             std::string message;
             packet >> message;
-            BroadcastChatLog(message,clientId);
-        }else if (type == CSMessageType::REQUEST_CHUNKS)
+            BroadcastChatLog(message, clientId);
+        }
+        else if (type == CSMessageType::REQUEST_CHUNKS)
         {
             uint64_t n;
             packet >> n;
             std::vector<sf::Vector2i> positions;
             positions.reserve(n);
-            for (int i = 0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 sf::Vector2i pos;
                 packet >> pos.x >> pos.y;
                 positions.push_back(pos);
             }
-            SendChunks(clientId,positions);
-        }else if (type == CSMessageType::REQUEST_SET_TILE)
+            SendChunks(clientId, positions);
+        }
+        else if (type == CSMessageType::REQUEST_SET_TILE)
         {
-            //create clone of packet to send to other players
+            // create clone of packet to send to other players
             sf::Packet out;
             out << (uint16_t)CSMessageType::SET_TILE;
 
-            const uint8_t* data = static_cast<const uint8_t*>(packet.getData());
-            std::size_t pos = packet.getReadPosition();   // just past the type you already read
+            const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
+            std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
             int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
-            for (int i = 0; i < currPlayers.size(); i ++)
+            for (int i = 0; i < currPlayers.size(); i++)
             {
                 if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
                 {
-                    SendToClient(clients[i].id,out);
+                    SendToClient(clients[i].id, out);
                 }
             }
 
@@ -195,22 +198,48 @@ namespace cc
             packet >> tileType;
             bool hasTileEntity;
             packet >> hasTileEntity;
-            TileEntity* e = nullptr;
+            TileEntity *e = nullptr;
             if (hasTileEntity)
             {
                 auto data = ReadBytesFromPacket(packet);
-                Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+                Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
                 e = CreateTileEntityFromType(tileType);
                 e->Serialize(s);
             }
-            planets[currPlayers[GetIndexOfId(clientId)].planet]->SetTileAt(position,Tile(tileType),e);
+            planets[currPlayers[GetIndexOfId(clientId)].planet]->SetTileAt(position, Tile(tileType), e);
+        }
+        else if (type == CSMessageType::REQUEST_ADD_ENTITY)
+        {
+            sf::Packet out;
+            out << (uint16_t)CSMessageType::ADD_ENTITY;
+
+            const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
+            std::size_t pos = packet.getReadPosition(); // just past the type you already read
+            out.append(data + pos, packet.getDataSize() - pos);
+            int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
+            for (int i = 0; i < currPlayers.size(); i++)
+            {
+                if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
+                {
+                    SendToClient(clients[i].id, out);
+                }
+            }
+
+            uint16_t t;
+            packet >> t;
+            Entity::EntityType type = (Entity::EntityType)t;
+            Entity *e = CreateEntityFromType(type);
+            std::vector<uint8_t> data2 = ReadBytesFromPacket(packet);
+            Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
+            e->Serialize(s);
+            planets[currPlayers[GetIndexOfId(clientId)].planet]->AddEntity(e, true);
         }
     }
     void Server::RegisterCurrentPlayers()
     {
-        for (int i = 0; i < currPlayers.size(); i ++)
+        for (int i = 0; i < currPlayers.size(); i++)
         {
-            for (int j = 0; j < allPlayers.size(); j ++)
+            for (int j = 0; j < allPlayers.size(); j++)
             {
                 if (allPlayers[i].username == currPlayers[i].username)
                 {
@@ -219,14 +248,14 @@ namespace cc
             }
         }
     }
-    void Server::SendJoinData(uint64_t clientId, sf::Packet& usernamePacket)
+    void Server::SendJoinData(uint64_t clientId, sf::Packet &usernamePacket)
     {
-        //REGISTERING PLAYER
+        // REGISTERING PLAYER
         std::string username;
         usernamePacket >> username;
         BroadcastServerLog("Received username: " + username);
         PlayerData p;
-        for (int i = 0; i < allPlayers.size(); i ++)
+        for (int i = 0; i < allPlayers.size(); i++)
         {
             if (allPlayers[i].username == username)
             {
@@ -242,61 +271,61 @@ namespace cc
             allPlayers.push_back(p);
         }
         currPlayers.push_back(p);
-        
-        //ASSEMBLING PACKET TO SEND BACK
+
+        // ASSEMBLING PACKET TO SEND BACK
         sf::Packet packet;
         packet << (uint16_t)CSMessageType::JOIN_DATA;
-        //first bit of data is every other player currently in server
-        //start by serializing the list of current players
-        Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+        // first bit of data is every other player currently in server
+        // start by serializing the list of current players
+        Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
         int n = currPlayers.size();
-        s.field("n",n);
-        for (int i = 0; i < currPlayers.size(); i ++)
+        s.field("n", n);
+        for (int i = 0; i < currPlayers.size(); i++)
         {
-            s.field(std::to_string(i),currPlayers[i]);
+            s.field(std::to_string(i), currPlayers[i]);
         }
         auto data = s.binary();
-        //put number of bytes in packet
+        // put number of bytes in packet
         packet << data.size();
-        //put bytes into packet
-        packet.append(data.data(),data.size());
-        //next, want to send all the chunks visible to the player
-        sf::Vector2f targetResolution {3840.f,2160.f};
+        // put bytes into packet
+        packet.append(data.data(), data.size());
+        // next, want to send all the chunks visible to the player
+        sf::Vector2f targetResolution{3840.f, 2160.f};
         int minX = floor((p.cameraPosition.x - targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
         int maxX = ceil((p.cameraPosition.x + targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
         int minY = floor((p.cameraPosition.y - targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
         int maxY = ceil((p.cameraPosition.y + targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
-        //add number of chunks to packet
-        packet << (int)((maxX- minX + 1) * (maxY - minY + 1));
-        Planet* planet = planets[p.planet].get();
-        for (int x = minX; x <= maxX; x ++)
+        // add number of chunks to packet
+        packet << (int)((maxX - minX + 1) * (maxY - minY + 1));
+        Planet *planet = planets[p.planet].get();
+        for (int x = minX; x <= maxX; x++)
         {
-            for (int y = minY; y <= maxY; y ++)
+            for (int y = minY; y <= maxY; y++)
             {
-                if (!planet->chunks.contains({x,y}))
+                if (!planet->chunks.contains({x, y}))
                 {
-                    planet->GenerateChunk({x,y});
+                    planet->GenerateChunk({x, y});
                 }
-                Chunk* c = planet->chunks[{x,y}].get();
-                //put chunk position into packet
+                Chunk *c = planet->chunks[{x, y}].get();
+                // put chunk position into packet
                 packet << c->position.x << c->position.y;
                 auto b = c->GetByteData();
-                //put size of bytes into packet
+                // put size of bytes into packet
                 packet << b.size();
-                //put chunk data into packet
-                packet.append(b.data(),b.size());
+                // put chunk data into packet
+                packet.append(b.data(), b.size());
             }
-        }        
-        SendToClient(clientId,packet);
-        //let every other player know a new player has joined
+        }
+        SendToClient(clientId, packet);
+        // let every other player know a new player has joined
         sf::Packet newPlayerPacket;
         newPlayerPacket << (uint16_t)CSMessageType::PLAYER_JOINED;
-        Serializer s2(Serializer::Mode::WRITE,Serializer::Format::BINARY);
-        s2.field("player",p);
+        Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+        s2.field("player", p);
         auto b = s2.binary();
         newPlayerPacket << (uint64_t)b.size();
-        newPlayerPacket.append(b.data(),b.size());
-        Broadcast(newPlayerPacket,{clientId});
+        newPlayerPacket.append(b.data(), b.size());
+        Broadcast(newPlayerPacket, {clientId});
     }
     void Server::BroadcastServerLog(std::string message)
     {
@@ -307,7 +336,7 @@ namespace cc
     }
     int Server::GetIndexOfId(uint64_t id)
     {
-        for (int i = 0; i < clients.size(); i ++)
+        for (int i = 0; i < clients.size(); i++)
         {
             if (clients[i].id == id)
             {
@@ -322,29 +351,29 @@ namespace cc
         p << (uint16_t)CSMessageType::CHAT_MESSAGE;
         p << currPlayers[GetIndexOfId(clientId)].username;
         p << message;
-        Broadcast(p,{clientId});
+        Broadcast(p, {clientId});
     }
-    void Server::SendChunks(uint64_t clientId, std::vector<sf::Vector2i>& positions)
+    void Server::SendChunks(uint64_t clientId, std::vector<sf::Vector2i> &positions)
     {
         sf::Packet p;
         p << (uint16_t)CSMessageType::CHUNK_DATA;
         p << (uint64_t)positions.size();
-        Planet* planet = planets[currPlayers[GetIndexOfId(clientId)].planet].get();
-        for (int i = 0; i < positions.size(); i ++)
+        Planet *planet = planets[currPlayers[GetIndexOfId(clientId)].planet].get();
+        for (int i = 0; i < positions.size(); i++)
         {
             if (!planet->chunks.contains(positions[i]))
             {
                 planet->GenerateChunk(positions[i]);
             }
-            Chunk* c = planet->chunks[positions[i]].get();
-            //put chunk position into packet
+            Chunk *c = planet->chunks[positions[i]].get();
+            // put chunk position into packet
             p << c->position.x << c->position.y;
             auto b = c->GetByteData();
-            //put size of bytes into packet
+            // put size of bytes into packet
             p << b.size();
-            //put chunk data into packet
-            p.append(b.data(),b.size());
+            // put chunk data into packet
+            p.append(b.data(), b.size());
         }
-        SendToClient(clientId,p);
+        SendToClient(clientId, p);
     }
 }

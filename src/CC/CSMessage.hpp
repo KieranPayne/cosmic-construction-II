@@ -14,6 +14,8 @@ namespace cc
         REQUEST_CHUNKS,
         CHUNK_DATA, //result from requesting chunks
         REQUEST_SET_TILE,
-        SET_TILE
+        SET_TILE,
+        REQUEST_ADD_ENTITY,
+        ADD_ENTITY
     };
 }

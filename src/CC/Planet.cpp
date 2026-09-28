@@ -178,14 +178,28 @@ namespace cc
 		// FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
 		generator.Load(path);
 	}
-	void Planet::AddEntity(Entity *entity)
+	void Planet::AddEntity(Entity *entity, bool sentByServer)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
+		//TODO: deal with case where dont have chunk yet
 		if (!chunks.contains(chunkPos))
 		{
-			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+			return;
+			// chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+		}
+		if (!sentByServer)
+		{
+			sf::Packet p;
+			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITY;
+			p << (uint16_t)entity->type;
+			Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+			entity->Serialize(s);
+			auto data = s.binary();
+			p << data.size();
+			p.append(data.data(),data.size());
+			client->SendPacket(p);
 		}
 		chunks[chunkPos]->AddEntity(entity);
 	}
