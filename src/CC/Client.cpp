@@ -122,7 +122,7 @@ namespace cc
 		{
 			std::string username, message;
 			packet >> username >> message;
-			LogMessage(message, MessageOrigin::PLAYER);
+			LogMessage(message, MessageOrigin::PLAYER,username);
 		}
 	}
 
