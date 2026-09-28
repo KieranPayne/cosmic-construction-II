@@ -11,6 +11,8 @@
 #include "JsonEditor.hpp"
 #include "Item.hpp"
 #include "Serializer.hpp"
+#include "CSMessage.hpp"
+#include "Client.hpp"
 namespace cc
 {
 	Planet::Planet()
@@ -262,7 +264,46 @@ namespace cc
 		{
 			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
+		auto current = GetTileAt(position);
+		if (current.first->type == tile.type)
+		{
+			if (tileEntity != nullptr)
+			{
+				if (current.second != nullptr)
+				{
+					Serializer s1(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+					tileEntity->Serialize(s1);
+					Serializer s2(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+					current.second->Serialize(s2);
+					if (s1.binary() == s2.binary())
+					{
+						return;
+					}
+				}
+			}else if (tileEntity == nullptr && current.second == nullptr)
+			{
+				return;
+			}
+		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
+		if (client != nullptr)
+		{
+			sf::Packet p;
+			p << (uint16_t)CSMessageType::REQUEST_SET_TILE;
+			p  << position.x << position.y;
+			p << tile.type;
+			p << (bool)(tileEntity != nullptr);
+			if (tileEntity != nullptr)
+			{
+				Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+				
+				tileEntity->Serialize(s);
+				auto data = s.binary();
+				p << (uint64_t)data.size();
+				p.append(data.data(),data.size());
+			}
+			client->SendPacket(p);
+		}
 		chunks[chunkPos]->SetTile(subChunkPos, tile, tileEntity);
 		// chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
 		if (tileVertices.contains(chunkPos))
@@ -401,6 +442,9 @@ namespace cc
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
 				SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
+				// sf::Packet p;
+				// p << (uint16_t)CSMessageType::REQUEST_SET_TILE;
+
 			}
 		}
 		else if (currentView == 1)

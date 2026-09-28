@@ -10,6 +10,7 @@
 #include "Serializer.hpp"
 namespace cc
 {
+	class Client;
 	class Planet
 	{
 	public:
@@ -21,6 +22,7 @@ namespace cc
 		int index;
 		uint64_t seed = 0;
 		JsonEditor jsonEditor;
+		Client* client = nullptr;
 
 		// for display
 		double currFps;

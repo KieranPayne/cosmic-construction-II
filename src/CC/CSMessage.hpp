@@ -12,6 +12,8 @@ namespace cc
         SERVER_MESSAGE,
         CHAT_MESSAGE,
         REQUEST_CHUNKS,
-        CHUNK_DATA //result from requesting chunks
+        CHUNK_DATA, //result from requesting chunks
+        REQUEST_SET_TILE,
+        SET_TILE
     };
 }

@@ -18,14 +18,15 @@ namespace cc
         int activePlanet;
         void DisplayPauseMenu();
         public:
+        void AddPlanet(Planet* planet);
         void DerivedUpdate();
         void DerivedRender();
         Client(sf::RenderTarget* target);
         bool ConnectToServer(sf::IpAddress& ip, unsigned short port);
+        void SendPacket(sf::Packet& packet);
         private:
         //NETWORKING STUFF
         void ProcessPacket(sf::Packet& packet);
-        void SendPacket(sf::Packet& packet);
         void LoadJoinData(sf::Packet& packet);
         void NewPlayerJoined(sf::Packet& packet);
         bool IsConnected()

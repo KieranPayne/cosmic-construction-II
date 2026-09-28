@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include "CSMessage.hpp"
+#include "Utils.hpp"
 namespace cc
 {
     void Server::Start(unsigned short port)
@@ -169,6 +170,40 @@ namespace cc
                 positions.push_back(pos);
             }
             SendChunks(clientId,positions);
+        }else if (type == CSMessageType::REQUEST_SET_TILE)
+        {
+            //create clone of packet to send to other players
+            sf::Packet out;
+            out << (uint16_t)CSMessageType::SET_TILE;
+
+            const uint8_t* data = static_cast<const uint8_t*>(packet.getData());
+            std::size_t pos = packet.getReadPosition();   // just past the type you already read
+            out.append(data + pos, packet.getDataSize() - pos);
+            int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
+            for (int i = 0; i < currPlayers.size(); i ++)
+            {
+                if (currPlayers[i].planet == planetIndex)
+                {
+                    SendToClient(clients[i].id,packet);
+                }
+            }
+
+            sf::Vector2i position;
+            packet >> position.x >> position.y;
+            // BroadcastServerLog("Setting tile at " + std::to_string(position.x) + " " + std::to_string(position.y));
+            uint16_t tileType;
+            packet >> tileType;
+            bool hasTileEntity;
+            packet >> hasTileEntity;
+            TileEntity* e = nullptr;
+            if (hasTileEntity)
+            {
+                auto data = ReadBytesFromPacket(packet);
+                Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+                e = CreateTileEntityFromType(tileType);
+                e->Serialize(s);
+            }
+            planets[currPlayers[GetIndexOfId(clientId)].planet]->SetTileAt(position,Tile(tileType),e);
         }
     }
     void Server::RegisterCurrentPlayers()

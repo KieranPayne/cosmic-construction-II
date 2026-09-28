@@ -3,13 +3,19 @@
 #include "SaveManager.hpp"
 #include "MainMenu.hpp"
 #include "CSMessage.hpp"
+#include "Utils.hpp"
 namespace cc
 {
 	Client::Client(sf::RenderTarget *target)
 	{
 		this->renderTarget = target;
 		activePlanet = 0;
-		planets.push_back(std::make_unique<Planet>());
+		AddPlanet(new Planet());
+	}
+	void Client::AddPlanet(Planet* planet)
+	{
+		planet->client = this;
+		planets.push_back(std::unique_ptr<Planet>(planet));
 	}
 	void Client::DerivedUpdate()
 	{
@@ -138,6 +144,23 @@ namespace cc
 		}else if (type == CSMessageType::CHUNK_DATA)
 		{
 			LoadChunks(packet);
+		}else if (type == CSMessageType::SET_TILE)
+		{
+			sf::Vector2i position;
+            packet >> position.x >> position.y;
+            uint16_t tileType;
+            packet >> tileType;
+            bool hasTileEntity;
+            packet >> hasTileEntity;
+            TileEntity* e = nullptr;
+            if (hasTileEntity)
+            {
+                auto data = ReadBytesFromPacket(packet);
+                Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+                e = CreateTileEntityFromType(tileType);
+                e->Serialize(s);
+            }
+            planets[activePlanet]->SetTileAt(position,Tile(tileType),e);
 		}
 	}
 
@@ -208,18 +231,18 @@ namespace cc
 		{
 			int posX, posY;
 			packet >> posX >> posY;
+			auto chunkData = ReadBytesFromPacket(packet);
+			// uint64_t chunkByteSize; // same Uint64 assumption as above
+			// packet >> chunkByteSize;
 
-			uint64_t chunkByteSize; // same Uint64 assumption as above
-			packet >> chunkByteSize;
-
-			std::vector<uint8_t> chunkData;
-			chunkData.reserve(chunkByteSize);
-			for (uint64_t j = 0; j < chunkByteSize; j++)
-			{
-				uint8_t byte;
-				packet >> byte;
-				chunkData.push_back(byte);
-			}
+			// std::vector<uint8_t> chunkData;
+			// chunkData.reserve(chunkByteSize);
+			// for (uint64_t j = 0; j < chunkByteSize; j++)
+			// {
+			// 	uint8_t byte;
+			// 	packet >> byte;
+			// 	chunkData.push_back(byte);
+			// }
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
@@ -298,16 +321,17 @@ namespace cc
 	}
 	void Client::NewPlayerJoined(sf::Packet &packet)
 	{
-		uint64_t n;
-		packet >> n;
-		std::vector<uint8_t> data;
-		data.reserve(n);
-		for (int i = 0; i < n; i++)
-		{
-			uint8_t byte;
-			packet >> byte;
-			data.push_back(byte);
-		}
+		auto data = ReadBytesFromPacket(packet);
+		// uint64_t n;
+		// packet >> n;
+		// // std::vector<uint8_t> data;
+		// data.reserve(n);
+		// for (int i = 0; i < n; i++)
+		// {
+		// 	uint8_t byte;
+		// 	packet >> byte;
+		// 	data.push_back(byte);
+		// }
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		PlayerData p;
 		s.field("player", p);
@@ -399,18 +423,18 @@ namespace cc
 		{
 			int posX, posY;
 			packet >> posX >> posY;
+			auto chunkData = ReadBytesFromPacket(packet);
+			// uint64_t chunkByteSize; // same Uint64 assumption as above
+			// packet >> chunkByteSize;
 
-			uint64_t chunkByteSize; // same Uint64 assumption as above
-			packet >> chunkByteSize;
-
-			std::vector<uint8_t> chunkData;
-			chunkData.reserve(chunkByteSize);
-			for (uint64_t j = 0; j < chunkByteSize; j++)
-			{
-				uint8_t byte;
-				packet >> byte;
-				chunkData.push_back(byte);
-			}
+			// std::vector<uint8_t> chunkData;
+			// chunkData.reserve(chunkByteSize);
+			// for (uint64_t j = 0; j < chunkByteSize; j++)
+			// {
+			// 	uint8_t byte;
+			// 	packet >> byte;
+			// 	chunkData.push_back(byte);
+			// }
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);

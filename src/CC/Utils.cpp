@@ -288,4 +288,18 @@ namespace cc
 		}
 		return ImGuiKey_None;
 	}
+	std::vector<uint8_t> ReadBytesFromPacket(sf::Packet& packet)
+	{
+		uint64_t n;
+		packet >> n;
+		std::vector<uint8_t> result;
+		result.reserve(n);
+		for (int i = 0; i < n; i ++)
+		{
+			uint8_t byte;
+			packet >> byte;
+			result.push_back(byte);
+		}
+		return result;
+	}
 }

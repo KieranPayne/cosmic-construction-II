@@ -11,4 +11,5 @@ namespace cc
     sf::Vector2i TileToChunkPos(sf::Vector2i &pos);
     sf::Vector2i TileToChunkPos(sf::Vector2f &pos);
     ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key key);
+    std::vector<uint8_t> ReadBytesFromPacket(sf::Packet& packet);
 }
