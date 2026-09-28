@@ -7,10 +7,11 @@
 #include "MainMenu.hpp"
 namespace cc
 {
-	UsernameMenu::UsernameMenu()
+	UsernameMenu::UsernameMenu(sf::RenderTarget* target)
 	{
 		strcpy(username, "");
 		errorMessage = "";
+		this->renderTarget = target;
     }
 
 	int UsernameMenu::InputTextCallback(ImGuiInputTextCallbackData *data)
@@ -107,7 +108,7 @@ namespace cc
     void UsernameMenu::UsernameEntered(std::string username)
     {
         SaveManager::username = username;
-        state = std::unique_ptr<Kosmic::State>(new MainMenu());
+        state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
     }
     bool UsernameMenu::CheckForExisting()
     {

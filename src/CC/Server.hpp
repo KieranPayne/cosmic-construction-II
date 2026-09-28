@@ -24,7 +24,7 @@ namespace cc
         uint64_t currClientId = 0;
         uint64_t GetNextClientId();
 
-        std::vector<std::unique_ptr<Planet>> planets;
+        std::vector<std::unique_ptr<Planet>> planets = {};
         Server();
         int tps;
         void Tick();

@@ -106,6 +106,7 @@ namespace cc
 			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
 			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
 			client->ConnectToServer(ip, 5000);
+			
 		}
 		void SaveServer(Server *server)
 		{

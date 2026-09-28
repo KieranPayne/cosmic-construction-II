@@ -21,7 +21,7 @@ namespace cc
 		std::vector<std::string> directories;
 		std::vector<std::string> playTimes;
 
-		MainMenu();
+		MainMenu(sf::RenderTarget* target);
 		void GetNames();
 		void DisplayTitleScreen();
 		void DisplayHostMenu();

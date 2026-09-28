@@ -182,9 +182,9 @@ namespace cc
             int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
             for (int i = 0; i < currPlayers.size(); i ++)
             {
-                if (currPlayers[i].planet == planetIndex)
+                if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
                 {
-                    SendToClient(clients[i].id,packet);
+                    SendToClient(clients[i].id,out);
                 }
             }
 

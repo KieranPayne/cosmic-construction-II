@@ -11,7 +11,7 @@ namespace cc
         char username[21]; // 20 characters + null terminator
         std::string errorMessage;
 
-        UsernameMenu();
+        UsernameMenu(sf::RenderTarget* target);
         static int InputTextCallback(ImGuiInputTextCallbackData *data);
         bool IsValidUsername(const std::string &name);
         void DerivedUpdate();

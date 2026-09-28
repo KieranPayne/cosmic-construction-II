@@ -7,11 +7,12 @@
 #include "Client.hpp"
 namespace cc
 {
-	MainMenu::MainMenu()
+	MainMenu::MainMenu(sf::RenderTarget* target)
 	{
 		currentState = TITLE_SCREEN;
 		strcpy(ipAddress, "");
-		connectError = "";
+		connectError = "";	
+		this->renderTarget = target;
 	}
 
 	void MainMenu::DerivedUpdate()

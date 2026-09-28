@@ -82,9 +82,8 @@ namespace cc
 			{
 				SaveManager::SaveServer(server.get());
 				server.reset(nullptr);
-				state = std::unique_ptr<Kosmic::State>(new MainMenu());
+				state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
 				InputState inputState;
-				state->renderTarget = renderTarget;
 				state->Update(inputState, 0);
 			}
 		}
@@ -92,9 +91,8 @@ namespace cc
 		{
 			if (ImGui::Button("disconnect"))
 			{
-				state = std::unique_ptr<Kosmic::State>(new MainMenu());
+				state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
 				InputState inputState;
-				state->renderTarget = renderTarget;
 				state->Update(inputState, 0);
 			}
 		}
@@ -343,9 +341,8 @@ namespace cc
 	{
 		connected = false;
 		std::cout << "Server closed, returning to main menu" << std::endl;
-		state = std::unique_ptr<Kosmic::State>(new MainMenu());
+		state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
 		InputState inputState;
-		state->renderTarget = renderTarget;
 		state->Update(inputState, 0);
 	}
 	void Client::LogMessage(std::string message, MessageOrigin origin, std::string username)

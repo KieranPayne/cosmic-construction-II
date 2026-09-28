@@ -41,16 +41,15 @@ int main()
 		return -1;
 	Input input;
 	// state = new Civitron::State();
-	cc::UsernameMenu* usernameMenu = new cc::UsernameMenu();
+	cc::UsernameMenu* usernameMenu = new cc::UsernameMenu(window.get());
 	if (usernameMenu->CheckForExisting())
 	{
 		delete usernameMenu;
-		state = std::unique_ptr<Kosmic::State>(new cc::MainMenu());
+		state = std::unique_ptr<Kosmic::State>(new cc::MainMenu(window.get()));
 	}else
 	{
 		state = std::unique_ptr<Kosmic::State>(usernameMenu);
 	}
-	state->renderTarget = window.get();
 	sf::Clock deltaClock;
 	cc::TileInfo::Init();
 	cc::EntityInfo::Init();
