@@ -321,6 +321,8 @@ namespace cc
 		if (ImGui::Button("Connect", buttonSize))
 		{
 			ConnectToHost();
+			ImGui::End();
+			return;
 		}
 
 		ImGui::SetCursorPos(ImVec2(windowCenter.x + 10, windowCenter.y + 10));

@@ -14,7 +14,11 @@ namespace cc
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
-		planets[activePlanet]->VisibleUpdate(renderTarget,inputState,deltaTime);
+		if (!connected)
+		{
+			return;
+		}
+		planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 		// for (auto &p : planets)
 		// {
 		// 	p->VisibleUpdate(renderTarget, inputState, deltaTime);
@@ -57,7 +61,9 @@ namespace cc
 				SaveManager::SaveServer(server.get());
 				server.reset(nullptr);
 				state = std::unique_ptr<Kosmic::State>(new MainMenu());
+				InputState inputState;
 				state->renderTarget = renderTarget;
+				state->Update(inputState, 0);
 			}
 		}
 		else
@@ -65,7 +71,9 @@ namespace cc
 			if (ImGui::Button("disconnect"))
 			{
 				state = std::unique_ptr<Kosmic::State>(new MainMenu());
+				InputState inputState;
 				state->renderTarget = renderTarget;
+				state->Update(inputState, 0);
 			}
 		}
 
@@ -81,15 +89,17 @@ namespace cc
 		if (type == CSMessageType::JOIN_DATA)
 		{
 			LoadJoinData(packet);
-		}else if (type == CSMessageType::PLAYER_JOINED)
+		}
+		else if (type == CSMessageType::PLAYER_JOINED)
 		{
 			NewPlayerJoined(packet);
-		}else if (type == CSMessageType::PLAYER_LEFT)
+		}
+		else if (type == CSMessageType::PLAYER_LEFT)
 		{
 			std::string username;
 			packet >> username;
 			std::cout << "player " << username << " disconnected" << std::endl;
-			for (int i = 0; i < otherPlayers.size(); i ++)
+			for (int i = 0; i < otherPlayers.size(); i++)
 			{
 				if (otherPlayers[i].username == username)
 				{
@@ -181,10 +191,10 @@ namespace cc
 			}
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
-			planets[activePlanet]->chunks[{posX,posY}] = std::unique_ptr<Chunk>(c);
+			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
 		}
-		std::cout << "join data processed. other players:" << std::endl; 
-		for (auto& p : otherPlayers)
+		std::cout << "join data processed. other players:" << std::endl;
+		for (auto &p : otherPlayers)
 		{
 			std::cout << p.username << std::endl;
 		}
@@ -255,21 +265,21 @@ namespace cc
 		packet << SaveManager::username;
 		SendPacket(packet);
 	}
-	void Client::NewPlayerJoined(sf::Packet& packet)
+	void Client::NewPlayerJoined(sf::Packet &packet)
 	{
 		uint64_t n;
 		packet >> n;
 		std::vector<uint8_t> data;
 		data.reserve(n);
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			uint8_t byte;
 			packet >> byte;
 			data.push_back(byte);
 		}
-		Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		PlayerData p;
-		s.field("player",p);
+		s.field("player", p);
 		otherPlayers.push_back(p);
 		std::cout << "player connected: " << p.username << std::endl;
 	}
@@ -278,5 +288,8 @@ namespace cc
 		connected = false;
 		std::cout << "Server closed, returning to main menu" << std::endl;
 		state = std::unique_ptr<Kosmic::State>(new MainMenu());
+		InputState inputState;
+		state->renderTarget = renderTarget;
+		state->Update(inputState, 0);
 	}
 }
