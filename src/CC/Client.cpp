@@ -146,6 +146,7 @@ namespace cc
 			LoadChunks(packet);
 		}else if (type == CSMessageType::SET_TILE)
 		{
+			LogMessage("Setting tile");
 			sf::Vector2i position;
             packet >> position.x >> position.y;
             uint16_t tileType;
