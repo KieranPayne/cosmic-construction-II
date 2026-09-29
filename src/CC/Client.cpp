@@ -507,7 +507,7 @@ namespace cc
 			rect.setFillColor(sf::Color::Transparent);
 			rect.setOutlineColor(col);
 			rect.setOutlineThickness(3.f);
-			rect.setOrigin(p.resolution/2.f);
+			rect.setOrigin(p.resolution/2.f * p.cameraZoom);
 			rect.setPosition(p.cameraPosition);
 			rect.setSize(p.cameraZoom * p.resolution);
 			renderTarget->draw(rect);
