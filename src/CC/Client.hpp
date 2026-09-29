@@ -15,7 +15,7 @@ namespace cc
         std::vector<PlayerData> otherPlayers = {};
         std::vector<std::unique_ptr<Planet>> planets = {};
         std::vector<std::string> chatLog = {};
-        int activePlanet;
+        int activePlanet = 0;
         sf::Clock sendPlayerDataClock;
         float timePerPlayerDataUpdate = 0.5f;
         void DisplayPauseMenu();

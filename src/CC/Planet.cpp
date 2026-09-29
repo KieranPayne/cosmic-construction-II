@@ -554,6 +554,11 @@ namespace cc
 	}
 	void Planet::ReplaceEntity(int index, Entity* e)
 	{
+		sf::Vector2i chunkPos = TileToChunkPos(entities[index]->position);
+		chunks[chunkPos]->RemoveEntity(entities[index].get());
 		entities[index].reset(e);
+		sf::Vector2i newPos = TileToChunkPos(entities[index]->position);
+		chunks[newPos]->AddEntity(e);
+		
 	}
 }
