@@ -170,7 +170,7 @@ namespace cc
 			entityData.field(std::to_string(i) + " type", type);
 			Entity *e = CreateEntityFromType((Entity::EntityType)type);
 			entityData.field(std::to_string(i), e);
-			AddEntity(e);
+			AddEntity(e,true);
 		}
 		// load misc data
 		Serializer s = SaveManager::LoadSerializerFromFile(path + "/planet");

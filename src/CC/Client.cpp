@@ -11,6 +11,7 @@ namespace cc
 		this->renderTarget = target;
 		activePlanet = 0;
 		AddPlanet(new Planet());
+		sendPlayerDataClock.start();
 	}
 	void Client::AddPlanet(Planet* planet)
 	{
@@ -52,6 +53,19 @@ namespace cc
 				SendPacket(p);
 			}
 			DrawLogWindow();
+			
+			if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
+			{
+				sendPlayerDataClock.restart();
+				sf::Packet p;
+				p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
+				Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+				GetPlayerData().Serialize(s);
+				auto data = s.binary();
+				p << (uint64_t)data.size();
+				p.append(data.data(),data.size());
+				SendPacket(p);
+			}
 		}
 	}
 	void Client::DerivedRender()
@@ -171,6 +185,27 @@ namespace cc
 			packet >> index;
 			Entity* e = LoadEntityFromPacket(packet);
 			planets[activePlanet]->ReplaceEntity(index,e);
+		}else if (type == CSMessageType::UPDATE_PLAYER_DATA)
+		{
+			std::string username;
+			packet >> username;
+			uint64_t n;
+            packet >> n;
+            std::vector<uint8_t> data2;
+            for (int i = 0; i < n; i ++)
+            {
+                uint8_t byte;
+                packet >> byte;
+                data2.push_back(byte);
+            }
+            Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data2);
+			for (int i = 0; i < otherPlayers.size(); i ++)
+			{
+				if (otherPlayers[i].username == username)
+				{
+					otherPlayers[i].Serialize(s);
+				}
+			}
 		}
 	}
 
@@ -263,7 +298,7 @@ namespace cc
 		for (int i = 0; i < numEntities; i ++)
 		{
 			Entity* e = LoadEntityFromPacket(packet);
-			planets[activePlanet]->AddEntity(e);
+			planets[activePlanet]->AddEntity(e,true);
 		}
 
 		std::string msg = "Join data processed. Other players:";
@@ -463,6 +498,10 @@ namespace cc
 		sf::RectangleShape rect;
 		for (auto& p : otherPlayers)
 		{
+			if (p.planet != activePlanet)
+			{
+				continue;
+			}
 			sf::Color col = UsernameToColor(p.username);
 			sf::Vector2f targetResolution = p.resolution;
 			rect.setFillColor(sf::Color::Transparent);
@@ -473,6 +512,15 @@ namespace cc
 			rect.setSize(p.cameraZoom * p.resolution);
 			renderTarget->draw(rect);
 		}
+	}
+	PlayerData Client::GetPlayerData()
+	{
+		PlayerData p;
+		p.cameraPosition = planets[activePlanet]->camera.position;
+		p.cameraZoom = planets[activePlanet]->camera.targetZoom;
+		p.planet = activePlanet;
+		p.resolution = (sf::Vector2f) renderTarget->getSize();
+		return p;
 	}
 
 }

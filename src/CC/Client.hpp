@@ -16,6 +16,8 @@ namespace cc
         std::vector<std::unique_ptr<Planet>> planets = {};
         std::vector<std::string> chatLog = {};
         int activePlanet;
+        sf::Clock sendPlayerDataClock;
+        float timePerPlayerDataUpdate = 0.5f;
         void DisplayPauseMenu();
         public:
         void AddPlanet(Planet* planet);
@@ -48,5 +50,6 @@ namespace cc
         void DrawLogWindow();
         void LoadChunks(sf::Packet& packet);
         void DrawOtherPlayers();
+        PlayerData GetPlayerData();
     };
 }

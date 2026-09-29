@@ -244,6 +244,27 @@ namespace cc
             packet >> index;
             Entity* e = LoadEntityFromPacket(packet);
             planets[currPlayers[GetIndexOfId(clientId)].planet]->ReplaceEntity(index,e);
+        }else if (type == CSMessageType::UPDATE_PLAYER_DATA)
+        {
+            PlayerData& playerData = currPlayers[GetIndexOfId(clientId)];
+            sf::Packet out;
+            out << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
+            out << playerData.username;
+            const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
+            std::size_t pos = packet.getReadPosition(); // just past the type you already read
+            out.append(data + pos, packet.getDataSize() - pos);
+            Broadcast(out,{clientId});
+            uint64_t n;
+            packet >> n;
+            std::vector<uint8_t> data2;
+            for (int i = 0; i < n; i ++)
+            {
+                uint8_t byte;
+                packet >> byte;
+                data2.push_back(byte);
+            }
+            Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data2);
+            playerData.Serialize(s);
         }
     }
     void Server::RegisterCurrentPlayers()

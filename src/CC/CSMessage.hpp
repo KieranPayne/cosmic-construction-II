@@ -18,6 +18,7 @@ namespace cc
         REQUEST_ADD_ENTITY,
         ADD_ENTITY,
         REQUEST_UPDATE_ENTITY,
-        UPDATE_ENTITY
+        UPDATE_ENTITY,
+        UPDATE_PLAYER_DATA,
     };
 }
