@@ -212,7 +212,6 @@ namespace cc
         {
             sf::Packet out;
             out << (uint16_t)CSMessageType::ADD_ENTITY;
-
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
@@ -224,15 +223,27 @@ namespace cc
                     SendToClient(clients[i].id, out);
                 }
             }
-
-            uint16_t t;
-            packet >> t;
-            Entity::EntityType type = (Entity::EntityType)t;
-            Entity *e = CreateEntityFromType(type);
-            std::vector<uint8_t> data2 = ReadBytesFromPacket(packet);
-            Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
-            e->Serialize(s);
+            Entity* e = LoadEntityFromPacket(packet);
             planets[currPlayers[GetIndexOfId(clientId)].planet]->AddEntity(e, true);
+        }else if (type == CSMessageType::REQUEST_UPDATE_ENTITY)
+        {
+            sf::Packet out;
+            out << (uint16_t)CSMessageType::UPDATE_ENTITY;
+            const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
+            std::size_t pos = packet.getReadPosition(); // just past the type you already read
+            out.append(data + pos, packet.getDataSize() - pos);
+            int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
+            for (int i = 0; i < currPlayers.size(); i++)
+            {
+                if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
+                {
+                    SendToClient(clients[i].id, out);
+                }
+            }
+            int index;
+            packet >> index;
+            Entity* e = LoadEntityFromPacket(packet);
+            planets[currPlayers[GetIndexOfId(clientId)].planet]->ReplaceEntity(index,e);
         }
     }
     void Server::RegisterCurrentPlayers()
@@ -316,6 +327,14 @@ namespace cc
                 packet.append(b.data(), b.size());
             }
         }
+        //send entities
+        uint64_t numEntities = (uint64_t)planet->entities.size();
+        packet << numEntities;
+        for (int i = 0; i < numEntities; i ++)
+        {
+            AppendEntityToPacket(packet,planet->entities[i].get());
+        }
+
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;

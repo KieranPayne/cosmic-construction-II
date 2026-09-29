@@ -193,12 +193,7 @@ namespace cc
 		{
 			sf::Packet p;
 			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITY;
-			p << (uint16_t)entity->type;
-			Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
-			entity->Serialize(s);
-			auto data = s.binary();
-			p << data.size();
-			p.append(data.data(),data.size());
+			AppendEntityToPacket(p,entity);
 			client->SendPacket(p);
 		}
 		chunks[chunkPos]->AddEntity(entity);
@@ -556,5 +551,9 @@ namespace cc
 	void Planet::GenerateChunk(sf::Vector2i position)
 	{
 		chunks[position] = std::unique_ptr<Chunk>(generator.GenerateChunk(position));
+	}
+	void Planet::ReplaceEntity(int index, Entity* e)
+	{
+		entities[index].reset(e);
 	}
 }

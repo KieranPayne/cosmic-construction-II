@@ -16,6 +16,8 @@ namespace cc
         REQUEST_SET_TILE,
         SET_TILE,
         REQUEST_ADD_ENTITY,
-        ADD_ENTITY
+        ADD_ENTITY,
+        REQUEST_UPDATE_ENTITY,
+        UPDATE_ENTITY
     };
 }

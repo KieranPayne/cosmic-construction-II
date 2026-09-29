@@ -1,5 +1,7 @@
 #include "Utils.hpp"
 #include "Chunk.hpp"
+#include "Serializer.hpp"
+#include "Entity.hpp"
 namespace cc
 {
 	std::vector<std::string> Split(std::string str, char splitChar)
@@ -301,5 +303,24 @@ namespace cc
 			result.push_back(byte);
 		}
 		return result;
+	}
+	void AppendEntityToPacket(sf::Packet& packet, Entity* e)
+	{
+		packet << (uint16_t) e->type;
+		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		e->Serialize(s);
+		auto data = s.binary();
+		packet << data.size();
+		packet.append(data.data(),data.size());
+	}
+	Entity* LoadEntityFromPacket(sf::Packet& packet)
+	{
+		uint16_t type;
+		packet >> type;
+		Entity* e = CreateEntityFromType((Entity::EntityType)type);
+		std::vector<uint8_t> data = ReadBytesFromPacket(packet);
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+		e->Serialize(s);
+		return e;
 	}
 }

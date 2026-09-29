@@ -1,6 +1,8 @@
 #include "JsonEditor.hpp"
 #include "Planet.hpp"
 #include "Serializer.hpp"
+#include "CSMessage.hpp"
+#include "Client.hpp"
 namespace cc
 {
     void JsonEditor::Draw(Planet *p)
@@ -61,6 +63,12 @@ namespace cc
                 {
                     Serializer sr(Serializer::Mode::READ,Serializer::Format::JSON,j);
                     p->entities[i]->Serialize(sr);
+                    //TODO: ADD PACKET SENDING HERE
+                    sf::Packet packet;
+                    packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITY;
+                    packet << i;
+                    AppendEntityToPacket(packet,p->entities[i].get());
+                    p->client->SendPacket(packet);
                 }
             }
             ImGui::End();

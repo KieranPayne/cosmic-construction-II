@@ -51,6 +51,7 @@ namespace cc
 		// void FromJson(nlohmann::json j);
 		void SetSeed(uint64_t seed);
 		void GenerateChunk(sf::Vector2i position);
+		void ReplaceEntity(int index, Entity* e);
 		// some nonsense to allow having a vector of unique ptrs
 		Planet(const Planet &) = delete;
 		Planet &operator=(const Planet &) = delete;
