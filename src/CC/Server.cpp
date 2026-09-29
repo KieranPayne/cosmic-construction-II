@@ -301,7 +301,7 @@ namespace cc
         // put bytes into packet
         packet.append(data.data(), data.size());
         // next, want to send all the chunks visible to the player
-        sf::Vector2f targetResolution{3840.f, 2160.f};
+        sf::Vector2f targetResolution = p.resolution;
         int minX = floor((p.cameraPosition.x - targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
         int maxX = ceil((p.cameraPosition.x + targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
         int minY = floor((p.cameraPosition.y - targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);

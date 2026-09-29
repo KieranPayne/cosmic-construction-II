@@ -59,6 +59,7 @@ namespace cc
 		sf::View original = renderTarget->getView();
 		planets[activePlanet]->camera.SetView(renderTarget);
 		planets[activePlanet]->Render(renderTarget);
+		DrawOtherPlayers();
 		renderTarget->setView(original);
 	}
 	void Client::DisplayPauseMenu()
@@ -457,6 +458,21 @@ namespace cc
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
 		}
 	}
-
+	void Client::DrawOtherPlayers()
+	{
+		sf::RectangleShape rect;
+		for (auto& p : otherPlayers)
+		{
+			sf::Color col = UsernameToColor(p.username);
+			sf::Vector2f targetResolution = p.resolution;
+			rect.setFillColor(sf::Color::Transparent);
+			rect.setOutlineColor(col);
+			rect.setOutlineThickness(3.f);
+			rect.setOrigin(p.resolution/2.f);
+			rect.setPosition(p.cameraPosition);
+			rect.setSize(p.cameraZoom * p.resolution);
+			renderTarget->draw(rect);
+		}
+	}
 
 }

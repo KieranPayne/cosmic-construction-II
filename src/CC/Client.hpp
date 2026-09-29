@@ -47,5 +47,6 @@ namespace cc
         void LogMessage(std::string message, MessageOrigin origin = MessageOrigin::SELF, std::string username = "");
         void DrawLogWindow();
         void LoadChunks(sf::Packet& packet);
+        void DrawOtherPlayers();
     };
 }

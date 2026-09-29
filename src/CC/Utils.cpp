@@ -58,10 +58,12 @@ namespace cc
 			(float)j[0].get<int>(),
 			(float)j[1].get<int>());
 	}
-	int fastFloorDiv(int v) {
+	int fastFloorDiv(int v)
+	{
 		return (v >= 0) ? (v >> 5) : -((-v - 1) >> 5) - 1;
 	}
-	int TileToChunkPos(int pos){
+	int TileToChunkPos(int pos)
+	{
 		return fastFloorDiv(pos);
 	}
 	sf::Vector2i TileToChunkPos(sf::Vector2i &pos)
@@ -75,8 +77,7 @@ namespace cc
 	{
 		return {
 			static_cast<int>(std::floor(pos.x / 32.0f)),
-			static_cast<int>(std::floor(pos.y / 32.0f))
-		};
+			static_cast<int>(std::floor(pos.y / 32.0f))};
 	}
 	ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key code)
 	{
@@ -290,13 +291,13 @@ namespace cc
 		}
 		return ImGuiKey_None;
 	}
-	std::vector<uint8_t> ReadBytesFromPacket(sf::Packet& packet)
+	std::vector<uint8_t> ReadBytesFromPacket(sf::Packet &packet)
 	{
 		uint64_t n;
 		packet >> n;
 		std::vector<uint8_t> result;
 		result.reserve(n);
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			uint8_t byte;
 			packet >> byte;
@@ -304,23 +305,80 @@ namespace cc
 		}
 		return result;
 	}
-	void AppendEntityToPacket(sf::Packet& packet, Entity* e)
+	void AppendEntityToPacket(sf::Packet &packet, Entity *e)
 	{
-		packet << (uint16_t) e->type;
-		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		packet << (uint16_t)e->type;
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 		e->Serialize(s);
 		auto data = s.binary();
 		packet << data.size();
-		packet.append(data.data(),data.size());
+		packet.append(data.data(), data.size());
 	}
-	Entity* LoadEntityFromPacket(sf::Packet& packet)
+	Entity *LoadEntityFromPacket(sf::Packet &packet)
 	{
 		uint16_t type;
 		packet >> type;
-		Entity* e = CreateEntityFromType((Entity::EntityType)type);
+		Entity *e = CreateEntityFromType((Entity::EntityType)type);
 		std::vector<uint8_t> data = ReadBytesFromPacket(packet);
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		e->Serialize(s);
 		return e;
+	}
+	sf::Color UsernameToColor(std::string& username)
+	{
+		// FNV-1a hash (32-bit): stable across platforms and runs
+		std::uint32_t hash = 2166136261u;
+		for (unsigned char c : username)
+		{
+			hash ^= c;
+			hash *= 16777619u;
+		}
+
+		// Map hash to a hue in [0, 360)
+		float hue = static_cast<float>(hash % 360);
+
+		// HSV -> RGB with S = 1, V = 1
+		float h = hue / 60.f;								// sector 0..5
+		float x = 1.f - std::fabs(std::fmod(h, 2.f) - 1.f); // secondary component
+
+		float r = 0.f, g = 0.f, b = 0.f;
+		switch (static_cast<int>(h))
+		{
+		case 0:
+			r = 1.f;
+			g = x;
+			b = 0.f;
+			break;
+		case 1:
+			r = x;
+			g = 1.f;
+			b = 0.f;
+			break;
+		case 2:
+			r = 0.f;
+			g = 1.f;
+			b = x;
+			break;
+		case 3:
+			r = 0.f;
+			g = x;
+			b = 1.f;
+			break;
+		case 4:
+			r = x;
+			g = 0.f;
+			b = 1.f;
+			break;
+		default:
+			r = 1.f;
+			g = 0.f;
+			b = x;
+			break;
+		}
+
+		return sf::Color(
+			static_cast<std::uint8_t>(std::round(r * 255.f)),
+			static_cast<std::uint8_t>(std::round(g * 255.f)),
+			static_cast<std::uint8_t>(std::round(b * 255.f)));
 	}
 }

@@ -15,4 +15,5 @@ namespace cc
     std::vector<uint8_t> ReadBytesFromPacket(sf::Packet& packet);
     void AppendEntityToPacket(sf::Packet& packet,Entity* e);
     Entity* LoadEntityFromPacket(sf::Packet& packet);
+    sf::Color UsernameToColor(std::string& username);
 }
