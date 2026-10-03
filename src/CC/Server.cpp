@@ -18,6 +18,7 @@ namespace cc
     Server::Server()
     {
         planets.push_back(std::make_unique<Planet>());
+        planets[0]->isServerPlanet = true;
     }
     void Server::SetSeed(uint64_t seed)
     {

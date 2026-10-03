@@ -23,6 +23,7 @@ namespace cc
 		uint64_t seed = 0;
 		JsonEditor jsonEditor;
 		Client* client = nullptr;
+		bool isServerPlanet = false;
 
 		// for display
 		double currFps;

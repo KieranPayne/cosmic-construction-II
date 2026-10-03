@@ -24,6 +24,8 @@ namespace cc
         sf::Vector2i chunkPos;
         sf::Vector2f position = {0.f,0.f};
         sf::Vector2f size = {1.f,1.f};
+        //whether there is a chunk that contains this entity
+        bool isInChunk = false;
         virtual std::vector<sf::Vertex> GetVerts()
         {
             sf::Vector2f offsets[6] = {
@@ -65,6 +67,10 @@ namespace cc
             type = (EntityType)t;
             s.field("position", position);
             s.field("size",size);
+        }
+        void UpdateChunkPos()
+        {
+            chunkPos = TileToChunkPos(position);
         }
         // virtual nlohmann::json ToJson()
         // {

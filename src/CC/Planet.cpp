@@ -25,6 +25,21 @@ namespace cc
 	}
 	void Planet::Update(double dt)
 	{
+		if (isServerPlanet)
+		{
+			for (auto& e : entities)
+			{
+				if (!e->isInChunk)
+				{
+					if (!chunks.contains(e->chunkPos))
+					{
+						GenerateChunk(e->chunkPos);
+					}
+					chunks[e->chunkPos]->AddEntity(e.get());
+					e->isInChunk = true;
+				}
+			}
+		}
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
@@ -50,6 +65,23 @@ namespace cc
 				if (!chunks.contains({x, z}))
 				{
 					positions.push_back({x,z});
+				}
+			}
+		}
+		for (auto& e : entities)
+		{
+			if (!e->isInChunk)
+			{
+				if (chunks.contains(e->chunkPos))
+				{
+					chunks[e->chunkPos]->AddEntity(e.get());
+					e->isInChunk = true;
+				}else
+				{
+					if (std::find(positions.begin(),positions.end(),e->chunkPos) == positions.end())
+					{
+						positions.push_back(e->chunkPos);
+					}
 				}
 			}
 		}
@@ -196,6 +228,7 @@ namespace cc
 			AppendEntityToPacket(p,entity);
 			client->SendPacket(p);
 		}
+		entity->isInChunk = true;
 		chunks[chunkPos]->AddEntity(entity);
 	}
 	void Planet::DrawInfoGUI(double dt)
@@ -555,10 +588,20 @@ namespace cc
 	void Planet::ReplaceEntity(int index, Entity* e)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entities[index]->position);
-		chunks[chunkPos]->RemoveEntity(entities[index].get());
+		if (chunks.contains(chunkPos))
+		{
+			chunks[chunkPos]->RemoveEntity(entities[index].get());
+		}
 		entities[index].reset(e);
 		sf::Vector2i newPos = TileToChunkPos(entities[index]->position);
-		chunks[newPos]->AddEntity(e);
-		
+		if (chunks.contains(newPos))
+		{
+			chunks[newPos]->AddEntity(e);
+			e->isInChunk = true;
+		}else
+		{
+			e->isInChunk = false;
+		}
+		e->UpdateChunkPos();
 	}
 }
