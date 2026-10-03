@@ -13,7 +13,7 @@ namespace cc
 		AddPlanet(new Planet());
 		sendPlayerDataClock.start();
 	}
-	void Client::AddPlanet(Planet* planet)
+	void Client::AddPlanet(Planet *planet)
 	{
 		planet->client = this;
 		planets.push_back(std::unique_ptr<Planet>(planet));
@@ -21,6 +21,7 @@ namespace cc
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
+		FlushOutgoing();
 		if (!connected || !loadedJoinData)
 		{
 			return;
@@ -39,7 +40,7 @@ namespace cc
 		}
 		else
 		{
-			for (auto& p : planets)
+			for (auto &p : planets)
 			{
 				p->Update(deltaTime);
 			}
@@ -50,31 +51,31 @@ namespace cc
 				sf::Packet p;
 				p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
 				p << (uint64_t)chunks.size();
-				for (auto& c : chunks)
+				for (auto &c : chunks)
 				{
 					p << c.x << c.y;
 				}
 				SendPacket(p);
 			}
 			DrawLogWindow();
-			
+
 			if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
 			{
 				sendPlayerDataClock.restart();
 				sf::Packet p;
 				p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
-				Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+				Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 				GetPlayerData().Serialize(s);
 				auto data = s.binary();
 				p << (uint64_t)data.size();
-				p.append(data.data(),data.size());
+				p.append(data.data(), data.size());
 				SendPacket(p);
 			}
 		}
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
 			std::string path = "content/resources/images/borzoi.png";
-			planets[activePlanet]->MakeImageFromTiles(path,{30,30},150);
+			planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
 		}
 	}
 	void Client::DerivedRender()
@@ -168,16 +169,18 @@ namespace cc
 		{
 			std::string username, message;
 			packet >> username >> message;
-			LogMessage(message, MessageOrigin::PLAYER,username);
-		}else if (type == CSMessageType::CHUNK_DATA)
+			LogMessage(message, MessageOrigin::PLAYER, username);
+		}
+		else if (type == CSMessageType::CHUNK_DATA)
 		{
 			LoadChunks(packet);
-		}else if (type == CSMessageType::SET_TILES)
+		}
+		else if (type == CSMessageType::SET_TILES)
 		{
 			// LogMessage("Setting tiles");
 			int n;
 			packet >> n;
-			for (int i = 0; i < n; i ++)
+			for (int i = 0; i < n; i++)
 			{
 				sf::Vector2i position;
 				packet >> position.x >> position.y;
@@ -185,58 +188,60 @@ namespace cc
 				packet >> tileType;
 				bool hasTileEntity;
 				packet >> hasTileEntity;
-				TileEntity* e = nullptr;
+				TileEntity *e = nullptr;
 				if (hasTileEntity)
 				{
 					auto data = ReadBytesFromPacket(packet);
-					Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+					Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 					e = CreateTileEntityFromType(tileType);
 					e->Serialize(s);
 				}
-				planets[activePlanet]->SetTileAt(position,Tile(tileType),e,true);
+				planets[activePlanet]->SetTileAt(position, Tile(tileType), e, true);
 			}
-		}else if (type == CSMessageType::ADD_ENTITIES)
+		}
+		else if (type == CSMessageType::ADD_ENTITIES)
 		{
 			int n;
 			packet >> n;
-			for (int i = 0; i < n; i ++)
+			for (int i = 0; i < n; i++)
 			{
-				Entity* e = LoadEntityFromPacket(packet);
+				Entity *e = LoadEntityFromPacket(packet);
 				planets[activePlanet]->AddEntity(e, true);
 			}
-		}else if (type == CSMessageType::UPDATE_ENTITIES)
+		}
+		else if (type == CSMessageType::UPDATE_ENTITIES)
 		{
 			int n;
 			packet >> n;
-			for (int i = 0; i < n; i ++)
+			for (int i = 0; i < n; i++)
 			{
 				int index;
 				packet >> index;
-				Entity* e = LoadEntityFromPacket(packet);
-				planets[activePlanet]->ReplaceEntity(index,e);
+				Entity *e = LoadEntityFromPacket(packet);
+				planets[activePlanet]->ReplaceEntity(index, e);
 			}
-		}else if (type == CSMessageType::UPDATE_PLAYER_DATA)
+		}
+		else if (type == CSMessageType::UPDATE_PLAYER_DATA)
 		{
 			std::string username;
 			packet >> username;
 			uint64_t n;
-            packet >> n;
-            std::vector<uint8_t> data2;
-            for (int i = 0; i < n; i ++)
-            {
-                uint8_t byte;
-                packet >> byte;
-                data2.push_back(byte);
-            }
-            Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data2);
-			for (int i = 0; i < otherPlayers.size(); i ++)
+			packet >> n;
+			std::vector<uint8_t> data2;
+			for (int i = 0; i < n; i++)
+			{
+				uint8_t byte;
+				packet >> byte;
+				data2.push_back(byte);
+			}
+			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
+			for (int i = 0; i < otherPlayers.size(); i++)
 			{
 				if (otherPlayers[i].username == username)
 				{
 					prevOtherPlayers[i] = otherPlayers[i];
 					prevOtherClocks[i].restart();
 					otherPlayers[i].Serialize(s);
-
 				}
 			}
 		}
@@ -253,12 +258,13 @@ namespace cc
 		{
 			return;
 		}
-		sf::Socket::Status status = socket.send(packet);
+		outgoingPackets.push_back(packet);
+		// sf::Socket::Status status = socket.send(packet);
 
-		if (status == sf::Socket::Status::Disconnected)
-		{
-			OnServerClosed();
-		}
+		// if (status == sf::Socket::Status::Disconnected)
+		// {
+		// OnServerClosed();
+		// }
 	}
 
 	void Client::LoadJoinData(sf::Packet &packet)
@@ -301,8 +307,7 @@ namespace cc
 			otherPlayers.push_back(p);
 			prevOtherPlayers.push_back(p);
 			prevOtherClocks.push_back(sf::Clock());
-			prevOtherClocks.back().start();	
-
+			prevOtherClocks.back().start();
 		}
 
 		// --- Read chunk data ---
@@ -315,28 +320,18 @@ namespace cc
 			int posX, posY;
 			packet >> posX >> posY;
 			auto chunkData = ReadBytesFromPacket(packet);
-			// uint64_t chunkByteSize; // same Uint64 assumption as above
-			// packet >> chunkByteSize;
-
-			// std::vector<uint8_t> chunkData;
-			// chunkData.reserve(chunkByteSize);
-			// for (uint64_t j = 0; j < chunkByteSize; j++)
-			// {
-			// 	uint8_t byte;
-			// 	packet >> byte;
-			// 	chunkData.push_back(byte);
-			// }
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
+			planets[activePlanet]->chunksRequested.emplace(sf::Vector2i{posX, posY});
 		}
-		//load entities;
+		// load entities;
 		uint64_t numEntities;
 		packet >> numEntities;
-		for (int i = 0; i < numEntities; i ++)
+		for (int i = 0; i < numEntities; i++)
 		{
-			Entity* e = LoadEntityFromPacket(packet);
-			planets[activePlanet]->AddEntity(e,true);
+			Entity *e = LoadEntityFromPacket(packet);
+			planets[activePlanet]->AddEntity(e, true);
 		}
 
 		std::string msg = "Join data processed. Other players:";
@@ -501,38 +496,25 @@ namespace cc
 
 		ImGui::End();
 	}
-	void Client::SendChatMessage(const std::string& text)
+	void Client::SendChatMessage(const std::string &text)
 	{
-		LogMessage(text,MessageOrigin::PLAYER,SaveManager::username);
+		LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
 		sf::Packet p;
 		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
 		p << text;
 		SendPacket(p);
 	}
-	void Client::LoadChunks(sf::Packet& packet)
+	void Client::LoadChunks(sf::Packet &packet)
 	{
 		uint64_t n;
 		packet >> n;
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			int posX, posY;
 			packet >> posX >> posY;
-			auto chunkData = ReadBytesFromPacket(packet);
-			// uint64_t chunkByteSize; // same Uint64 assumption as above
-			// packet >> chunkByteSize;
-
-			// std::vector<uint8_t> chunkData;
-			// chunkData.reserve(chunkByteSize);
-			// for (uint64_t j = 0; j < chunkByteSize; j++)
-			// {
-			// 	uint8_t byte;
-			// 	packet >> byte;
-			// 	chunkData.push_back(byte);
-			// }
-			if (planets[activePlanet]->chunks.contains({posX,posY}))
-			{
-				std::cerr << "Received chunk that already have data for" << std::endl;
-			}
+			auto chunkData = ReadBytesFromPacket(packet); // already consumed, keep this first
+			if (planets[activePlanet]->chunks.contains({posX, posY}))
+				continue;
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
@@ -541,23 +523,23 @@ namespace cc
 	void Client::DrawOtherPlayers()
 	{
 		sf::RectangleShape rect;
-		for (int i = 0; i < otherPlayers.size(); i ++)
+		for (int i = 0; i < otherPlayers.size(); i++)
 		{
-			PlayerData& p = otherPlayers[i];
-			PlayerData& oldP = prevOtherPlayers[i];
+			PlayerData &p = otherPlayers[i];
+			PlayerData &oldP = prevOtherPlayers[i];
 			if (p.planet != activePlanet)
 			{
 				continue;
 			}
-			float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate,0.f,1.f);
+			float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate, 0.f, 1.f);
 			sf::Color col = UsernameToColor(p.username);
-			sf::Vector2f targetResolution = Lerp(oldP.resolution,p.resolution,t);
-			float zoom = Lerp(oldP.cameraZoom,p.cameraZoom,t);
-			sf::Vector2f position = Lerp(oldP.cameraPosition,p.cameraPosition,t);
+			sf::Vector2f targetResolution = Lerp(oldP.resolution, p.resolution, t);
+			float zoom = Lerp(oldP.cameraZoom, p.cameraZoom, t);
+			sf::Vector2f position = Lerp(oldP.cameraPosition, p.cameraPosition, t);
 			rect.setFillColor(sf::Color::Transparent);
 			rect.setOutlineColor(col);
 			rect.setOutlineThickness(3.f);
-			rect.setOrigin(targetResolution/2.f * zoom);
+			rect.setOrigin(targetResolution / 2.f * zoom);
 			rect.setPosition(position);
 			rect.setSize(zoom * targetResolution);
 			renderTarget->draw(rect);
@@ -569,8 +551,24 @@ namespace cc
 		p.cameraPosition = planets[activePlanet]->camera.position;
 		p.cameraZoom = planets[activePlanet]->camera.targetZoom;
 		p.planet = activePlanet;
-		p.resolution = (sf::Vector2f) renderTarget->getSize();
+		p.resolution = (sf::Vector2f)renderTarget->getSize();
 		return p;
+	}
+	void Client::FlushOutgoing()
+	{
+		while (!outgoingPackets.empty())
+		{
+			auto status = socket.send(outgoingPackets.front());
+			if (status == sf::Socket::Status::Done)
+				outgoingPackets.pop_front();
+			else if (status == sf::Socket::Status::Disconnected)
+			{
+				OnServerClosed();
+				return; // 'this' may be destroyed by OnServerClosed, touch nothing after it
+			}
+			else
+				break;
+		}
 	}
 
 }

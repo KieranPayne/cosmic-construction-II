@@ -42,7 +42,7 @@ namespace cc
 		}
 		if (tileSetRequests.size() > 0)
 		{
-			client->LogMessage("num tile set requests: " + std::to_string(tileSetRequests.size()));
+			// client->LogMessage("num tile set requests: " + std::to_string(tileSetRequests.size()));
 			for (int i = 0; i < tileSetRequests.size(); i ++)
 			{
 				auto& t = tileSetRequests[i];

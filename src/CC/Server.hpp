@@ -12,13 +12,15 @@ namespace cc
         public:
         struct ServerClient
         {
-            sf::TcpSocket socket;
             uint64_t id;
+            sf::TcpSocket socket;
+            std::deque<sf::Packet> outgoing;
+            PlayerData player;
+            bool joined = false;
         };
         sf::TcpListener listener;
         //every player that has joined this save
         std::vector<PlayerData> allPlayers = {};
-        std::vector<PlayerData> currPlayers = {};
 
         std::vector<ServerClient> clients;
         uint64_t currClientId = 0;
@@ -46,5 +48,9 @@ namespace cc
         void BroadcastChatLog(std::string message, uint64_t clientId);
         int GetIndexOfId(uint64_t id);
         void SendChunks(uint64_t clientId, std::vector<sf::Vector2i>& positions);
+        void FlushOutgoing();
+        void RemoveClient(std::size_t index);
+        void SavePlayer(const PlayerData& p);
+        ServerClient* GetClient(uint64_t id);
     };
 }

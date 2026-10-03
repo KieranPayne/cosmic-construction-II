@@ -115,7 +115,7 @@ namespace cc
 				p->Save();
 			}
 			Serializer s(Serializer::Mode::WRITE,saveFormat);
-			server->RegisterCurrentPlayers();
+			for (auto &c : server->clients) if (c.joined) server->SavePlayer(c.player);
 			s.field("players",server->allPlayers);
 			WriteSerializerToFile(s,savePath + "/players");
 			WriteServerMetadata(server);

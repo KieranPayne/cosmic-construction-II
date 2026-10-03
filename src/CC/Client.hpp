@@ -18,6 +18,7 @@ namespace cc
         std::vector<sf::Clock> prevOtherClocks = {};
         std::vector<std::unique_ptr<Planet>> planets = {};
         std::vector<std::string> chatLog = {};
+        std::deque<sf::Packet> outgoingPackets;
         int activePlanet = 0;
         sf::Clock sendPlayerDataClock;
         float timePerPlayerDataUpdate = 0.2f;
@@ -55,6 +56,7 @@ namespace cc
         void DrawLogWindow();
         void LoadChunks(sf::Packet& packet);
         void DrawOtherPlayers();
+        void FlushOutgoing();
         PlayerData GetPlayerData();
     };
 }

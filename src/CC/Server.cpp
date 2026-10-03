@@ -43,11 +43,14 @@ namespace cc
     {
         AcceptClients();
         ReceivePackets();
+        FlushOutgoing();
         timeSinceTick += dt;
-        if (timeSinceTick > (1.0 / tps))
+        const double interval = 1.0 / tps;
+        timeSinceTick = std::min(timeSinceTick, interval * 5); // avoid a spiral after a long stall
+        while (timeSinceTick >= interval)
         {
             Tick();
-            timeSinceTick -= dt;
+            timeSinceTick -= interval;
         }
     }
     uint64_t Server::GetNextClientId()
@@ -67,7 +70,7 @@ namespace cc
         {
             if (c.id == clientId)
             {
-                c.socket.send(packet);
+                c.outgoing.push_back(packet);
                 break;
             }
         }
@@ -84,7 +87,7 @@ namespace cc
                 //      ((Client*)state.get())->ProcessPacket(packet);
                 //      continue;
                 //  }
-                client.socket.send(packet);
+                client.outgoing.push_back(packet);
             }
         }
     }
@@ -115,41 +118,66 @@ namespace cc
     {
         for (std::size_t i = 0; i < clients.size();)
         {
-            sf::Packet packet;
-
-            sf::Socket::Status status = clients[i].socket.receive(packet);
-
-            if (status == sf::Socket::Status::Done)
+            bool disconnected = false;
+            while (true) // drain everything waiting, not just one packet
             {
-                HandlePacket(clients[i].id, packet);
-
-                ++i;
+                sf::Packet packet;
+                auto status = clients[i].socket.receive(packet);
+                if (status == sf::Socket::Status::Done)
+                    HandlePacket(clients[i].id, packet);
+                else if (status == sf::Socket::Status::NotReady)
+                    break;
+                else
+                {
+                    disconnected = true;
+                    break;
+                }
             }
-            else if (status == sf::Socket::Status::NotReady)
-            {
-                ++i;
-            }
+            if (disconnected)
+                RemoveClient(i);
             else
-            {
-                // Disconnected / error
-                BroadcastServerLog("Client disconnected: " + std::to_string(clients[i].id));
-
-                clients.erase(clients.begin() + i);
-                std::string username = currPlayers[i].username;
-                sf::Packet p;
-                p << (uint16_t)CSMessageType::PLAYER_LEFT;
-                p << username;
-                Broadcast(p);
-                RegisterCurrentPlayers();
-                currPlayers.erase(currPlayers.begin() + i);
-            }
+                ++i;
         }
+    }
+
+    void Server::RemoveClient(std::size_t index)
+    {
+        bool joined = clients[index].joined;
+        PlayerData player = clients[index].player;
+        uint64_t id = clients[index].id;
+
+        if (joined)
+            SavePlayer(player);
+        clients.erase(clients.begin() + index);
+
+        BroadcastServerLog("Client disconnected: " + std::to_string(id));
+        if (joined)
+        {
+            sf::Packet p;
+            p << (uint16_t)CSMessageType::PLAYER_LEFT;
+            p << player.username;
+            Broadcast(p);
+        }
+    }
+
+    void Server::SavePlayer(const PlayerData &p)
+    {
+        for (auto &a : allPlayers)
+            if (a.username == p.username)
+            {
+                a = p;
+                return;
+            }
+        allPlayers.push_back(p);
     }
     void Server::HandlePacket(std::uint64_t clientId, sf::Packet &packet)
     {
         uint16_t t;
         packet >> t;
         CSMessageType type = (CSMessageType)t;
+        ServerClient *client = GetClient(clientId);
+        if (!client) return;
+        if (type == CSMessageType::SEND_USERNAME ? client->joined : !client->joined) return;
         if (type == CSMessageType::SEND_USERNAME)
         {
             SendJoinData(clientId, packet);
@@ -185,8 +213,8 @@ namespace cc
             out.append(data + pos, packet.getDataSize() - pos);
             int n;
             packet >> n;
-            int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
-            for (int i = 0; i < n; i ++)
+            int planetIndex = GetClient(clientId)->player.planet;
+            for (int i = 0; i < n; i++)
             {
                 sf::Vector2i position;
                 packet >> position.x >> position.y;
@@ -207,16 +235,12 @@ namespace cc
                     e = CreateTileEntityFromType(tileType);
                     e->Serialize(s);
                 }
-                planets[currPlayers[GetIndexOfId(clientId)].planet]->SetTileAt(position, Tile(tileType), e);
+                planets[GetClient(clientId)->player.planet]->SetTileAt(position, Tile(tileType), e);
             }
 
-            for (int i = 0; i < currPlayers.size(); i++)
-            {
-                if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
-                {
-                    SendToClient(clients[i].id, out);
-                }
-            }
+            for (auto &c : clients)
+                if (c.joined && c.player.planet == planetIndex && c.id != clientId)
+                    c.outgoing.push_back(out);
         }
         else if (type == CSMessageType::REQUEST_ADD_ENTITIES)
         {
@@ -225,83 +249,67 @@ namespace cc
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
-            int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
-            for (int i = 0; i < currPlayers.size(); i++)
-            {
-                if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
-                {
-                    SendToClient(clients[i].id, out);
-                }
-            }
+            int planetIndex = GetClient(clientId)->player.planet;
+            for (auto &c : clients)
+                if (c.joined && c.player.planet == planetIndex && c.id != clientId)
+                    c.outgoing.push_back(out);
             int n;
-            packet >>n;
-            for (int i = 0; i < n; i ++)
+            packet >> n;
+            for (int i = 0; i < n; i++)
             {
-                Entity* e = LoadEntityFromPacket(packet);
-                planets[currPlayers[GetIndexOfId(clientId)].planet]->AddEntity(e, true);
+                Entity *e = LoadEntityFromPacket(packet);
+                planets[GetClient(clientId)->player.planet]->AddEntity(e, true);
             }
-        }else if (type == CSMessageType::REQUEST_UPDATE_ENTITIES)
+        }
+        else if (type == CSMessageType::REQUEST_UPDATE_ENTITIES)
         {
             sf::Packet out;
             out << (uint16_t)CSMessageType::UPDATE_ENTITIES;
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
-            int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
-            for (int i = 0; i < currPlayers.size(); i++)
-            {
-                if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
-                {
-                    SendToClient(clients[i].id, out);
-                }
-            }
+            int planetIndex = GetClient(clientId)->player.planet;
+            for (auto &c : clients)
+                if (c.joined && c.player.planet == planetIndex && c.id != clientId)
+                    c.outgoing.push_back(out);
             int n;
             packet >> n;
-            for (int i = 0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 int index;
                 packet >> index;
-                Entity* e = LoadEntityFromPacket(packet);
-                planets[currPlayers[GetIndexOfId(clientId)].planet]->ReplaceEntity(index,e);
+                Entity *e = LoadEntityFromPacket(packet);
+                planets[GetClient(clientId)->player.planet]->ReplaceEntity(index, e);
             }
-        }else if (type == CSMessageType::UPDATE_PLAYER_DATA)
+        }
+        else if (type == CSMessageType::UPDATE_PLAYER_DATA)
         {
-            PlayerData& playerData = currPlayers[GetIndexOfId(clientId)];
+            PlayerData &playerData = GetClient(clientId)->player;
             sf::Packet out;
             out << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
             out << playerData.username;
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
-            Broadcast(out,{clientId});
+            Broadcast(out, {clientId});
             uint64_t n;
             packet >> n;
             std::vector<uint8_t> data2;
-            for (int i = 0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 uint8_t byte;
                 packet >> byte;
                 data2.push_back(byte);
             }
-            Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data2);
+            Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
             playerData.Serialize(s);
         }
     }
-    void Server::RegisterCurrentPlayers()
-    {
-        for (int i = 0; i < currPlayers.size(); i++)
-        {
-            for (int j = 0; j < allPlayers.size(); j++)
-            {
-                if (allPlayers[i].username == currPlayers[i].username)
-                {
-                    allPlayers[i] = currPlayers[i];
-                }
-            }
-        }
-    }
+    
     void Server::SendJoinData(uint64_t clientId, sf::Packet &usernamePacket)
     {
+        ServerClient *client = GetClient(clientId);
+        if (!client) return;
         // REGISTERING PLAYER
         std::string username;
         usernamePacket >> username;
@@ -322,7 +330,10 @@ namespace cc
             p.username = username;
             allPlayers.push_back(p);
         }
-        currPlayers.push_back(p);
+        
+        
+        client->player = p;
+        client->joined = true;
 
         // ASSEMBLING PACKET TO SEND BACK
         sf::Packet packet;
@@ -330,15 +341,16 @@ namespace cc
         // first bit of data is every other player currently in server
         // start by serializing the list of current players
         Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-        int n = currPlayers.size();
+        std::vector<PlayerData *> joinedPlayers;
+        for (auto &c : clients)
+            if (c.joined) joinedPlayers.push_back(&c.player);
+        int n = joinedPlayers.size();
         s.field("n", n);
-        for (int i = 0; i < currPlayers.size(); i++)
-        {
-            s.field(std::to_string(i), currPlayers[i]);
-        }
+        for (int i = 0; i < n; i++)
+            s.field(std::to_string(i), *joinedPlayers[i]);
         auto data = s.binary();
         // put number of bytes in packet
-        packet << data.size();
+        packet << (uint64_t) data.size();
         // put bytes into packet
         packet.append(data.data(), data.size());
         // next, want to send all the chunks visible to the player
@@ -363,17 +375,17 @@ namespace cc
                 packet << c->position.x << c->position.y;
                 auto b = c->GetByteData();
                 // put size of bytes into packet
-                packet << b.size();
+                packet << (uint64_t) b.size();
                 // put chunk data into packet
                 packet.append(b.data(), b.size());
             }
         }
-        //send entities
+        // send entities
         uint64_t numEntities = (uint64_t)planet->entities.size();
         packet << numEntities;
-        for (int i = 0; i < numEntities; i ++)
+        for (int i = 0; i < numEntities; i++)
         {
-            AppendEntityToPacket(packet,planet->entities[i].get());
+            AppendEntityToPacket(packet, planet->entities[i].get());
         }
 
         SendToClient(clientId, packet);
@@ -409,7 +421,7 @@ namespace cc
     {
         sf::Packet p;
         p << (uint16_t)CSMessageType::CHAT_MESSAGE;
-        p << currPlayers[GetIndexOfId(clientId)].username;
+        p << GetClient(clientId)->player.username;
         p << message;
         Broadcast(p, {clientId});
     }
@@ -418,7 +430,7 @@ namespace cc
         sf::Packet p;
         p << (uint16_t)CSMessageType::CHUNK_DATA;
         p << (uint64_t)positions.size();
-        Planet *planet = planets[currPlayers[GetIndexOfId(clientId)].planet].get();
+        Planet *planet = planets[GetClient(clientId)->player.planet].get();
         for (int i = 0; i < positions.size(); i++)
         {
             if (!planet->chunks.contains(positions[i]))
@@ -430,10 +442,32 @@ namespace cc
             p << c->position.x << c->position.y;
             auto b = c->GetByteData();
             // put size of bytes into packet
-            p << b.size();
+            p << (uint64_t) b.size();
             // put chunk data into packet
             p.append(b.data(), b.size());
         }
         SendToClient(clientId, p);
+    }
+    void Server::FlushOutgoing()
+    {
+        for (auto &c : clients)
+        {
+            while (!c.outgoing.empty())
+            {
+                auto status = c.socket.send(c.outgoing.front());
+                if (status == sf::Socket::Status::Done)
+                    c.outgoing.pop_front();
+                else
+                    break; // Partial/NotReady: retry the SAME packet next frame
+                           // (Disconnected/Error get caught by ReceivePackets)
+            }
+        }
+    }
+    Server::ServerClient *Server::GetClient(uint64_t id)
+    {
+        for (auto &c : clients)
+            if (c.id == id)
+                return &c;
+        return nullptr;
     }
 }
