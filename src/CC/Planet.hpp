@@ -24,6 +24,8 @@ namespace cc
 		JsonEditor jsonEditor;
 		Client* client = nullptr;
 		bool isServerPlanet = false;
+		std::vector<std::pair<sf::Vector2i, std::pair<Tile,TileEntity*>>> tileSetRequests; 
+		std::unordered_set<sf::Vector2i, ChunkHash> chunksRequested;
 
 		// for display
 		double currFps;
@@ -43,7 +45,7 @@ namespace cc
 		void MoveEntity(Entity* entity, sf::Vector2i newPos);
 		void AddEntity(Entity* entity, bool sentByServer = false);
 		// like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
-		void GenerateLayerVertices(sf::Vector2i pos);
+		// void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
 		std::pair<Tile*,TileEntity*> GetTileAt(sf::Vector2i position);
 		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr, bool sentByServer = false);
@@ -53,6 +55,8 @@ namespace cc
 		void SetSeed(uint64_t seed);
 		void GenerateChunk(sf::Vector2i position);
 		void ReplaceEntity(int index, Entity* e);
+
+		void MakeImageFromTiles(std::string& imagePath, sf::Vector2i placePos, int width);
 		// some nonsense to allow having a vector of unique ptrs
 		Planet(const Planet &) = delete;
 		Planet &operator=(const Planet &) = delete;

@@ -43,6 +43,9 @@ namespace cc
 				for (auto& j2 : j["textures"])
 				{
 					tileData.paths.push_back("content/resources/images/" + (std::string)(j2));
+					sf::Image im;
+					im.loadFromFile("content/resources/images/" + (std::string)(j2));
+					tileData.images.push_back(im);
 				}
 				tileRegistry.push_back(tileData);
 				i ++;

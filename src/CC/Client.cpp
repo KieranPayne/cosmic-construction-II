@@ -67,6 +67,11 @@ namespace cc
 				SendPacket(p);
 			}
 		}
+		if (inputState.Pressed(sf::Keyboard::Key::I))
+		{
+			std::string path = "C:\\Users\\kiera\\Downloads\\borzoi.png";
+			planets[activePlanet]->MakeImageFromTiles(path,{10,10},60);
+		}
 	}
 	void Client::DerivedRender()
 	{

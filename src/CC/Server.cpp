@@ -183,17 +183,30 @@ namespace cc
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
+
+            sf::Vector2i position;
+            packet >> position.x >> position.y;
+            sf::Vector2i chunkPos = TileToChunkPos(position);
             int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
+            if (!planets[planetIndex]->chunks.contains(chunkPos))
+            {
+                planets[planetIndex]->GenerateChunk(chunkPos);
+            }
+
             for (int i = 0; i < currPlayers.size(); i++)
             {
                 if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
                 {
+                    if (!clients[i].sentChunks.contains(position))
+                    {
+                        std::vector<sf::Vector2i> poses = {chunkPos};
+                        SendChunks(clients[i].id,poses);
+                    }
                     SendToClient(clients[i].id, out);
                 }
             }
 
-            sf::Vector2i position;
-            packet >> position.x >> position.y;
+           
             // BroadcastServerLog("Setting tile at " + std::to_string(position.x) + " " + std::to_string(position.y));
             uint16_t tileType;
             packet >> tileType;
@@ -331,6 +344,15 @@ namespace cc
         // add number of chunks to packet
         packet << (int)((maxX - minX + 1) * (maxY - minY + 1));
         Planet *planet = planets[p.planet].get();
+        ServerClient* client;
+        for (auto& c : clients)
+        {
+            if (c.id == clientId)
+            {
+                client = &c;
+                break;
+            }
+        }
         for (int x = minX; x <= maxX; x++)
         {
             for (int y = minY; y <= maxY; y++)
@@ -347,6 +369,7 @@ namespace cc
                 packet << b.size();
                 // put chunk data into packet
                 packet.append(b.data(), b.size());
+                client->sentChunks.emplace(sf::Vector2i{x,y});
             }
         }
         //send entities
@@ -414,6 +437,16 @@ namespace cc
             p << b.size();
             // put chunk data into packet
             p.append(b.data(), b.size());
+        }
+        for (auto& c : clients)
+        {
+            if (c.id == clientId)
+            {
+                for (auto& p : positions)
+                {
+                    c.sentChunks.emplace(p);
+                }
+            }
         }
         SendToClient(clientId, p);
     }

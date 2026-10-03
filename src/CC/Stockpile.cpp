@@ -12,7 +12,7 @@ namespace cc
 			{0, 0},
 			{TILE_SIZE, TILE_SIZE},
 			{0, TILE_SIZE}};
-        sf::Vector2f texCoords = (sf::Vector2f)TileInfo::tileRegistry[type].positions[1];
+        sf::Vector2f texCoords = (sf::Vector2f)TileInfo::tileRegistry[type].positions[0];
         for (int i = 0; i < 6; i ++)
         {
             sf::Vertex v;
