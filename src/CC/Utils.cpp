@@ -324,69 +324,85 @@ namespace cc
 		e->Serialize(s);
 		return e;
 	}
-	sf::Color UsernameToColor(std::string& username)
+	sf::Color UsernameToColor(std::string &username)
 	{
-		// FNV-1a hash (32-bit): stable across platforms and runs
-		std::uint32_t hash = 2166136261u;
-		for (unsigned char c : username)
-		{
-			hash ^= c;
-			hash *= 16777619u;
+		const int p = 31;
+		const int m = 1e9 + 9;
+		long long hash_value = 0;
+		long long p_pow = 1;
+		for (char c : username) {
+			hash_value = (hash_value + (c - 'a' + 1) * p_pow) % m;
+			p_pow = (p_pow * p) % m;
 		}
 
 		// Map hash to a hue in [0, 360)
-		float hue = static_cast<float>(hash % 360);
-
-		// HSV -> RGB with S = 1, V = 1
-		float h = hue / 60.f;								// sector 0..5
-		float x = 1.f - std::fabs(std::fmod(h, 2.f) - 1.f); // secondary component
-
-		float r = 0.f, g = 0.f, b = 0.f;
-		switch (static_cast<int>(h))
-		{
-		case 0:
-			r = 1.f;
-			g = x;
-			b = 0.f;
-			break;
-		case 1:
-			r = x;
-			g = 1.f;
-			b = 0.f;
-			break;
-		case 2:
-			r = 0.f;
-			g = 1.f;
-			b = x;
-			break;
-		case 3:
-			r = 0.f;
-			g = x;
-			b = 1.f;
-			break;
-		case 4:
-			r = x;
-			g = 0.f;
-			b = 1.f;
-			break;
-		default:
-			r = 1.f;
-			g = 0.f;
-			b = x;
-			break;
-		}
-
-		return sf::Color(
-			static_cast<std::uint8_t>(std::round(r * 255.f)),
-			static_cast<std::uint8_t>(std::round(g * 255.f)),
-			static_cast<std::uint8_t>(std::round(b * 255.f)));
+		float hue = static_cast<float>(hash_value % 360);
+		return HsvToRgb(hue,1.f,1.f);
 	}
 	float Lerp(float a, float b, float t)
 	{
-		return a + (b-a) * t;
+		return a + (b - a) * t;
 	}
 	sf::Vector2f Lerp(sf::Vector2f a, sf::Vector2f b, float t)
 	{
-		return {Lerp(a.x,b.x,t),Lerp(a.y,b.y,t)};
+		return {Lerp(a.x, b.x, t), Lerp(a.y, b.y, t)};
+	}
+
+	sf::Color HsvToRgb(float h, float s, float v)
+	{
+		// Wrap hue into [0, 360) and clamp s and v to [0, 1]
+		h = std::fmod(h, 360.f);
+		if (h < 0.f)
+			h += 360.f;
+		s = std::clamp(s, 0.f, 1.f);
+		v = std::clamp(v, 0.f, 1.f);
+
+		float c = v * s; // chroma
+		float x = c * (1.f - std::fabs(std::fmod(h / 60.f, 2.f) - 1.f));
+		float m = v - c;
+
+		float r = 0.f, g = 0.f, b = 0.f;
+
+		if (h < 60.f)
+		{
+			r = c;
+			g = x;
+			b = 0;
+		}
+		else if (h < 120.f)
+		{
+			r = x;
+			g = c;
+			b = 0;
+		}
+		else if (h < 180.f)
+		{
+			r = 0;
+			g = c;
+			b = x;
+		}
+		else if (h < 240.f)
+		{
+			r = 0;
+			g = x;
+			b = c;
+		}
+		else if (h < 300.f)
+		{
+			r = x;
+			g = 0;
+			b = c;
+		}
+		else
+		{
+			r = c;
+			g = 0;
+			b = x;
+		}
+
+		return sf::Color(
+			static_cast<uint8_t>(std::round((r + m) * 255.f)),
+			static_cast<uint8_t>(std::round((g + m) * 255.f)),
+			static_cast<uint8_t>(std::round((b + m) * 255.f)));
 	}
 }
