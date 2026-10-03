@@ -130,7 +130,7 @@ namespace cc
 		for (int i = 0; i < tileSetRequests.size();i ++)
 		{
 			sf::Vector2i chunkPos = TileToChunkPos(tileSetRequests[i].first);
-			if (!chunks.contains(chunkPos))
+			if (!chunks.contains(chunkPos) && std::find(positions.begin(), positions.end(), chunkPos) == positions.end())
 			{
 				positions.push_back(chunkPos);
 			}
