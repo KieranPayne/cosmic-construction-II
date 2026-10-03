@@ -1,6 +1,7 @@
 #include "Main.hpp"
 #include "CC/MainMenu.hpp"
-#include "CC/State.hpp"
+#include "CC/UsernameMenu.hpp"
+// #include "CC/State.hpp"
 #include "CC/TileInfo.hpp"
 // #include "Civitron/ItemInfo.hpp"
 #include "Input/Input.hpp"
@@ -17,8 +18,8 @@ std::unique_ptr<sf::RenderWindow> window;
 // width and height of the window
 int width = 1280;
 int height = 720;
-Kosmic::State *state = nullptr;
-
+std::unique_ptr<Kosmic::State> state;
+std::unique_ptr<cc::Server> server;
 Kosmic::Macro macro;
 
 // the main procedure that runs the program
@@ -40,8 +41,15 @@ int main()
 		return -1;
 	Input input;
 	// state = new Civitron::State();
-	state = new cc::MainMenu();
-	state->renderTarget = window.get();
+	cc::UsernameMenu* usernameMenu = new cc::UsernameMenu(window.get());
+	if (usernameMenu->CheckForExisting())
+	{
+		delete usernameMenu;
+		state = std::unique_ptr<Kosmic::State>(new cc::MainMenu(window.get()));
+	}else
+	{
+		state = std::unique_ptr<Kosmic::State>(usernameMenu);
+	}
 	sf::Clock deltaClock;
 	cc::TileInfo::Init();
 	cc::EntityInfo::Init();
@@ -76,7 +84,7 @@ int main()
 		inputState.DrawToWindow();
 		if (macro.active)
 		{
-			macro.Execute(state);
+			macro.Execute(state.get());
 			InputState copy = InputState(macro.inputState);
 			inputState = copy;
 		}
@@ -88,5 +96,6 @@ int main()
 
 		window->display();
 	}
+	if (server) server->Stop();
 	return 0;
 }

@@ -10,6 +10,7 @@
 #include "Serializer.hpp"
 namespace cc
 {
+	class Client;
 	class Planet
 	{
 	public:
@@ -21,6 +22,12 @@ namespace cc
 		int index;
 		uint64_t seed = 0;
 		JsonEditor jsonEditor;
+		Client* client = nullptr;
+		bool isServerPlanet = false;
+		std::vector<std::pair<sf::Vector2i, std::pair<Tile,TileEntity*>>> tileSetRequests; 
+		std::unordered_set<sf::Vector2i, ChunkHash> chunksRequested;
+		std::vector<std::pair<sf::Vector2i, std::pair<Tile,TileEntity*>>> tilesToSend; 
+		
 
 		// for display
 		double currFps;
@@ -29,7 +36,7 @@ namespace cc
 		void VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt);
 		void Update(double dt);
 		void Tick();
-		void GenerateChunksInView(sf::RenderTarget *target);
+		std::vector<sf::Vector2i> GetChunksToRequest(sf::RenderTarget *target);
 		void Render(sf::RenderTarget *target);
 		void DrawInfoGUI(double dt);
 		void DrawToolGUI(InputState &inputState);
@@ -38,16 +45,20 @@ namespace cc
 		void GetTileVertices(sf::Vector2i chunkPos);
 		//NOTE: THIS IS MOVING CHUNKS, NOT JUST MOVING IN GENERAL.
 		void MoveEntity(Entity* entity, sf::Vector2i newPos);
-		void AddEntity(Entity* entity);
+		void AddEntity(Entity* entity, bool sentByServer = false);
 		// like with the layerVertices map, the pos x and z are chunk coordinates, but the y is view height.
-		void GenerateLayerVertices(sf::Vector2i pos);
+		// void GenerateLayerVertices(sf::Vector2i pos);
 		std::pair<std::vector<sf::Vertex>, bool> GetVertices(sf::Vector2i tilePosition);
 		std::pair<Tile*,TileEntity*> GetTileAt(sf::Vector2i position);
-		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr);
+		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity = nullptr, bool sentByServer = false);
 		void Serialize(Serializer& s);
 		// nlohmann::json ToJson();
 		// void FromJson(nlohmann::json j);
 		void SetSeed(uint64_t seed);
+		void GenerateChunk(sf::Vector2i position);
+		void ReplaceEntity(int index, Entity* e);
+
+		void MakeImageFromTiles(std::string& imagePath, sf::Vector2i placePos, int width);
 		// some nonsense to allow having a vector of unique ptrs
 		Planet(const Planet &) = delete;
 		Planet &operator=(const Planet &) = delete;

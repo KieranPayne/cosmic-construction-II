@@ -1,5 +1,7 @@
 #include "Utils.hpp"
 #include "Chunk.hpp"
+#include "Serializer.hpp"
+#include "Entity.hpp"
 namespace cc
 {
 	std::vector<std::string> Split(std::string str, char splitChar)
@@ -56,10 +58,12 @@ namespace cc
 			(float)j[0].get<int>(),
 			(float)j[1].get<int>());
 	}
-	int fastFloorDiv(int v) {
+	int fastFloorDiv(int v)
+	{
 		return (v >= 0) ? (v >> 5) : -((-v - 1) >> 5) - 1;
 	}
-	int TileToChunkPos(int pos){
+	int TileToChunkPos(int pos)
+	{
 		return fastFloorDiv(pos);
 	}
 	sf::Vector2i TileToChunkPos(sf::Vector2i &pos)
@@ -73,8 +77,7 @@ namespace cc
 	{
 		return {
 			static_cast<int>(std::floor(pos.x / 32.0f)),
-			static_cast<int>(std::floor(pos.y / 32.0f))
-		};
+			static_cast<int>(std::floor(pos.y / 32.0f))};
 	}
 	ImGuiKey keycodeToImGuiKey(sf::Keyboard::Key code)
 	{
@@ -287,5 +290,119 @@ namespace cc
 			break;
 		}
 		return ImGuiKey_None;
+	}
+	std::vector<uint8_t> ReadBytesFromPacket(sf::Packet &packet)
+	{
+		uint64_t n;
+		packet >> n;
+		std::vector<uint8_t> result;
+		result.reserve(n);
+		for (int i = 0; i < n; i++)
+		{
+			uint8_t byte;
+			packet >> byte;
+			result.push_back(byte);
+		}
+		return result;
+	}
+	void AppendEntityToPacket(sf::Packet &packet, Entity *e)
+	{
+		packet << (uint16_t)e->type;
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+		e->Serialize(s);
+		auto data = s.binary();
+		packet << data.size();
+		packet.append(data.data(), data.size());
+	}
+	Entity *LoadEntityFromPacket(sf::Packet &packet)
+	{
+		uint16_t type;
+		packet >> type;
+		Entity *e = CreateEntityFromType((Entity::EntityType)type);
+		std::vector<uint8_t> data = ReadBytesFromPacket(packet);
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+		e->Serialize(s);
+		return e;
+	}
+	sf::Color UsernameToColor(std::string &username)
+	{
+		const int p = 31;
+		const int m = 1e9 + 9;
+		long long hash_value = 0;
+		long long p_pow = 1;
+		for (char c : username) {
+			hash_value = (hash_value + (c - 'a' + 1) * p_pow) % m;
+			p_pow = (p_pow * p) % m;
+		}
+
+		// Map hash to a hue in [0, 360)
+		float hue = static_cast<float>(hash_value % 360);
+		return HsvToRgb(hue,1.f,1.f);
+	}
+	float Lerp(float a, float b, float t)
+	{
+		return a + (b - a) * t;
+	}
+	sf::Vector2f Lerp(sf::Vector2f a, sf::Vector2f b, float t)
+	{
+		return {Lerp(a.x, b.x, t), Lerp(a.y, b.y, t)};
+	}
+
+	sf::Color HsvToRgb(float h, float s, float v)
+	{
+		// Wrap hue into [0, 360) and clamp s and v to [0, 1]
+		h = std::fmod(h, 360.f);
+		if (h < 0.f)
+			h += 360.f;
+		s = std::clamp(s, 0.f, 1.f);
+		v = std::clamp(v, 0.f, 1.f);
+
+		float c = v * s; // chroma
+		float x = c * (1.f - std::fabs(std::fmod(h / 60.f, 2.f) - 1.f));
+		float m = v - c;
+
+		float r = 0.f, g = 0.f, b = 0.f;
+
+		if (h < 60.f)
+		{
+			r = c;
+			g = x;
+			b = 0;
+		}
+		else if (h < 120.f)
+		{
+			r = x;
+			g = c;
+			b = 0;
+		}
+		else if (h < 180.f)
+		{
+			r = 0;
+			g = c;
+			b = x;
+		}
+		else if (h < 240.f)
+		{
+			r = 0;
+			g = x;
+			b = c;
+		}
+		else if (h < 300.f)
+		{
+			r = x;
+			g = 0;
+			b = c;
+		}
+		else
+		{
+			r = c;
+			g = 0;
+			b = x;
+		}
+
+		return sf::Color(
+			static_cast<uint8_t>(std::round((r + m) * 255.f)),
+			static_cast<uint8_t>(std::round((g + m) * 255.f)),
+			static_cast<uint8_t>(std::round((b + m) * 255.f)));
 	}
 }

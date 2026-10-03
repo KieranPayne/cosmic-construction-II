@@ -11,6 +11,8 @@
 #include "JsonEditor.hpp"
 #include "Item.hpp"
 #include "Serializer.hpp"
+#include "CSMessage.hpp"
+#include "Client.hpp"
 namespace cc
 {
 	Planet::Planet()
@@ -23,26 +25,71 @@ namespace cc
 	}
 	void Planet::Update(double dt)
 	{
+		if (isServerPlanet)
+		{
+			for (auto &e : entities)
+			{
+				if (!e->isInChunk)
+				{
+					if (!chunks.contains(e->chunkPos))
+					{
+						GenerateChunk(e->chunkPos);
+					}
+					chunks[e->chunkPos]->AddEntity(e.get());
+					e->isInChunk = true;
+				}
+			}
+		}
+		if (tileSetRequests.size() > 0)
+		{
+			// client->LogMessage("num tile set requests: " + std::to_string(tileSetRequests.size()));
+			for (int i = 0; i < tileSetRequests.size(); i ++)
+			{
+				auto& t = tileSetRequests[i];
+				sf::Vector2i chunkPos = TileToChunkPos(t.first);
+				if (chunks.contains(chunkPos))
+				{
+					SetTileAt(t.first,t.second.first,t.second.second);
+					tileSetRequests.erase(tileSetRequests.begin() + i);
+					i --;
+				}
+			}
+		}
+		if (tilesToSend.size() > 0)
+		{
+			sf::Packet p;
+			p << (uint16_t)CSMessageType::REQUEST_SET_TILES;
+			p << (int)tilesToSend.size();
+			for (int i = 0; i < tilesToSend.size(); i ++)
+			{
+				sf::Vector2i& position = tilesToSend[i].first;
+				Tile& tile = tilesToSend[i].second.first;
+				TileEntity* tileEntity = tilesToSend[i].second.second;
+				p << position.x << position.y;
+				p << tile.type;
+				p << (bool)(tileEntity != nullptr);
+				if (tileEntity != nullptr)
+				{
+					Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+					
+					tileEntity->Serialize(s);
+					auto data = s.binary();
+					p << (uint64_t)data.size();
+					p.append(data.data(), data.size());
+				}
+			}
+			client->SendPacket(p);
+			tilesToSend.clear();
+		}
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
 		camera.Update(dt, inputState);
-		GenerateChunksInView(target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
 		jsonEditor.Draw(this);
-		// ImGui::Begin("test");
-		// for (int i = 0; i < entities.size(); i ++)
-		// {
-		// 	nlohmann::json j = entities[i]->ToJson();
-		// 	if (jsonEditor.Draw(j,("entity " +  std::to_string(i)).c_str()))
-		// 	{
-		// 		entities[i]->FromJson(j);
-		// 	}		
-		// }
-		// ImGui::End();
 	}
-	void Planet::GenerateChunksInView(sf::RenderTarget *target)
+	std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
 	{
 		sf::FloatRect view = camera.toFloatRect(target);
 		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
@@ -50,6 +97,7 @@ namespace cc
 		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
 		topLeft -= {1, 1};
 		bottomRight += {1, 1};
+		std::vector<sf::Vector2i> positions = {};
 		for (int x = topLeft.x; x <= bottomRight.x; x++)
 		{
 			for (int z = topLeft.y; z <= bottomRight.y; z++)
@@ -57,12 +105,48 @@ namespace cc
 
 				if (!chunks.contains({x, z}))
 				{
-
-					chunks[{x, z}] = std::unique_ptr<Chunk>(generator.GenerateChunk({x, z}));
+					positions.push_back({x, z});
 				}
-				sf::Vector2i pos(x, z);
 			}
 		}
+		for (auto &e : entities)
+		{
+			if (!e->isInChunk)
+			{
+				if (chunks.contains(e->chunkPos))
+				{
+					chunks[e->chunkPos]->AddEntity(e.get());
+					e->isInChunk = true;
+				}
+				else
+				{
+					if (std::find(positions.begin(), positions.end(), e->chunkPos) == positions.end())
+					{
+						positions.push_back(e->chunkPos);
+					}
+				}
+			}
+		}
+		for (int i = 0; i < tileSetRequests.size();i ++)
+		{
+			sf::Vector2i chunkPos = TileToChunkPos(tileSetRequests[i].first);
+			if (!chunks.contains(chunkPos) && std::find(positions.begin(), positions.end(), chunkPos) == positions.end())
+			{
+				positions.push_back(chunkPos);
+			}
+		}
+		for (int i = 0; i < positions.size(); i ++)
+		{
+			if (chunksRequested.contains(positions[i]))
+			{
+				positions.erase(positions.begin() + i);
+				i --;
+			}else
+			{
+				chunksRequested.emplace(positions[i]);
+			}
+		}
+		return positions;
 	}
 	void Planet::Render(sf::RenderTarget *target)
 	{
@@ -77,6 +161,10 @@ namespace cc
 		{
 			for (int y = topLeft.y; y <= bottomRight.y; y++)
 			{
+				if (!chunks.contains({x, y}))
+				{
+					continue;
+				}
 				if (!tileVertices.contains({x, y}))
 				{
 					GetTileVertices({x, y});
@@ -89,6 +177,10 @@ namespace cc
 		{
 			for (int y = topLeft.y - 1; y <= bottomRight.y + 1; y++)
 			{
+				if (!chunks.contains({x, y}))
+				{
+					continue;
+				}
 				chunks[{x, y}]->RenderEntities(target);
 			}
 		}
@@ -117,22 +209,22 @@ namespace cc
 			c.second->WriteData(chunkPath + ".txt");
 		}
 		// save entities
-		Serializer entityData(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serializer entityData(Serializer::Mode::WRITE, SaveManager::saveFormat);
 		int n = entities.size();
-		entityData.field("n",n);
+		entityData.field("n", n);
 		// nlohmann::json entityData;
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			uint16_t type = (uint16_t)entities[i]->type;
-			entityData.field(std::to_string(i) + " type",type);
-			entityData.field(std::to_string(i),entities[i].get());
+			entityData.field(std::to_string(i) + " type", type);
+			entityData.field(std::to_string(i), entities[i].get());
 		}
 		SaveManager::WriteSerializerToFile(entityData, path + "/entities");
 		// SaveManager::WriteData(path + "/entities.json", entityData.dump(2));
 		// misc variables get saved in planet json
-		Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+		Serializer s(Serializer::Mode::WRITE, SaveManager::saveFormat);
 		Serialize(s);
-		SaveManager::WriteSerializerToFile(s,path + "/planet");
+		SaveManager::WriteSerializerToFile(s, path + "/planet");
 		// SaveManager::WriteData(path + "/planet.json", ToJson().dump(2));
 		generator.Save(path);
 	}
@@ -163,31 +255,42 @@ namespace cc
 		// load entities
 		Serializer entityData = SaveManager::LoadSerializerFromFile(path + "/entities");
 		int n;
-		entityData.field("n",n);
+		entityData.field("n", n);
 		// nlohmann::json entityData = nlohmann::json::parse(SaveManager::ReadData(path + "/entities.json"));
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
 			uint16_t type;
-			entityData.field(std::to_string(i) + " type",type);
-			Entity* e = CreateEntityFromType((Entity::EntityType)type);
-			entityData.field(std::to_string(i),e);
-			AddEntity(e);
+			entityData.field(std::to_string(i) + " type", type);
+			Entity *e = CreateEntityFromType((Entity::EntityType)type);
+			entityData.field(std::to_string(i), e);
+			AddEntity(e, true);
 		}
 		// load misc data
-		Serializer s = SaveManager::LoadSerializerFromFile(path +"/planet");
+		Serializer s = SaveManager::LoadSerializerFromFile(path + "/planet");
 		Serialize(s);
 		// FromJson(nlohmann::json::parse(SaveManager::ReadData(path + "/planet.json")));
 		generator.Load(path);
 	}
-	void Planet::AddEntity(Entity *entity)
+	void Planet::AddEntity(Entity *entity, bool sentByServer)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
+		// TODO: deal with case where dont have chunk yet
 		if (!chunks.contains(chunkPos))
 		{
-			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+			return;
+			// chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
 		}
+		if (!sentByServer)
+		{
+			sf::Packet p;
+			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITIES;
+			p << (int)1;
+			AppendEntityToPacket(p, entity);
+			client->SendPacket(p);
+		}
+		entity->isInChunk = true;
 		chunks[chunkPos]->AddEntity(entity);
 	}
 	void Planet::DrawInfoGUI(double dt)
@@ -197,17 +300,13 @@ namespace cc
 			return;
 		}
 		static int currentView = -1;
-		ImGui::SetNextWindowPos(ImVec2(321,4),ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(362,183),ImGuiCond_Once);
+		ImGui::SetNextWindowPos(ImVec2(321, 4), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(362, 183), ImGuiCond_Once);
 		ImGui::Begin("World Info");
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
 		// ImGui::SliderInt("Tracking Entity", &trackingEntity, -1, entities.size() - 1);
-
-		static float t = 0.1f;
-		ImGui::SliderFloat("Time Per Tick", &t, 0.f, 1.f);
-		((State *)state)->timePerTick = t;
 
 		// bgTile += "Colour: " + std::to_string()
 		const char *currentLabel = "None";
@@ -233,7 +332,7 @@ namespace cc
 		ImGui::Separator();
 		if (currentView == 0)
 		{
-			Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
 			camera.Serialize(s);
 			ImGui::Text(s.json().dump(2).c_str());
 		}
@@ -242,7 +341,7 @@ namespace cc
 			std::string result = "";
 			for (auto &e : entities)
 			{
-				Serializer s(Serializer::Mode::WRITE,Serializer::Format::JSON);
+				Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
 				e->Serialize(s);
 				result += s.json().dump(2) + "\n";
 			}
@@ -250,27 +349,66 @@ namespace cc
 		}
 		ImGui::End();
 	}
-	//TODO: make this return a pair that also returns the tile entity if there is one here
-	std::pair<Tile*,TileEntity*> Planet::GetTileAt(sf::Vector2i position)
+	// TODO: make this return a pair that also returns the tile entity if there is one here
+	std::pair<Tile *, TileEntity *> Planet::GetTileAt(sf::Vector2i position)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
-			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+			if (isServerPlanet)
+			{
+				GenerateChunk(chunkPos);
+			}else
+			{
+				return {nullptr,nullptr};
+			}
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		// return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
 		return chunks[chunkPos]->GetTile(subChunkPos);
 	}
-	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity* tileEntity)
+	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity, bool sentByServer)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
-			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+			if (isServerPlanet)
+			{
+				GenerateChunk(chunkPos);
+			}else
+			{
+				tileSetRequests.push_back({position,{tile,tileEntity}});
+				return;
+			}
+		}
+		auto current = GetTileAt(position);
+		if (current.first->type == tile.type)
+		{
+			if (tileEntity != nullptr)
+			{
+				if (current.second != nullptr)
+				{
+					Serializer s1(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+					tileEntity->Serialize(s1);
+					Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+					current.second->Serialize(s2);
+					if (s1.binary() == s2.binary())
+					{
+						return;
+					}
+				}
+			}
+			else if (tileEntity == nullptr && current.second == nullptr)
+			{
+				return;
+			}
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		chunks[chunkPos]->SetTile(subChunkPos,tile, tileEntity);
+		if (client != nullptr && !sentByServer)
+		{
+			tilesToSend.push_back({position,{tile,tileEntity}});
+		}
+		chunks[chunkPos]->SetTile(subChunkPos, tile, tileEntity);
 		// chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;
 		if (tileVertices.contains(chunkPos))
 		{
@@ -305,7 +443,13 @@ namespace cc
 		chunks[entity->chunkPos]->RemoveEntity(entity);
 		if (!chunks.contains(newPos))
 		{
-			chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
+			if (isServerPlanet)
+			{
+				chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
+			}else
+			{
+				entity->isInChunk = false;
+			}
 		}
 		chunks[newPos]->AddEntity(entity);
 		entity->chunkPos = newPos;
@@ -340,18 +484,24 @@ namespace cc
 	}
 	void Planet::DrawToolGUI(InputState &inputState)
 	{
-		ImGui::SetNextWindowPos(ImVec2(4,316),ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(231,400),ImGuiCond_Once);
+		ImGui::SetNextWindowPos(ImVec2(4, 316), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(231, 400), ImGuiCond_Once);
 		ImGui::Begin("Tool Menu");
-		ImGui::Text("Hovering over:");
-		std::string bgTile = "Background Tile:\n";
 		sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
 		sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
+		if (!chunks.contains(worldChunkPos))
+		{
+			ImGui::End();
+			return;
+		}
+		ImGui::Text("Hovering over:");
+		std::string bgTile = "Background Tile:\n";
+
 		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;
 		BackgroundTile *bgT = &chunks[worldChunkPos]->backgroundTiles[subChunkPos.x][subChunkPos.y];
 		bgTile += "Colour: " + std::to_string(bgT->color.r) + " " + std::to_string(bgT->color.g) + " " + std::to_string(bgT->color.b) + "\n";
-		bgTile += "Type: " + std::to_string((uint8_t) bgT->type);
+		bgTile += "Type: " + std::to_string((uint8_t)bgT->type);
 		ImGui::Text(bgTile.c_str());
 		std::string tile = "Tile:\n";
 		auto t = GetTileAt(worldTilePos);
@@ -359,11 +509,13 @@ namespace cc
 		if (t.second != nullptr)
 		{
 			tile += "\nTile Entity data:\n";
-			tile += t.second->ToJson().dump(2);
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
+			s.field("Tile Entity", t.second);
+			tile += s.json().dump(2);
 		}
 		ImGui::Text(tile.c_str());
 		static int currentView = 0;
-		std::vector<std::string> names = {"Add Tile", "Add Entity", "blah blahh blahhhhoiahsdfoj"};
+		std::vector<std::string> names = {"Add Tile", "Insert image"};
 		const char *currentLabel = "None";
 		currentLabel = names[currentView].c_str();
 		if (ImGui::BeginCombo("##", currentLabel))
@@ -400,22 +552,43 @@ namespace cc
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
 				SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
+				// sf::Packet p;
+				// p << (uint16_t)CSMessageType::REQUEST_SET_TILE;
 			}
 		}
 		else if (currentView == 1)
 		{
-			if (inputState.Pressed(sf::Mouse::Button::Right))
+			// Persistent state (members of your class, or statics)
+			static char pathBuf[256] = "assets/image.png";
+			static int  placeXY[2]   = {0, 0};
+			static int  width        = 64;
+			static std::string status;
+
+			if (ImGui::Begin("Image to Tiles"))
 			{
-				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
-				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
+				ImGui::InputText("Image path", pathBuf, sizeof(pathBuf));
+				ImGui::InputInt2("Place position (x, y)", placeXY);
+				ImGui::InputInt("Width (tiles)", &width);
+				width = std::clamp(width, 1, 1024);   // sanity limit, adjust to taste
+
+				if (ImGui::Button("Generate"))
+				{
+					std::string path = pathBuf;       // function takes a non-const std::string&
+					MakeImageFromTiles(path, sf::Vector2i{placeXY[0], placeXY[1]}, width);
+					status = "Placed " + path;
+				}
+
+				if (!status.empty())
+					ImGui::TextUnformatted(status.c_str());
 			}
+			ImGui::End();
 		}
 		ImGui::End();
 	}
-	void Planet::Serialize(Serializer& s)
+	void Planet::Serialize(Serializer &s)
 	{
-		s.field("camera",camera);
-		s.field("seed",seed);
+		s.field("camera", camera);
+		s.field("seed", seed);
 		// s.field("generator",generator);
 	}
 	// nlohmann::json Planet::ToJson()
@@ -472,7 +645,7 @@ namespace cc
 				}
 				if (TileInfo::tileRegistry[t->type].isTileEntity)
 				{
-					c->tileEntities[c->TileEntityIndex({x,y})]->GetVertices(arr,i);
+					c->tileEntities[c->TileEntityIndex({x, y})]->GetVertices(arr, i);
 					continue;
 				}
 				sf::Vector2f texPos = (sf::Vector2f)TileInfo::tileRegistry[t->type].positions[0];
@@ -494,5 +667,209 @@ namespace cc
 		this->seed = seed;
 		generator.SetSeed(seed);
 	}
-	
+	void Planet::GenerateChunk(sf::Vector2i position)
+	{
+		chunks[position] = std::unique_ptr<Chunk>(generator.GenerateChunk(position));
+	}
+	void Planet::ReplaceEntity(int index, Entity *e)
+	{
+		sf::Vector2i chunkPos = TileToChunkPos(entities[index]->position);
+		if (chunks.contains(chunkPos))
+		{
+			chunks[chunkPos]->RemoveEntity(entities[index].get());
+		}
+		entities[index].reset(e);
+		sf::Vector2i newPos = TileToChunkPos(entities[index]->position);
+		if (chunks.contains(newPos))
+		{
+			chunks[newPos]->AddEntity(e);
+			e->isInChunk = true;
+		}
+		else
+		{
+			e->isInChunk = false;
+		}
+		e->UpdateChunkPos();
+	}
+	void Planet::MakeImageFromTiles(std::string &imagePath, sf::Vector2i placePos, int width)
+	{
+		const bool dither = true; // false = plain nearest-colour matching
+
+		// ---------- load + scale ----------
+		sf::Texture texture;
+		if (!texture.loadFromFile(imagePath))
+			return;
+		sf::Vector2u texSize = texture.getSize();
+		if (texSize.x == 0 || width <= 0)
+			return;
+
+		float scaleFactor = (float)width / (float)texSize.x;
+		int newH = std::max(1, (int)std::round((float)texSize.y * scaleFactor));
+		texture.setSmooth(false);
+
+		sf::RenderTexture rt(sf::Vector2u{(unsigned)width, (unsigned)newH});
+		rt.clear(sf::Color::Transparent);
+		sf::Sprite sprite(texture);
+		sprite.setScale({scaleFactor, scaleFactor});
+		sf::RenderStates states;
+		states.blendMode = sf::BlendNone;
+		rt.draw(sprite, states);
+		rt.display();
+		sf::Image small = rt.getTexture().copyToImage();
+
+		// ---------- sRGB -> linear lookup table ----------
+		float srgbToLin[256];
+		for (int i = 0; i < 256; i++)
+		{
+			float c = i / 255.f;
+			srgbToLin[i] = c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f);
+		}
+
+		// ---------- tile averages (linear light) -> Lab ----------
+		int tileCount = (int)TileInfo::tileRegistry.size();
+		std::vector<float> tileLab(tileCount * 3, 0.f); // L,a,b per tile
+		std::vector<float> tileRgb(tileCount * 3, 0.f); // average sRGB 0-255 (for dither error)
+		std::vector<char> tileValid(tileCount, 0);
+
+		for (int i = 0; i < tileCount; i++)
+		{
+			auto &t = TileInfo::tileRegistry[i];
+			if (t.images.size() == 0)
+				continue;
+			if (t.isTileEntity)
+			{
+				continue;
+			}
+			sf::Image &im = t.images[0];
+			float sum[3] = {0.f, 0.f, 0.f};
+			int n = 0;
+			for (unsigned y = 0; y < im.getSize().y; y++)
+			{
+				for (unsigned x = 0; x < im.getSize().x; x++)
+				{
+					sf::Color p = im.getPixel({x, y});
+					if (p.a == 0)
+						continue;
+					n++;
+					sum[0] += srgbToLin[p.r];
+					sum[1] += srgbToLin[p.g];
+					sum[2] += srgbToLin[p.b];
+				}
+			}
+			if (n == 0)
+				continue; // fully transparent tile, never matched
+		
+			float lin[3] = {sum[0] / n, sum[1] / n, sum[2] / n};
+
+			// linear -> sRGB (stored so dithering can compute the error)
+			for (int k = 0; k < 3; k++)
+			{
+				float c = lin[k];
+				float s = c <= 0.0031308f ? 12.92f * c : 1.055f * std::pow(c, 1.f / 2.4f) - 0.055f;
+				tileRgb[i * 3 + k] = s * 255.f;
+			}
+
+			// linear -> XYZ -> Lab
+			float f[3];
+			f[0] = (0.4124564f * lin[0] + 0.3575761f * lin[1] + 0.1804375f * lin[2]) / 0.95047f;
+			f[1] = 0.2126729f * lin[0] + 0.7151522f * lin[1] + 0.0721750f * lin[2];
+			f[2] = (0.0193339f * lin[0] + 0.1191920f * lin[1] + 0.9503041f * lin[2]) / 1.08883f;
+			for (int k = 0; k < 3; k++)
+				f[k] = f[k] > 0.008856f ? std::cbrt(f[k]) : 7.787f * f[k] + 16.f / 116.f;
+
+			tileLab[i * 3 + 0] = 116.f * f[1] - 16.f;
+			tileLab[i * 3 + 1] = 500.f * (f[0] - f[1]);
+			tileLab[i * 3 + 2] = 200.f * (f[1] - f[2]);
+			tileValid[i] = 1;
+		}
+
+		// ---------- working buffer (float, so dithering error can accumulate) ----------
+		std::vector<float> buf(width * newH * 3);
+		for (int y = 0; y < newH; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				sf::Color p = small.getPixel({(unsigned)x, (unsigned)y});
+				int idx = (y * width + x) * 3;
+				buf[idx + 0] = p.r;
+				buf[idx + 1] = p.g;
+				buf[idx + 2] = p.b;
+			}
+		}
+
+		// ---------- match each pixel (row by row, needed for error diffusion) ----------
+		for (int y = 0; y < newH; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				if (small.getPixel({(unsigned)x, (unsigned)y}).a == 0)
+					continue;
+
+				int idx = (y * width + x) * 3;
+
+				// clamp, then convert this pixel to Lab
+				float rgb[3];
+				float lin[3];
+				for (int k = 0; k < 3; k++)
+				{
+					rgb[k] = std::clamp(buf[idx + k], 0.f, 255.f);
+					float c = rgb[k] / 255.f;
+					lin[k] = c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f);
+				}
+
+				float f[3];
+				f[0] = (0.4124564f * lin[0] + 0.3575761f * lin[1] + 0.1804375f * lin[2]) / 0.95047f;
+				f[1] = 0.2126729f * lin[0] + 0.7151522f * lin[1] + 0.0721750f * lin[2];
+				f[2] = (0.0193339f * lin[0] + 0.1191920f * lin[1] + 0.9503041f * lin[2]) / 1.08883f;
+				for (int k = 0; k < 3; k++)
+					f[k] = f[k] > 0.008856f ? std::cbrt(f[k]) : 7.787f * f[k] + 16.f / 116.f;
+
+				float pL = 116.f * f[1] - 16.f;
+				float pa = 500.f * (f[0] - f[1]);
+				float pb = 200.f * (f[1] - f[2]);
+
+				// nearest tile by squared Lab distance
+				float bestDist = std::numeric_limits<float>::max();
+				int best = -1;
+				for (int i = 0; i < tileCount; i++)
+				{
+					if (!tileValid[i])
+						continue;
+					float dL = pL - tileLab[i * 3 + 0];
+					float da = pa - tileLab[i * 3 + 1];
+					float db = pb - tileLab[i * 3 + 2];
+					float d = dL * dL + da * da + db * db;
+					if (d < bestDist)
+					{
+						bestDist = d;
+						best = i;
+					}
+				}
+				if (best < 0)
+					continue; // no usable tiles at all
+
+				SetTileAt(placePos + sf::Vector2i{x, y}, Tile(best));
+
+				// Floyd-Steinberg: push the leftover error onto unprocessed neighbours
+				if (dither)
+				{
+					for (int k = 0; k < 3; k++)
+					{
+						float err = rgb[k] - tileRgb[best * 3 + k];
+						if (x + 1 < width)
+							buf[idx + 3 + k] += err * 7.f / 16.f;
+						if (y + 1 < newH)
+						{
+							int below = idx + width * 3;
+							if (x > 0)
+								buf[below - 3 + k] += err * 3.f / 16.f;
+							buf[below + k] += err * 5.f / 16.f;
+							if (x + 1 < width)
+								buf[below + 3 + k] += err * 1.f / 16.f;
+						}
+					}
+				}
+			}
+		}
+	}
 }

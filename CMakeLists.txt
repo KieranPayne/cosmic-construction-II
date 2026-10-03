@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(CCII LANGUAGES CXX)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
+set(BUILD_SHARED_LIBS OFF)
 include(FetchContent)
 FetchContent_Declare(SFML
     GIT_REPOSITORY https://github.com/SFML/SFML.git
@@ -19,6 +19,7 @@ add_executable(CCII ${SOURCES})
 
 target_compile_features(CCII PRIVATE cxx_std_20)
 target_link_libraries(CCII PRIVATE SFML::Graphics SFML::Window SFML::System SFML::Audio SFML::Network)
+target_link_options(CCII PRIVATE -static-libgcc -static-libstdc++ -static)
 add_custom_target(copy_content ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/content

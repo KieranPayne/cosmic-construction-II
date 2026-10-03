@@ -3,13 +3,16 @@
 #include "../Timer.hpp"
 #include "../imgui/imgui.h"
 #include "SaveManager.hpp"
-#include "State.hpp"
 #include "Utils.hpp"
+#include "Client.hpp"
 namespace cc
 {
-	MainMenu::MainMenu()
+	MainMenu::MainMenu(sf::RenderTarget* target)
 	{
 		currentState = TITLE_SCREEN;
+		strcpy(ipAddress, "");
+		connectError = "";	
+		this->renderTarget = target;
 	}
 
 	void MainMenu::DerivedUpdate()
@@ -18,17 +21,33 @@ namespace cc
 		{
 			DisplayTitleScreen();
 		}
+		else if (currentState == HOST_MENU)
+		{
+			DisplayHostMenu();
+		}
 		else if (currentState == NEW_GAME)
 		{
 			DisplayNewGame();
+		}
+		else if (currentState == JOIN_GAME)
+		{
+			DisplayJoinGame();
 		}
 		else
 		{
 			DisplayLoadGame();
 		}
+
 		if (inputState.Pressed(sf::Keyboard::Key::Escape) && (currentState != TITLE_SCREEN))
 		{
-			currentState = TITLE_SCREEN;
+			if (currentState == NEW_GAME || currentState == LOAD_GAME)
+			{
+				currentState = HOST_MENU;
+			}
+			else
+			{
+				currentState = TITLE_SCREEN;
+			}
 		}
 	}
 	void MainMenu::DisplayTitleScreen()
@@ -59,6 +78,53 @@ namespace cc
 		ImVec2 windowCenter = ImVec2(displaySize.x * 0.5f, displaySize.y * 0.5f);
 
 		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y - buttonSize.y - 10));
+		if (ImGui::Button("Host", buttonSize))
+		{
+			currentState = HOST_MENU;
+		}
+
+		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y + 10));
+		if (ImGui::Button("Join", buttonSize))
+		{
+			strcpy(ipAddress, "");
+			connectError = "";
+			currentState = JOIN_GAME;
+		}
+
+		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y + 20 + buttonSize.y));
+		if (ImGui::Button("Quick Start", buttonSize))
+		{
+			SaveManager::CreateSave("quick start save", "");
+		}
+
+		ImGui::End();
+	}
+	void MainMenu::DisplayHostMenu()
+	{
+		ImGuiIO &io = ImGui::GetIO();
+		ImVec2 displaySize = io.DisplaySize;
+
+		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(displaySize);
+
+		ImGui::Begin("HostMenu", nullptr, windowFlags);
+
+		float originalFontScale = ImGui::GetFont()->Scale;
+		ImGui::SetWindowFontScale(3.0f);
+
+		const char *title = "Host Game";
+		ImVec2 textSize = ImGui::CalcTextSize(title);
+		ImGui::SetCursorPos(ImVec2((displaySize.x - textSize.x) * 0.5f, displaySize.y * 0.2f));
+		ImGui::TextUnformatted(title);
+
+		ImGui::SetWindowFontScale(1.0f);
+
+		ImVec2 buttonSize(200, 50);
+		ImVec2 windowCenter = ImVec2(displaySize.x * 0.5f, displaySize.y * 0.5f);
+
+		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y - buttonSize.y - 10));
 		if (ImGui::Button("New Game", buttonSize))
 		{
 			strcpy(saveName, "");
@@ -73,10 +139,10 @@ namespace cc
 			currentState = LOAD_GAME;
 		}
 
-		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y + 20 + buttonSize.y));
-		if (ImGui::Button("Quick Start", buttonSize))
+		ImGui::SetCursorPos(ImVec2(20, displaySize.y - 70));
+		if (ImGui::Button("Back", ImVec2(100, 40)))
 		{
-			SaveManager::CreateSave("quick start save", "");
+			currentState = TITLE_SCREEN;
 		}
 
 		ImGui::End();
@@ -104,7 +170,7 @@ namespace cc
 		ImGui::SameLine();
 		if (ImGui::Button("Back"))
 		{
-			currentState = TITLE_SCREEN;
+			currentState = HOST_MENU;
 		}
 		ImGui::End();
 	}
@@ -205,7 +271,7 @@ namespace cc
 						break;
 					}
 				}
-				SaveManager::Load(index);
+				SaveManager::LoadServer(index);
 			}
 			ImGui::EndGroup();
 
@@ -221,6 +287,67 @@ namespace cc
 
 		ImGui::EndChild();
 		ImGui::End();
+	}
+	void MainMenu::DisplayJoinGame()
+	{
+		ImGuiIO &io = ImGui::GetIO();
+		ImVec2 displaySize = io.DisplaySize;
+
+		ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(displaySize);
+
+		ImGui::Begin("JoinMenu", nullptr, windowFlags);
+
+		float originalFontScale = ImGui::GetFont()->Scale;
+		ImGui::SetWindowFontScale(3.0f);
+
+		const char *title = "Join Game";
+		ImVec2 textSize = ImGui::CalcTextSize(title);
+		ImGui::SetCursorPos(ImVec2((displaySize.x - textSize.x) * 0.5f, displaySize.y * 0.2f));
+		ImGui::TextUnformatted(title);
+
+		ImGui::SetWindowFontScale(1.0f);
+
+		ImVec2 fieldSize(300, 0);
+		ImVec2 windowCenter = ImVec2(displaySize.x * 0.5f, displaySize.y * 0.5f);
+
+		ImGui::SetCursorPos(ImVec2(windowCenter.x - fieldSize.x * 0.5f, windowCenter.y - 40));
+		ImGui::SetNextItemWidth(fieldSize.x);
+		ImGui::InputTextWithHint("##IpAddress", "IP Address (e.g. 127.0.0.1)", ipAddress, IM_ARRAYSIZE(ipAddress));
+
+		ImVec2 buttonSize(150, 50);
+		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x - 10, windowCenter.y + 10));
+		if (ImGui::Button("Connect", buttonSize))
+		{
+			ConnectToHost();
+			ImGui::End();
+			return;
+		}
+
+		ImGui::SetCursorPos(ImVec2(windowCenter.x + 10, windowCenter.y + 10));
+		if (ImGui::Button("Back", buttonSize))
+		{
+			currentState = TITLE_SCREEN;
+		}
+
+		if (!connectError.empty())
+		{
+			ImVec2 errSize = ImGui::CalcTextSize(connectError.c_str());
+			ImGui::SetCursorPos(ImVec2(windowCenter.x - errSize.x * 0.5f, windowCenter.y + 70));
+			ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%s", connectError.c_str());
+		}
+
+		ImGui::End();
+	}
+	void MainMenu::ConnectToHost()
+	{
+		auto ipResult = sf::IpAddress::resolve(ipAddress);
+		//TODO: deal with case where not valid ip address
+		Client* c = new Client(state->renderTarget);
+		c->ConnectToServer(ipResult.value(),5000);
+		state = std::unique_ptr<Kosmic::State>(c);
 	}
 
 	MainMenu::~MainMenu()

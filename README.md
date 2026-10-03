@@ -13,3 +13,15 @@ to do:
 - add trees
 - make humans pathfind to and mine trees
 - add multi tile structures
+
+
+
+
+MULTIPLAYER TODO
+- [ ] send client join data
+    - [ ] have list of player datas stored in file
+        - [ ] camera position etc.
+    - [ ] client enters username before joining
+    - [ ] look up username when client joins
+    - [ ] send player data and other join data
+    - [ ] client has loading screen until join data received

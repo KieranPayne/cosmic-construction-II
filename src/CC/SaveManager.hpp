@@ -1,5 +1,6 @@
 #pragma once
-#include "State.hpp"
+// #include "State.hpp"
+#include "Server.hpp"
 #include "Serializer.hpp"
 namespace cc
 {
@@ -8,12 +9,13 @@ namespace cc
         extern Serializer::Format saveFormat;
         extern std::string saveName;
         extern std::string savePath;
+        extern std::string username;
         // extern uint64_t seed;
-        void Save(State *state);
+        void SaveServer(Server* server);
         void CreateSave(std::string name, std::string seed);
-        void Load(int index);
-        void WriteMetadata(State* state);
-        void LoadStartingChunks(State* state);
+        void LoadServer(int index);
+        void WriteServerMetadata(Server* server);
+        // void LoadStartingChunks(State* state);
         bool CreateDirectory(std::string path);
         bool DirExists(std::string path);
         std::vector<std::string> ListFiles(std::string path);
@@ -28,5 +30,8 @@ namespace cc
         //note: do not include file extension, done by function.
         void WriteSerializerToFile(Serializer& s, std::string path);
         Serializer LoadSerializerFromFile(std::string path);
+        std::string GetUsername();
+        void WriteUsername(std::string username);
+        bool FileExists(std::string path);
     }
 }

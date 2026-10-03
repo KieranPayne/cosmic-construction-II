@@ -14,6 +14,7 @@ namespace cc
 			}
 		}
 	}
+
 	Chunk::Chunk()
 	{
 		position = {0, 0};
@@ -28,38 +29,28 @@ namespace cc
 			if (area % w == 0)
 			{
 				int h = area / w;
-				return {w, h}; // width and height
+				return {w, h};
 			}
 		}
 
-		return {1, area}; // Fallback, area is a prime number
+		// area is prime
+		return {1, area};
 	}
+
 	void Chunk::WriteData(std::string path)
 	{
-		// DATA IS STORED AS:
-		// STR_LEN STR BIN_LEN BIN
+		// file layout: uint32 byte count, followed by that many bytes of chunk data
 		std::ofstream file(path, std::ios::binary);
-		// writing string
-		std::string stringData = GetStringData();
-		// std::cout << stringData << std::endl;
-		uint32_t strSize = stringData.size();
-		file.write(reinterpret_cast<const char *>(&strSize), sizeof(strSize));
-		file.write(stringData.data(), stringData.size());
-		// writing binary
 		std::vector<uint8_t> binaryData = GetByteData();
 		uint32_t binarySize = binaryData.size();
 		file.write(reinterpret_cast<const char *>(&binarySize), sizeof(binarySize));
 		file.write(reinterpret_cast<const char *>(binaryData.data()), binaryData.size());
 		file.close();
 	}
+
 	void Chunk::ReadData(std::string path)
 	{
 		std::ifstream file(path, std::ios::binary);
-		uint32_t textSize;
-		file.read(reinterpret_cast<char *>(&textSize), sizeof(textSize));
-		std::string text;
-		text.resize(textSize);
-		file.read(text.data(), textSize);
 
 		std::vector<uint8_t> binaryData;
 		std::uint32_t binarySize;
@@ -67,17 +58,38 @@ namespace cc
 		binaryData.resize(binarySize);
 		file.read(reinterpret_cast<char *>(binaryData.data()), binarySize);
 
-		LoadStringData(text);
 		LoadByteData(binaryData);
 		file.close();
 	}
+
 	std::vector<uint8_t> Chunk::GetByteData()
 	{
 		std::vector<uint8_t> bytes;
 		bytes.reserve(CHUNK_SIZE * CHUNK_SIZE * 6);
 
-		size_t index = 0;
+		// tile entity block
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+		int n = tileEntities.size();
+		s.field("n", n);
+		int i = 0;
+		for (auto &e : tileEntities)
+		{
+			std::string index = std::to_string(i);
+			s.field(index + " type", e.second->type);
+			uint16_t key = e.first;
+			s.field(index + " key", key);
+			s.field(index + " value", e.second.get());
+			i++;
+		}
+		auto data = s.binary();
 
+		// the block is prefixed with its size so it can be skipped over when reading
+		uint32_t size = (uint32_t)data.size();
+		uint8_t *sizeBytes = reinterpret_cast<uint8_t *>(&size);
+		bytes.insert(bytes.end(), sizeBytes, sizeBytes + sizeof(uint32_t));
+		bytes.insert(bytes.end(), data.begin(), data.end());
+
+		// per-tile data
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
@@ -86,11 +98,10 @@ namespace cc
 
 				bytes.push_back(static_cast<uint8_t>(type >> 8));
 				bytes.push_back(static_cast<uint8_t>(type & 0xFF));
-				// TODO: not sure why these need to be bgr instead of rgb, need to investigate
 				bytes.push_back(backgroundTiles[x][y].color.r);
 				bytes.push_back(backgroundTiles[x][y].color.g);
 				bytes.push_back(backgroundTiles[x][y].color.b);
-				bytes.push_back((uint8_t) backgroundTiles[x][y].type);
+				bytes.push_back((uint8_t)backgroundTiles[x][y].type);
 			}
 		}
 
@@ -99,17 +110,40 @@ namespace cc
 
 	void Chunk::LoadByteData(std::vector<uint8_t> &bytes)
 	{
-		size_t index = 0;
+		// the data starts with the size of the tile entity block
+		uint32_t size;
+		std::memcpy(&size, bytes.data(), sizeof(uint32_t));
 
+		// tile entity block
+		std::vector<uint8_t> data(
+			bytes.begin() + sizeof(uint32_t),
+			bytes.begin() + sizeof(uint32_t) + size);
+
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+		int n;
+		s.field("n", n);
+		for (int i = 0; i < n; i++)
+		{
+			std::string index = std::to_string(i);
+			uint16_t type;
+			s.field(index + " type", type);
+			auto *e = CreateTileEntityFromType(type);
+			uint16_t key;
+			s.field(index + " key", key);
+			s.field(index + " value", e);
+			tileEntities[key] = std::unique_ptr<TileEntity>(e);
+		}
+
+		// per-tile data follows the tile entity block
+		size_t index = sizeof(uint32_t) + size;
 		for (int x = 0; x < CHUNK_SIZE; x++)
 		{
 			for (int y = 0; y < CHUNK_SIZE; y++)
 			{
-				uint16_t type =
-					(static_cast<uint16_t>(bytes[index++]) << 8) |
-					static_cast<uint16_t>(bytes[index++]);
+				uint16_t high = bytes[index++];
+				uint16_t low = bytes[index++];
+				tiles[x][y].type = static_cast<uint16_t>((high << 8) | low);
 
-				tiles[x][y].type = type;
 				uint8_t r = bytes[index++];
 				uint8_t g = bytes[index++];
 				uint8_t b = bytes[index++];
@@ -119,36 +153,12 @@ namespace cc
 		}
 	}
 
-	std::string Chunk::GetStringData()
-	{
-		nlohmann::json arr;
-		for (auto &e : tileEntities)
-		{
-			nlohmann::json j;
-			j["key"] = e.first;
-			j["value"] = e.second->ToJson();
-			arr.push_back(j);
-		}
-		return arr.dump(2);
-	}
-
-	void Chunk::LoadStringData(std::string &data)
-	{
-		nlohmann::json arr = nlohmann::json::parse(data);
-		for (auto &j : arr)
-		{
-			uint16_t key = j["key"];
-			uint16_t type = j["value"]["type"];
-			TileEntity *entity = CreateTileEntityFromType(type);
-			tileEntities[key] = std::unique_ptr<TileEntity>(entity);
-		}
-	}
-
 	void Chunk::RenderEntities(sf::RenderTarget *target)
 	{
 		sf::RenderStates states;
 		states.texture = &EntityInfo::atlas.texture;
-		// allows for 1 rectangles per entity
+
+		// reserve room for one quad (6 vertices) per entity; resized to the real count below
 		sf::VertexArray arr(sf::PrimitiveType::Triangles, entities.size() * 6);
 		int i = 0;
 		for (auto &e : entities)
@@ -163,14 +173,17 @@ namespace cc
 		arr.resize(i);
 		target->draw(arr, states);
 	}
+
 	void Chunk::AddEntity(Entity *entity)
 	{
 		entities.push_back(entity);
 	}
+
 	void Chunk::RemoveEntity(int index)
 	{
 		entities.erase(entities.begin() + index);
 	}
+
 	void Chunk::RemoveEntity(Entity *entity)
 	{
 		for (int i = 0; i < entities.size(); i++)
@@ -182,46 +195,48 @@ namespace cc
 			}
 		}
 	}
+
 	uint16_t Chunk::TileEntityIndex(sf::Vector2i pos)
 	{
 		return pos.y * CHUNK_SIZE + pos.x;
 	}
+
 	void Chunk::SetTile(sf::Vector2i pos, Tile tile, TileEntity *tileEntity)
 	{
-		if (tileEntities.contains(TileEntityIndex(pos)))
+		const uint16_t entityIndex = TileEntityIndex(pos);
+		if (tileEntities.contains(entityIndex))
 		{
-			RemoveTileEntity(TileEntityIndex(pos));
+			RemoveTileEntity(entityIndex);
 		}
 		tiles[pos.x][pos.y] = tile;
-		if (TileInfo::tileRegistry[tile.type].isTileEntity)
+
+		if (!TileInfo::tileRegistry[tile.type].isTileEntity)
 		{
-			int index = TileEntityIndex(pos);
-			if (tileEntity != nullptr)
-			{
-				tileEntities[index] = std::unique_ptr<TileEntity>(tileEntity);
-			}
-			else
-			{
-				tileEntities[index] = std::unique_ptr<TileEntity>(CreateTileEntityFromType(tile.type));
-			}
-			tileEntities[index]->position = pos;
-			tileEntities[index]->chunk = this;
-			
+			return;
 		}
+		if (tileEntity == nullptr)
+		{
+			tileEntity = CreateTileEntityFromType(tile.type);
+		}
+		tileEntities[entityIndex] = std::unique_ptr<TileEntity>(tileEntity);
+		tileEntity->position = pos;
+		tileEntity->chunk = this;
 	}
+
 	void Chunk::RemoveTileEntity(uint16_t index)
 	{
-		// TODO: add some sort of ondelete function. this would be used if a container holding items gets destroyed for example
+		// TODO: add some sort of on-delete function, for example for a container holding items that gets destroyed
 		tileEntities.erase(index);
 	}
-	std::pair<Tile*, TileEntity*> Chunk::GetTile(sf::Vector2i pos)
+
+	std::pair<Tile *, TileEntity *> Chunk::GetTile(sf::Vector2i pos)
 	{
-		Tile* t = &tiles[pos.x][pos.y];
-		TileEntity* e = nullptr;
+		Tile *t = &tiles[pos.x][pos.y];
+		TileEntity *e = nullptr;
 		if (TileInfo::tileRegistry[t->type].isTileEntity)
 		{
 			e = tileEntities[TileEntityIndex(pos)].get();
 		}
-		return {t,e};
+		return {t, e};
 	}
 }

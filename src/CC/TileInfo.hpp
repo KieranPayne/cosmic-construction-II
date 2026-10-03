@@ -27,6 +27,7 @@ namespace cc
 			// std::string path;
 			std::string name;
 			std::vector<sf::Vector2i> positions;
+			std::vector<sf::Image> images;
 			std::vector<std::string> paths;
 			uint16_t id;
 			bool isTileEntity;

@@ -12,10 +12,12 @@
 #include <chrono>
 #include "Item.hpp"
 #include "Human.hpp"
+#include "Client.hpp"
 namespace cc
 {
 	namespace SaveManager
 	{
+		std::string username = "";
         Serializer::Format saveFormat = Serializer::Format::JSON;
 		std::string saveName;
 		std::string savePath;
@@ -48,35 +50,36 @@ namespace cc
 			}
 			savePath = dir + "/" + std::to_string(maxIndex);
 			CreateDirectory(savePath);
-			State *s = new State();
-			
+			server = std::make_unique<Server>();
+
 			const bool randomize = false;
 			if (seed == "" && randomize)
 			{
-				s->SetSeed(rand());
-				// SaveManager::seed = rand();
+				server->SetSeed(rand());
 			}
 			else
 			{
-				s->SetSeed(HashFromString(seed));
-				// SaveManager::seed = HashFromString(seed);
+				server->SetSeed(HashFromString(seed));
 			}
-			// LoadStartingChunks(s);
-			s->renderTarget = window.get();
-			s->planets[0]->AddEntity(new Entity());
-			Human* h = new Human();		
-			h->position = {1.f,0.f};	
-			s->planets[0]->AddEntity(h);
-			Item* item = new Item();
-			item->position = {2.f,0.f};
-			s->planets[0]->AddEntity(item);
-			InputState inputState;
-			s->Update(inputState,0);
-			delete state;
-			state = s;
-			Save(s);
+			server->planets[0]->AddEntity(new Entity(),true);
+			Human *h = new Human();
+			h->position = {1.f, 0.f};
+			server->planets[0]->AddEntity(h,true);
+			Item *item = new Item();
+			item->position = {2.f, 0.f};
+			server->planets[0]->AddEntity(item,true);
+			SaveServer(server.get());
+			server->Start(5000);
+			server->StartThread();
+			Client *client = new Client(state->renderTarget);
+			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
+			state = std::unique_ptr<Kosmic::State>(client);
+			client->ConnectToServer(ip, 5000);
+			// InputState inputState;
+			// client->Update(inputState, 0);
 		}
-		void Load(int index)
+		void LoadServer(int index)
 		{
 			std::cout << index << std::endl;
 			playTimeTimer.restart();
@@ -86,26 +89,47 @@ namespace cc
 
 			nlohmann::json j = nlohmann::json::parse(ReadData(savePath + "/metadata.json"));
 			saveName = j["saveName"];
-			State *s = new State();
-			s->SetSeed(j["seed"]);
-			InputState inputState;
-			s->renderTarget = window.get();
-			s->planets[0]->Load();
-			s->Update(inputState,0);
-			state = s;
+			// Server *s = new Server();
+			server = std::make_unique<Server>();
+			Serializer s = LoadSerializerFromFile(savePath + "/players");
+			s.field("players",server->allPlayers);
+			server->SetSeed(j["seed"]);
+			// InputState inputState;
+			// server->renderTarget = window.get();
+			for (auto &p : server->planets)
+			{
+				p->Load();
+			}
+			server->Start(5000);
+			server->StartThread();
+			// server->Update(inputState,0);
+			Client *client = new Client(state->renderTarget);
+			state = std::unique_ptr<Kosmic::State>(client);
+			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
+			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
+			client->ConnectToServer(ip, 5000);
+			
 		}
-		void Save(State *state)
+		void SaveServer(Server *server)
 		{
-			state->planets[0]->Save();
-			WriteMetadata(state);
+			for (auto &p : server->planets)
+			{
+				p->Save();
+			}
+			Serializer s(Serializer::Mode::WRITE,saveFormat);
+			for (auto &c : server->clients) if (c.joined) server->SavePlayer(c.player);
+			s.field("players",server->allPlayers);
+			WriteSerializerToFile(s,savePath + "/players");
+			WriteServerMetadata(server);
 		}
-		void WriteMetadata(State* state)
+		void WriteServerMetadata(Server *server)
 		{
-			struct stat buffer;   
-  			bool exists = (stat ((savePath + "/metadata.json").c_str(), &buffer) == 0); 
+			struct stat buffer;
+			bool exists = (stat((savePath + "/metadata.json").c_str(), &buffer) == 0);
 			nlohmann::json j;
 			int playTime = 0;
-			if (exists){
+			if (exists)
+			{
 				std::string existing = ReadData(savePath + "/metadata.json");
 				j = nlohmann::json::parse(existing);
 				playTime = j["playTime"];
@@ -117,7 +141,7 @@ namespace cc
 			auto duration = now.time_since_epoch();
 			auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
 			j["modified"] = seconds;
-			j["seed"] = state->seed;
+			j["seed"] = server->GetSeed();
 			WriteData(savePath + "/metadata.json", j.dump(2));
 		}
 		void WriteData(std::string path, std::string string)
@@ -359,13 +383,28 @@ namespace cc
 			return data;
 		}
 	}
-	void SaveManager::LoadStartingChunks(State* state){
-		int range = 10;
-		for (int x = -range; x <= range; x ++){
-			for (int z = -range; z <= range; z ++){
-				state->planets[0]->chunks[{x, z}] = std::unique_ptr<Chunk>(state->planets[0]->generator.GenerateChunk({x, z}));
-			}
+	std::string SaveManager::GetUsername()
+	{
+		std::string path = GetSavedataDir() + "/username.txt";
+		if (!FileExists(path))
+		{
+			return "";
+		}else
+		{
+			return ReadData(path);
 		}
+	}
+	void SaveManager::WriteUsername(std::string username)
+	{
+		std::string path = GetSavedataDir() + "/username.txt";
+		WriteData(path,username);
+	}
+	bool SaveManager::FileExists(std::string path)
+	{
+		struct stat info;
+		if (stat(path.c_str(), &info) != 0)
+			return false;
+		return (info.st_mode & S_IFREG) != 0;
 	}
 
 	void SaveManager::WriteSerializerToFile(Serializer& s, std::string path)

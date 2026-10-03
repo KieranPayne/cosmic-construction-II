@@ -13,5 +13,70 @@
     "name":"Stockpile",
     "textures":["stockpile.png", "stockpile 2.png"],
     "isTileEntity":true
+},
+{
+    "name":"Black",
+    "textures":["black.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Dark grey",
+    "textures":["dark grey.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Grey",
+    "textures":["grey.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Light grey",
+    "textures":["light grey.png"],
+    "isTileEntity":false
+},
+{
+    "name":"White",
+    "textures":["white.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Brown",
+    "textures":["brown.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Purple",
+    "textures":["purple.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Blue",
+    "textures":["blue.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Teal",
+    "textures":["teal.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Green",
+    "textures":["green.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Yellow",
+    "textures":["yellow.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Orange",
+    "textures":["orange.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Red",
+    "textures":["red.png"],
+    "isTileEntity":false
 }
 ]
