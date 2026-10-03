@@ -7,11 +7,11 @@
 #include "Client.hpp"
 namespace cc
 {
-	MainMenu::MainMenu(sf::RenderTarget* target)
+	MainMenu::MainMenu(sf::RenderTarget *target)
 	{
 		currentState = TITLE_SCREEN;
 		strcpy(ipAddress, "");
-		connectError = "";	
+		connectError = "";
 		this->renderTarget = target;
 	}
 
@@ -62,9 +62,7 @@ namespace cc
 
 		ImGui::Begin("MainMenu", nullptr, windowFlags);
 
-		// Font scaling
-		float originalFontScale = ImGui::GetFont()->Scale;
-		ImGui::SetWindowFontScale(3.0f); // Double font size
+		ImGui::SetWindowFontScale(3.0f); // enlarge the title
 
 		const char *title = "Cosmic Construction II";
 		ImVec2 textSize = ImGui::CalcTextSize(title);
@@ -111,7 +109,6 @@ namespace cc
 
 		ImGui::Begin("HostMenu", nullptr, windowFlags);
 
-		float originalFontScale = ImGui::GetFont()->Scale;
 		ImGui::SetWindowFontScale(3.0f);
 
 		const char *title = "Host Game";
@@ -158,7 +155,6 @@ namespace cc
 		ImGui::SetNextWindowSize(displaySize);
 
 		ImGui::Begin("NewGameMenu", nullptr, windowFlags);
-		float centerX = displaySize.x * 0.5f;
 		ImGui::Text("New Game");
 		ImGui::InputTextWithHint("##SaveName", "New Save", saveName, IM_ARRAYSIZE(saveName));
 		ImGui::Text("Seed:");
@@ -176,11 +172,10 @@ namespace cc
 	}
 	void MainMenu::GetNames()
 	{
-		// directories = {};
 		playTimes = {};
 		names = {};
 		directories = {};
-		std::vector<uint64_t> times = {}; 
+		std::vector<uint64_t> times = {};
 		std::string path = SaveManager::GetSavedataDir();
 		if (SaveManager::DirExists(path))
 		{
@@ -192,35 +187,43 @@ namespace cc
 				uint64_t time = j["modified"];
 				std::string playTime;
 				int seconds = j["playTime"];
-				if (seconds < 60){
+				if (seconds < 60)
+				{
 					playTime = std::to_string(seconds) + " seconds";
-				}else if (seconds < 60 * 60){
-					playTime =  (std::ostringstream() << std::fixed << std::setprecision(1) << (seconds / 60.f)).str() + " minutes";
-				}else if (seconds < 60 * 60 * 24){
-					playTime =  (std::ostringstream() << std::fixed << std::setprecision(1) << (seconds / 60.f / 60.f)).str() + " hours";
-				}else{
-					playTime =  (std::ostringstream() << std::fixed << std::setprecision(1) << (seconds / 60.f / 60.f / 24.f)).str() + " days";
 				}
+				else if (seconds < 60 * 60)
+				{
+					playTime = (std::ostringstream() << std::fixed << std::setprecision(1) << (seconds / 60.f)).str() + " minutes";
+				}
+				else if (seconds < 60 * 60 * 24)
+				{
+					playTime = (std::ostringstream() << std::fixed << std::setprecision(1) << (seconds / 60.f / 60.f)).str() + " hours";
+				}
+				else
+				{
+					playTime = (std::ostringstream() << std::fixed << std::setprecision(1) << (seconds / 60.f / 60.f / 24.f)).str() + " days";
+				}
+				// keep the lists sorted by modified time, newest first
 				bool found = false;
-				for (int i = 0; i < times.size(); i ++){
-					if (times[i] < time){
-						times.insert(times.begin() + i,time);
+				for (int i = 0; i < times.size(); i++)
+				{
+					if (times[i] < time)
+					{
+						times.insert(times.begin() + i, time);
 						names.insert(names.begin() + i, j["saveName"]);
-						playTimes.insert(playTimes.begin() + i,playTime);
-						directories.insert(directories.begin() + i,d);
+						playTimes.insert(playTimes.begin() + i, playTime);
+						directories.insert(directories.begin() + i, d);
 						found = true;
 						break;
 					}
 				}
-				if (!found){
+				if (!found)
+				{
 					times.push_back(time);
 					names.push_back(j["saveName"]);
 					directories.push_back(d);
 					playTimes.push_back(playTime);
-				} 
-				// auto metadata = Split(SaveManager::ReadData(fullPath + "/metadata.txt"), '\n');
-				// names.push_back(metadata[0]);
-				// directories.push_back(fullPath);
+				}
 			}
 		}
 	}
@@ -240,20 +243,17 @@ namespace cc
 		int dirToDelete = -1;
 		for (int i = 0; i < names.size(); ++i)
 		{
-			ImGui::PushID(i); // Ensure unique IDs per block
+			ImGui::PushID(i); // unique IDs per save
 
-			// Draw visible box around block info
+			// boxed entry for this save
 			ImGui::BeginGroup();
-			ImGui::BeginChild("BlockBox", ImVec2(0, 60), true); // Box with fixed height
+			ImGui::BeginChild("BlockBox", ImVec2(0, 60), true);
 
 			ImGui::Text("%s", names[i].c_str());
 
 			ImGui::SameLine();
-			
 			ImGui::Text("%s", ("            play time: " + playTimes[i]).c_str());
-
 			ImGui::SameLine();
-
 
 			if (ImGui::Button("Delete"))
 			{
@@ -265,8 +265,10 @@ namespace cc
 			{
 				auto dirs = SaveManager::ListDirectories(SaveManager::GetSavedataDir());
 				int index = 0;
-				for (int j = 0; j < dirs.size(); j ++){
-					if (dirs[j] == directories[i]){
+				for (int j = 0; j < dirs.size(); j++)
+				{
+					if (dirs[j] == directories[i])
+					{
 						index = j;
 						break;
 					}
@@ -300,7 +302,6 @@ namespace cc
 
 		ImGui::Begin("JoinMenu", nullptr, windowFlags);
 
-		float originalFontScale = ImGui::GetFont()->Scale;
 		ImGui::SetWindowFontScale(3.0f);
 
 		const char *title = "Join Game";
@@ -344,9 +345,9 @@ namespace cc
 	void MainMenu::ConnectToHost()
 	{
 		auto ipResult = sf::IpAddress::resolve(ipAddress);
-		//TODO: deal with case where not valid ip address
-		Client* c = new Client(state->renderTarget);
-		c->ConnectToServer(ipResult.value(),5000);
+		// TODO: handle an invalid address (value() throws if resolve failed)
+		Client *c = new Client(state->renderTarget);
+		c->ConnectToServer(ipResult.value(), 5000);
 		state = std::unique_ptr<Kosmic::State>(c);
 	}
 

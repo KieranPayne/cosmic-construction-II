@@ -12,7 +12,6 @@ namespace cc
 		{
 			if (str[i] == splitChar)
 			{
-
 				result.push_back(curr);
 				curr = "";
 				continue;
@@ -135,10 +134,6 @@ namespace cc
 			return ImGuiKey_RightBracket;
 		case sf::Keyboard::Key::Grave:
 			return ImGuiKey_GraveAccent;
-		// case : return ImGuiKey_CapsLock;
-		// case : return ImGuiKey_ScrollLock;
-		// case : return ImGuiKey_NumLock;
-		// case : return ImGuiKey_PrintScreen;
 		case sf::Keyboard::Key::Pause:
 			return ImGuiKey_Pause;
 		case sf::Keyboard::Key::Numpad0:
@@ -161,7 +156,6 @@ namespace cc
 			return ImGuiKey_Keypad8;
 		case sf::Keyboard::Key::Numpad9:
 			return ImGuiKey_Keypad9;
-		// case : return ImGuiKey_KeypadDecimal;
 		case sf::Keyboard::Key::Divide:
 			return ImGuiKey_KeypadDivide;
 		case sf::Keyboard::Key::Multiply:
@@ -170,8 +164,6 @@ namespace cc
 			return ImGuiKey_KeypadSubtract;
 		case sf::Keyboard::Key::Add:
 			return ImGuiKey_KeypadAdd;
-		// case : return ImGuiKey_KeypadEnter;
-		// case : return ImGuiKey_KeypadEqual;
 		case sf::Keyboard::Key::LControl:
 			return ImGuiKey_LeftCtrl;
 		case sf::Keyboard::Key::LShift:
@@ -330,14 +322,15 @@ namespace cc
 		const int m = 1e9 + 9;
 		long long hash_value = 0;
 		long long p_pow = 1;
-		for (char c : username) {
+		for (char c : username)
+		{
 			hash_value = (hash_value + (c - 'a' + 1) * p_pow) % m;
 			p_pow = (p_pow * p) % m;
 		}
 
 		// Map hash to a hue in [0, 360)
 		float hue = static_cast<float>(hash_value % 360);
-		return HsvToRgb(hue,1.f,1.f);
+		return HsvToRgb(hue, 1.f, 1.f);
 	}
 	float Lerp(float a, float b, float t)
 	{

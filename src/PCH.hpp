@@ -1,10 +1,11 @@
 #ifndef PRECOMPILED_HEADER_HPP
 #define PRECOMPILED_HEADER_HPP
 
+// Release builds (anything without _DEBUG) define NDEBUG, which turns off assert().
 #ifndef _DEBUG
-	#ifndef NDEBUG
-		#define NDEBUG
-	#endif
+#ifndef NDEBUG
+#define NDEBUG
+#endif
 #endif // _DEBUG
 
 // SFML
@@ -14,11 +15,11 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
-// Raspberry Pi
+// Treat 32-bit ARM Linux as a Raspberry Pi
 #ifdef SFML_SYSTEM_LINUX
-	#ifdef __arm__
-		#define SFML_SYSTEM_PI
-	#endif
+#ifdef __arm__
+#define SFML_SYSTEM_PI
+#endif
 #endif // SFML SYSTEM_LINUX
 
 // Typical stdafx.h
@@ -50,21 +51,19 @@
 
 // Windows
 #ifdef _WIN32
-	#ifndef UNICODE
-		#define UNICODE
-	#endif
+#ifndef UNICODE
+#define UNICODE
+#endif
 
-	#ifndef _UNICODE
-		#define _UNICODE
-	#endif
+#ifndef _UNICODE
+#define _UNICODE
+#endif
 
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif // _WIN32
 
-// Utils
-
-// Macros
+// Marks a variable as intentionally unused, to silence compiler warnings.
 #define UNUSED(x) (void)(x)
 
 #endif // PRECOMPILED_HEADER_HPP

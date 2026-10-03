@@ -60,12 +60,7 @@ namespace cc
 
     void Server::SendToClient(uint64_t clientId, sf::Packet &packet)
     {
-        // TODO: add this
-        //  if (clientID == ((Client *)state.get())->player.id)
-        //  {
-        //      ((Client *)state.get())->ProcessPacket(packet);
-        //      return;
-        //  }
+        // TODO: if the recipient is the host's own client, process the packet directly instead of queueing it.
         for (auto &c : clients)
         {
             if (c.id == clientId)
@@ -81,12 +76,7 @@ namespace cc
         {
             if (std::find(exclusions.begin(), exclusions.end(), client.id) == exclusions.end())
             {
-                // TODO: add this
-                //  if (client.id == ((Client*)state.get())->player.id)
-                //  {
-                //      ((Client*)state.get())->ProcessPacket(packet);
-                //      continue;
-                //  }
+                // TODO: if this is the host's own client, process the packet directly instead of queueing it.
                 client.outgoing.push_back(packet);
             }
         }
@@ -105,8 +95,6 @@ namespace cc
 
             if (status != sf::Socket::Status::Done)
                 continue;
-
-            // client.id = clients.size();
 
             client.socket.setBlocking(false);
             client.id = GetNextClientId();
@@ -215,7 +203,7 @@ namespace cc
             out.append(data + pos, packet.getDataSize() - pos);
             int n;
             packet >> n;
-            int planetIndex = GetClient(clientId)->player.planet;
+            int planetIndex = client->player.planet;
             for (int i = 0; i < n; i++)
             {
                 sf::Vector2i position;
@@ -237,7 +225,7 @@ namespace cc
                     e = CreateTileEntityFromType(tileType);
                     e->Serialize(s);
                 }
-                planets[GetClient(clientId)->player.planet]->SetTileAt(position, Tile(tileType), e);
+                planets[planetIndex]->SetTileAt(position, Tile(tileType), e);
             }
 
             for (auto &c : clients)
@@ -251,7 +239,7 @@ namespace cc
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
-            int planetIndex = GetClient(clientId)->player.planet;
+            int planetIndex = client->player.planet;
             for (auto &c : clients)
                 if (c.joined && c.player.planet == planetIndex && c.id != clientId)
                     c.outgoing.push_back(out);
@@ -260,7 +248,7 @@ namespace cc
             for (int i = 0; i < n; i++)
             {
                 Entity *e = LoadEntityFromPacket(packet);
-                planets[GetClient(clientId)->player.planet]->AddEntity(e, true);
+                planets[planetIndex]->AddEntity(e, true);
             }
         }
         else if (type == CSMessageType::REQUEST_UPDATE_ENTITIES)
@@ -270,7 +258,7 @@ namespace cc
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
-            int planetIndex = GetClient(clientId)->player.planet;
+            int planetIndex = client->player.planet;
             for (auto &c : clients)
                 if (c.joined && c.player.planet == planetIndex && c.id != clientId)
                     c.outgoing.push_back(out);
@@ -281,12 +269,12 @@ namespace cc
                 int index;
                 packet >> index;
                 Entity *e = LoadEntityFromPacket(packet);
-                planets[GetClient(clientId)->player.planet]->ReplaceEntity(index, e);
+                planets[planetIndex]->ReplaceEntity(index, e);
             }
         }
         else if (type == CSMessageType::UPDATE_PLAYER_DATA)
         {
-            PlayerData &playerData = GetClient(clientId)->player;
+            PlayerData &playerData = client->player;
             sf::Packet out;
             out << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
             out << playerData.username;
@@ -516,7 +504,7 @@ namespace cc
             try
             {
                 std::lock_guard lock(mutex);
-                Update(dt); // your existing Update, unchanged
+                Update(dt);
             }
             catch (const std::exception &e)
             {

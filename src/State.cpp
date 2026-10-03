@@ -4,7 +4,6 @@ namespace Kosmic
 {
 	State::State()
 	{
-		// gui = KGUI::GUI();
 	}
 	void State::Update(InputState &inputState, double deltaTime)
 	{
@@ -14,12 +13,12 @@ namespace Kosmic
 	}
 	void State::DerivedUpdate()
 	{
-
 	}
 	void State::Render()
 	{
-		if (deltaTime == -1){
-			//update didnt run
+		// Update() hasn't run yet, so there is nothing to draw
+		if (deltaTime == -1)
+		{
 			return;
 		}
 		DerivedRender();

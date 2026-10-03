@@ -7,12 +7,12 @@
 #include "MainMenu.hpp"
 namespace cc
 {
-	UsernameMenu::UsernameMenu(sf::RenderTarget* target)
+	UsernameMenu::UsernameMenu(sf::RenderTarget *target)
 	{
 		strcpy(username, "");
 		errorMessage = "";
 		this->renderTarget = target;
-    }
+	}
 
 	int UsernameMenu::InputTextCallback(ImGuiInputTextCallbackData *data)
 	{
@@ -55,8 +55,6 @@ namespace cc
 
 		ImGui::Begin("UsernameMenu", nullptr, windowFlags);
 
-		// Font scaling
-		float originalFontScale = ImGui::GetFont()->Scale;
 		ImGui::SetWindowFontScale(3.0f);
 
 		const char *title = "Enter Username";
@@ -72,7 +70,7 @@ namespace cc
 		ImGui::SetCursorPos(ImVec2(windowCenter.x - fieldSize.x * 0.5f, windowCenter.y - 40));
 		ImGui::SetNextItemWidth(fieldSize.x);
 		ImGui::InputTextWithHint("##Username", "Username", username, IM_ARRAYSIZE(username),
-								  ImGuiInputTextFlags_CallbackCharFilter, InputTextCallback);
+								 ImGuiInputTextFlags_CallbackCharFilter, InputTextCallback);
 
 		ImVec2 buttonSize(150, 50);
 		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y + 10));
@@ -82,9 +80,8 @@ namespace cc
 			if (IsValidUsername(name))
 			{
 				errorMessage = "";
-				// TODO: store the username / transition to the next state here
-                SaveManager::WriteUsername(name);
-                UsernameEntered(name);
+				SaveManager::WriteUsername(name);
+				UsernameEntered(name);
 			}
 			else
 			{
@@ -105,19 +102,19 @@ namespace cc
 	UsernameMenu::~UsernameMenu()
 	{
 	}
-    void UsernameMenu::UsernameEntered(std::string username)
-    {
-        SaveManager::username = username;
-        state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
-    }
-    bool UsernameMenu::CheckForExisting()
-    {
-        std::string savedName = SaveManager::GetUsername();
-        if (savedName != "" && IsValidUsername(savedName))
-        {
-            SaveManager::username = savedName;
-            return true;
-        }
-        return false;
-    }
+	void UsernameMenu::UsernameEntered(std::string username)
+	{
+		SaveManager::username = username;
+		state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
+	}
+	bool UsernameMenu::CheckForExisting()
+	{
+		std::string savedName = SaveManager::GetUsername();
+		if (savedName != "" && IsValidUsername(savedName))
+		{
+			SaveManager::username = savedName;
+			return true;
+		}
+		return false;
+	}
 }

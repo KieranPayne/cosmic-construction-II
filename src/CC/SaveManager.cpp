@@ -18,10 +18,9 @@ namespace cc
 	namespace SaveManager
 	{
 		std::string username = "";
-        Serializer::Format saveFormat = Serializer::Format::JSON;
+		Serializer::Format saveFormat = Serializer::Format::JSON;
 		std::string saveName;
 		std::string savePath;
-		// uint64_t seed;
 		sf::Clock playTimeTimer;
 
 		void CreateSave(std::string name, std::string seed)
@@ -61,27 +60,23 @@ namespace cc
 			{
 				server->SetSeed(HashFromString(seed));
 			}
-			server->planets[0]->AddEntity(new Entity(),true);
+			server->planets[0]->AddEntity(new Entity(), true);
 			Human *h = new Human();
 			h->position = {1.f, 0.f};
-			server->planets[0]->AddEntity(h,true);
+			server->planets[0]->AddEntity(h, true);
 			Item *item = new Item();
 			item->position = {2.f, 0.f};
-			server->planets[0]->AddEntity(item,true);
+			server->planets[0]->AddEntity(item, true);
 			SaveServer(server.get());
 			server->Start(5000);
 			server->StartThread();
 			Client *client = new Client(state->renderTarget);
-			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
 			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
 			state = std::unique_ptr<Kosmic::State>(client);
 			client->ConnectToServer(ip, 5000);
-			// InputState inputState;
-			// client->Update(inputState, 0);
 		}
 		void LoadServer(int index)
 		{
-			std::cout << index << std::endl;
 			playTimeTimer.restart();
 			std::string path = GetSavedataDir();
 			auto dirs = ListDirectories(path);
@@ -89,26 +84,20 @@ namespace cc
 
 			nlohmann::json j = nlohmann::json::parse(ReadData(savePath + "/metadata.json"));
 			saveName = j["saveName"];
-			// Server *s = new Server();
 			server = std::make_unique<Server>();
 			Serializer s = LoadSerializerFromFile(savePath + "/players");
-			s.field("players",server->allPlayers);
+			s.field("players", server->allPlayers);
 			server->SetSeed(j["seed"]);
-			// InputState inputState;
-			// server->renderTarget = window.get();
 			for (auto &p : server->planets)
 			{
 				p->Load();
 			}
 			server->Start(5000);
 			server->StartThread();
-			// server->Update(inputState,0);
 			Client *client = new Client(state->renderTarget);
 			state = std::unique_ptr<Kosmic::State>(client);
-			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
 			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
 			client->ConnectToServer(ip, 5000);
-			
 		}
 		void SaveServer(Server *server)
 		{
@@ -116,10 +105,12 @@ namespace cc
 			{
 				p->Save();
 			}
-			Serializer s(Serializer::Mode::WRITE,saveFormat);
-			for (auto &c : server->clients) if (c.joined) server->SavePlayer(c.player);
-			s.field("players",server->allPlayers);
-			WriteSerializerToFile(s,savePath + "/players");
+			Serializer s(Serializer::Mode::WRITE, saveFormat);
+			for (auto &c : server->clients)
+				if (c.joined)
+					server->SavePlayer(c.player);
+			s.field("players", server->allPlayers);
+			WriteSerializerToFile(s, savePath + "/players");
 			WriteServerMetadata(server);
 		}
 		void WriteServerMetadata(Server *server)
@@ -382,76 +373,83 @@ namespace cc
 			file.close();
 			return data;
 		}
-	}
-	std::string SaveManager::GetUsername()
-	{
-		std::string path = GetSavedataDir() + "/username.txt";
-		if (!FileExists(path))
-		{
-			return "";
-		}else
-		{
-			return ReadData(path);
-		}
-	}
-	void SaveManager::WriteUsername(std::string username)
-	{
-		std::string path = GetSavedataDir() + "/username.txt";
-		WriteData(path,username);
-	}
-	bool SaveManager::FileExists(std::string path)
-	{
-		struct stat info;
-		if (stat(path.c_str(), &info) != 0)
-			return false;
-		return (info.st_mode & S_IFREG) != 0;
-	}
 
-	void SaveManager::WriteSerializerToFile(Serializer& s, std::string path)
-	{
-		if (saveFormat == Serializer::Format::JSON)
+		std::string GetUsername()
 		{
-			path += ".json";
-			WriteData(path,s.json().dump());
-		}else
-		{
-			path += ".txt";
-			WriteBinaryData(path,s.binary());
+			std::string path = GetSavedataDir() + "/username.txt";
+			if (!FileExists(path))
+			{
+				return "";
+			}
+			else
+			{
+				return ReadData(path);
+			}
 		}
-	}
-	Serializer SaveManager::LoadSerializerFromFile(std::string path)
-	{
-		if (saveFormat == Serializer::Format::JSON)
+		void WriteUsername(std::string username)
 		{
-			path += ".json";
-			std::string data = ReadData(path);
-			nlohmann::json j = nlohmann::json::parse(data);
-			// std::cout << j.dump() << std::endl;
-			return Serializer(Serializer::Mode::READ,saveFormat,j);
-		}else
-		{
-			path += ".txt";
-			std::vector<uint8_t> data = ReadBinaryData(path);
-			return Serializer(Serializer::Mode::READ,saveFormat,{},data);
+			std::string path = GetSavedataDir() + "/username.txt";
+			if (!DirExists(GetSavedataDir()))
+			{
+				CreateDirectory(GetSavedataDir());
+			}
+			WriteData(path, username);
 		}
-	}
-	void SaveManager::WriteBinaryData(std::string path, std::vector<uint8_t> data)
-	{
-		std::ofstream file(path,std::ios::binary);
-		uint64_t size = data.size();
-		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		file.write(reinterpret_cast<const char *>(data.data()), data.size());
-		file.close();
-	}
-	std::vector<uint8_t> SaveManager::ReadBinaryData(std::string path)
-	{
-		std::ifstream file(path, std::ios::binary);
-		uint64_t size;
-		file.read(reinterpret_cast<char*>(&size),sizeof(size));
-		std::vector<uint8_t> data;
-		data.resize(size);
-		file.read(reinterpret_cast<char*>(data.data()),data.size());
-		file.close();
-		return data;
+		bool FileExists(std::string path)
+		{
+			struct stat info;
+			if (stat(path.c_str(), &info) != 0)
+				return false;
+			return (info.st_mode & S_IFREG) != 0;
+		}
+
+		void WriteSerializerToFile(Serializer &s, std::string path)
+		{
+			if (saveFormat == Serializer::Format::JSON)
+			{
+				path += ".json";
+				WriteData(path, s.json().dump());
+			}
+			else
+			{
+				path += ".txt";
+				WriteBinaryData(path, s.binary());
+			}
+		}
+		Serializer LoadSerializerFromFile(std::string path)
+		{
+			if (saveFormat == Serializer::Format::JSON)
+			{
+				path += ".json";
+				std::string data = ReadData(path);
+				nlohmann::json j = nlohmann::json::parse(data);
+				return Serializer(Serializer::Mode::READ, saveFormat, j);
+			}
+			else
+			{
+				path += ".txt";
+				std::vector<uint8_t> data = ReadBinaryData(path);
+				return Serializer(Serializer::Mode::READ, saveFormat, {}, data);
+			}
+		}
+		void WriteBinaryData(std::string path, std::vector<uint8_t> data)
+		{
+			std::ofstream file(path, std::ios::binary);
+			uint64_t size = data.size();
+			file.write(reinterpret_cast<const char *>(&size), sizeof(size));
+			file.write(reinterpret_cast<const char *>(data.data()), data.size());
+			file.close();
+		}
+		std::vector<uint8_t> ReadBinaryData(std::string path)
+		{
+			std::ifstream file(path, std::ios::binary);
+			uint64_t size;
+			file.read(reinterpret_cast<char *>(&size), sizeof(size));
+			std::vector<uint8_t> data;
+			data.resize(size);
+			file.read(reinterpret_cast<char *>(data.data()), data.size());
+			file.close();
+			return data;
+		}
 	}
 }

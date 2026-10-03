@@ -68,11 +68,7 @@ namespace Kosmic
 			data[index].endTimes.push_back(timer.getElapsedTime().asMicroseconds());
 			if (index == 0 && (timer.getElapsedTime().asSeconds() >= timePerWrite && timePerWrite >= 0))
 			{
-				constexpr bool write = true;
-				if (write)
-				{
-					WriteToGUI();
-				}
+				WriteToGUI();
 				data = {};
 				currentIndent = 0;
 				stack = {};
@@ -80,7 +76,8 @@ namespace Kosmic
 		}
 		void DisplayGUI()
 		{
-			if (macro.active){
+			if (macro.active)
+			{
 				return;
 			}
 			Start("imgui");
@@ -90,7 +87,6 @@ namespace Kosmic
 			ImGui::SameLine();
 			ImGui::SliderFloat("##", &timePerWrite, -0.01f, 2.f);
 			ImGui::Text(text.c_str());
-			// ImGui::SetWindowSize(ImGui::getwin)
 			ImGui::End();
 			End();
 		}
@@ -104,7 +100,6 @@ namespace Kosmic
 		}
 		void WriteToGUI()
 		{
-
 			std::string result = "";
 			double wholeAverage;
 			for (int i = 0; i < data.size(); i++)
@@ -129,11 +124,6 @@ namespace Kosmic
 			text = "FPS: " + std::to_string(1.0 / (wholeAverage / 1000));
 			text += '\n';
 			text += result;
-
-			// std::ofstream file("timings.txt");
-			// file << result;
-			// file.close();
-			// std::cout << "wrote timings to file" << std::endl;
 		}
 	}
 }

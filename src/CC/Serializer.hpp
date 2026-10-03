@@ -3,21 +3,61 @@
 #include "../PCH.hpp"
 namespace cc
 {
+    /**
+     * @brief Saves or loads an object's fields, to json or to compact binary, using one piece of code for both directions.
+     *
+     * A class describes itself once, in a `Serialize(Serializer &s)` function that calls `s.field(name, value)` for
+     * each member. If the serializer is in WRITE mode each call stores the value; in READ mode each call fills the
+     * value in. That keeps saving and loading from drifting apart.
+     *
+     * In JSON format fields are stored under their names, and are looked up by name when reading.
+     * In BINARY format the names are ignored and the values are stored one after another, so the fields must be
+     * read in exactly the same order and with the same types as they were written.
+     *
+     * Typical use:
+     * @code
+     * Serializer w(Serializer::Mode::WRITE, Serializer::Format::JSON);
+     * player.Serialize(w);
+     * nlohmann::json j = w.json();
+     *
+     * Serializer r(Serializer::Mode::READ, Serializer::Format::JSON, j);
+     * player.Serialize(r);
+     * @endcode
+     */
     class Serializer
     {
     public:
+        /// Whether a serializer fills values in or stores them.
         enum class Mode
         {
+            /// field() fills in each value from the stored data.
             READ,
+            /// field() stores each value.
             WRITE
         };
+
+        /// Whether this serializer reads or writes.
         Mode mode;
+
+        /// The kind of data a serializer works with.
         enum class Format
         {
+            /// Human-readable json, with fields stored by name.
             JSON,
+            /// Compact bytes, with fields stored in order and no names.
             BINARY
         };
+
+        /// Whether this serializer works with json or binary.
         Format format;
+
+        /**
+         * @brief Creates a serializer.
+         * @param mode READ to load values, WRITE to store them.
+         * @param format JSON or BINARY.
+         * @param j The json to read from. Only used when reading JSON.
+         * @param b The bytes to read from. Only used when reading BINARY.
+         */
         Serializer(Mode mode, Format format, nlohmann::json j = {}, std::vector<uint8_t> b = {})
         {
             this->mode = mode;
@@ -26,7 +66,11 @@ namespace cc
             b_ = b;
         }
 
-        // Scalar fields (int, float, std::string, bool...)
+        /**
+         * @brief Writes or reads a number, bool or string.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The value to store, or to fill in when reading.
+         */
         template <typename T>
         std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, std::string>>
         field(const std::string name, T &value)
@@ -70,7 +114,12 @@ namespace cc
             }
         }
 
-        // specific cases for vectors (cant add a serialize function to them)
+        /**
+         * @brief Writes or reads an sf::Vector2. In JSON it is stored as {"x": ..., "y": ...}.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The vector to store, or to fill in when reading.
+         * @note SFML's vectors have no Serialize() function of their own, so they get their own overloads.
+         */
         template <typename T>
         void field(const char *name, sf::Vector2<T> &value)
         {
@@ -105,6 +154,11 @@ namespace cc
             }
         }
 
+        /**
+         * @brief Writes or reads an sf::Vector3. In JSON it is stored as {"x": ..., "y": ..., "z": ...}.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The vector to store, or to fill in when reading.
+         */
         template <typename T>
         void field(const char *name, sf::Vector3<T> &value)
         {
@@ -143,7 +197,13 @@ namespace cc
             }
         }
 
-        // Custom types with their own Serialize()
+        /**
+         * @brief Writes or reads an object that has its own `Serialize(Serializer&)` function.
+         *
+         * In JSON the object becomes a nested json object under `name`. In BINARY its fields follow on directly.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The object to store, or to fill in when reading.
+         */
         template <typename T>
         std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, T &value)
@@ -168,7 +228,15 @@ namespace cc
             }
         }
 
-        // pointers to custom types with their own Serialize()
+        /**
+         * @brief Writes or reads an object through a pointer. The object needs its own `Serialize(Serializer&)` function.
+         *
+         * Stored the same way as the by-reference overload.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The object to store, or to fill in when reading.
+         * @warning The pointer is passed by value. When reading, a null pointer gets a new object, but the caller
+         *          never sees it (and it is leaked), so always pass an existing object when reading.
+         */
         template <typename T>
         std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, T *value)
@@ -204,7 +272,13 @@ namespace cc
             }
         }
 
-        // Vectors of primitives — nlohmann::json handles this directly
+        /**
+         * @brief Writes or reads a vector of numbers, bools or strings.
+         *
+         * In JSON it is a json array. In BINARY it is the element count followed by each element.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The vector to store, or to replace when reading.
+         */
         template <typename T>
         std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, std::string>>
         field(const std::string name, std::vector<T> &value)
@@ -227,7 +301,7 @@ namespace cc
                     uint32_t count = static_cast<uint32_t>(value.size());
                     writeRaw(count);
                     for (auto &elem : value)
-                        field(name, elem); // reuses the scalar overload above per-element
+                        field(name, elem); // reuses the scalar overload for each element
                 }
                 else
                 {
@@ -240,7 +314,14 @@ namespace cc
             }
         }
 
-        // Vectors of custom serializable types — loop + recurse
+        /**
+         * @brief Writes or reads a vector of objects that each have their own `Serialize(Serializer&)` function.
+         *
+         * In JSON it is an array with one nested object per element. In BINARY it is the element count followed by
+         * each element. When reading, the vector is cleared and refilled, and the element type must be default constructible.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The vector to store, or to replace when reading.
+         */
         template <typename T>
         std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, std::vector<T> &value)
@@ -295,6 +376,11 @@ namespace cc
             }
         }
 
+        /**
+         * @brief Writes or reads a std::size_t.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The value to store, or to fill in when reading.
+         */
         void field(const std::string name, std::size_t &value)
         {
             if (format == Format::JSON)
@@ -317,14 +403,23 @@ namespace cc
             }
         }
 
+        /// @brief Gets a copy of the json written so far (JSON format). Call after writing to get the result.
         nlohmann::json json() const { return j_; }
+
+        /// @brief Gets a copy of the bytes written so far (BINARY format). Call after writing to get the result.
         std::vector<uint8_t> binary() const { return b_; }
 
     private:
+        /// The json being written to or read from (JSON format).
         nlohmann::json j_;
-        std::vector<uint8_t> b_;
-        size_t readPos_ = 0; // cursor for binary reads
 
+        /// The bytes being written to or read from (BINARY format).
+        std::vector<uint8_t> b_;
+
+        /// Where the next binary read starts in `b_`.
+        size_t readPos_ = 0;
+
+        /// @brief Appends a value's bytes to `b_`. Only for types that can be safely copied as raw bytes.
         template <typename T>
         void writeRaw(const T &value)
         {
@@ -333,6 +428,7 @@ namespace cc
             b_.insert(b_.end(), p, p + sizeof(T));
         }
 
+        /// @brief Fills a value from the bytes at `readPos_` in `b_`, then moves `readPos_` past them. Does not check that enough bytes remain.
         template <typename T>
         void readRaw(T &value)
         {

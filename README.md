@@ -2,26 +2,21 @@
 
 a top down colony builder game similar to cosmic construction, based on the code of civitron.
 
-to do:
-- decide whether background tiles have textures
-- add entity
-- add human 
-- make human move randomly each tick
-- figure out how to do animation between ticks
-- add items
-- add ability for tile to be bigger than standard tile size (for trees)
-- add trees
-- make humans pathfind to and mine trees
-- add multi tile structures
+## Versions
 
+### V 0.1 -- COMPLETE
+the focus of this version was to get a working game with multiplayer.
+features:
+- infinite terrain generation
+- lakes, rocky areas etc.
+- can make saves, load saves
+- multiplayer using tcp
+- can place tiles and add entities
+- can import an image and watch it be recreated out of the existing tiles
 
-
-
-MULTIPLAYER TODO
-- [ ] send client join data
-    - [ ] have list of player datas stored in file
-        - [ ] camera position etc.
-    - [ ] client enters username before joining
-    - [ ] look up username when client joins
-    - [ ] send player data and other join data
-    - [ ] client has loading screen until join data received
+## V 0.2 -- WORK IN PROGRESS
+the aim of this version is to begin actually implementing content.
+this will start with adding the knowledge system, which is the way humans will research new technology.
+there will be a map to edit and view the connections between all knowledge in the game.
+after this, i will add a few basic items and structures to test out the knowledge system.
+i would also like to improve the graphics by adding a custom lighting system with a day night cycle.1

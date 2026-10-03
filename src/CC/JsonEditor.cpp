@@ -7,8 +7,8 @@ namespace cc
 {
     void JsonEditor::Draw(Planet *p)
     {
-        ImGui::SetNextWindowPos(ImVec2(3,4),ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(315,311),ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(3, 4), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(315, 311), ImGuiCond_Once);
         ImGui::Begin("Entity Editor");
         if (addingEntity)
         {
@@ -25,27 +25,27 @@ namespace cc
                 return;
             }
             ImGui::Separator();
-            // JsonWriter jw;
-            Serializer sw(Serializer::Mode::WRITE,Serializer::Format::JSON);
+            Serializer sw(Serializer::Mode::WRITE, Serializer::Format::JSON);
             entity->Serialize(sw);
             nlohmann::json j = sw.json();
-            // nlohmann::json j = entity->ToJson();
             int currType = j["type"];
-            if (DrawEntity(j,"entity"))
+            if (DrawEntity(j, "entity"))
             {
                 if (j["type"] != currType)
                 {
                     delete entity;
                     entity = CreateEntityFromType((Entity::EntityType)j["type"]);
-                }else
+                }
+                else
                 {
-                    Serializer sr(Serializer::Mode::READ,Serializer::Format::JSON,j);
+                    Serializer sr(Serializer::Mode::READ, Serializer::Format::JSON, j);
                     entity->Serialize(sr);
                 }
             }
             ImGui::End();
             return;
-        }else
+        }
+        else
         {
             if (ImGui::Button("Add Entity"))
             {
@@ -56,19 +56,18 @@ namespace cc
             ImGui::Separator();
             for (int i = 0; i < p->entities.size(); i++)
             {
-                Serializer sw(Serializer::Mode::WRITE,Serializer::Format::JSON);
+                Serializer sw(Serializer::Mode::WRITE, Serializer::Format::JSON);
                 p->entities[i]->Serialize(sw);
                 nlohmann::json j = sw.json();
                 if (DrawEntity(j, ("entity " + std::to_string(i)).c_str()))
                 {
-                    Serializer sr(Serializer::Mode::READ,Serializer::Format::JSON,j);
+                    Serializer sr(Serializer::Mode::READ, Serializer::Format::JSON, j);
                     p->entities[i]->Serialize(sr);
-                    //TODO: ADD PACKET SENDING HERE
                     sf::Packet packet;
                     packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;
                     packet << (int)1;
                     packet << i;
-                    AppendEntityToPacket(packet,p->entities[i].get());
+                    AppendEntityToPacket(packet, p->entities[i].get());
                     p->client->SendPacket(packet);
                 }
             }
@@ -134,13 +133,12 @@ namespace cc
         {
             auto &buffer = stringBuffers[path];
 
-            // Initialise buffer the first time we see this value
+            // Fill the buffer the first time we see this value
             if (buffer.empty() && !value.get<std::string>().empty())
             {
                 buffer = value.get<std::string>();
             }
 
-            // Give ImGui enough room to edit it
             char textBuffer[1024];
 
             std::strncpy(

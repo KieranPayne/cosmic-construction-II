@@ -1,9 +1,7 @@
 #include "Main.hpp"
 #include "CC/MainMenu.hpp"
 #include "CC/UsernameMenu.hpp"
-// #include "CC/State.hpp"
 #include "CC/TileInfo.hpp"
-// #include "Civitron/ItemInfo.hpp"
 #include "Input/Input.hpp"
 #include "Timer.hpp"
 #include "CC/EntityInfo.hpp"
@@ -11,7 +9,6 @@
 #include "imgui/imgui.h"
 #include <fstream>
 #include <iostream>
-// #include "Civitron/EntityInfo.hpp"
 #include "MacroRunner.hpp"
 // a unique pointer to the window object; this is unique to prevent accidentally creating multiple windows
 std::unique_ptr<sf::RenderWindow> window;
@@ -40,41 +37,28 @@ int main()
 	if (!ImGui::SFML::Init(*window))
 		return -1;
 	Input input;
-	// state = new Civitron::State();
-	cc::UsernameMenu* usernameMenu = new cc::UsernameMenu(window.get());
+	cc::UsernameMenu *usernameMenu = new cc::UsernameMenu(window.get());
 	if (usernameMenu->CheckForExisting())
 	{
 		delete usernameMenu;
 		state = std::unique_ptr<Kosmic::State>(new cc::MainMenu(window.get()));
-	}else
+	}
+	else
 	{
 		state = std::unique_ptr<Kosmic::State>(usernameMenu);
 	}
 	sf::Clock deltaClock;
 	cc::TileInfo::Init();
 	cc::EntityInfo::Init();
-	// Civitron::ItemInfo::Init();
 	cc::EntityInfo::Build();
-	// ImGui::PushFont(NULL,2.f);
-	// ImGuiIO& io = ImGui::GetIO();
-
-	// io.Fonts->Clear();
-	// ImFontConfig config;
-	// config.SizePixels = 20.f;
-
-	// io.Fonts->AddFontDefault(&config);
 	auto &io = ImGui::GetIO();
 	io.Fonts->Clear();
-	ImFont *font = io.Fonts->AddFontFromFileTTF("content/resources/fonts/default font.ttf", 20.f);
+	io.Fonts->AddFontFromFileTTF("content/resources/fonts/default font.ttf", 20.f);
 	if (!ImGui::SFML::UpdateFontTexture())
 	{
 		window->close();
-	};
+	}
 	macro.active = false;
-	// macro.ParseFile("content/resources/macro2.txt");
-
-	// tgui::Button::Ptr button = tgui::Button::create();
-	// gui.add(button);
 	while (window->isOpen())
 	{
 		InputState inputState = input.ProcessEvents(*window);
@@ -90,12 +74,12 @@ int main()
 		}
 		state->Update(inputState, dt);
 		window->clear(sf::Color(0, 0, 0));
-		// window->clear(sf::Color(8, 38, 19));
 		state->Render();
 		ImGui::SFML::Render(*window);
 
 		window->display();
 	}
-	if (server) server->Stop();
+	if (server)
+		server->Stop();
 	return 0;
 }

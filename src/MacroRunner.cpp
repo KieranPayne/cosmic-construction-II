@@ -97,7 +97,6 @@ namespace Kosmic
             macro->inputState.keysDown.push_back(index);
         }
         ImGui::SFML::ProcessEvent(*window, sf::Event(sf::Event::KeyPressed{index}));
-
         complete = true;
     }
     void MacroKBRelease::Execute(State *state, Macro *macro)
@@ -115,21 +114,19 @@ namespace Kosmic
             macro->inputState.mouseButtonsDown.push_back(index);
         }
         ImGui::SFML::ProcessEvent(*window, sf::Event(sf::Event::MouseButtonPressed{index, {(int)macro->inputState.mousePosition.x, (int)macro->inputState.mousePosition.y}}));
-
         complete = true;
     }
     void MacroMBRelease::Execute(State *state, Macro *macro)
     {
         macro->inputState.RemoveInput(index);
         macro->inputState.mouseButtonsReleased.push_back(index);
-        ImGui::SFML::ProcessEvent(*window, sf::Event(sf::Event::MouseButtonReleased{index, {(int)macro->inputState.mousePosition.x,(int) macro->inputState.mousePosition.y}}));
+        ImGui::SFML::ProcessEvent(*window, sf::Event(sf::Event::MouseButtonReleased{index, {(int)macro->inputState.mousePosition.x, (int)macro->inputState.mousePosition.y}}));
         complete = true;
     }
     void MacroMoveMouse::Execute(State *state, Macro *macro)
     {
         macro->inputState.mousePosition = pos;
-
-        ImGui::SFML::ProcessEvent(*window, sf::Event(sf::Event::MouseMoved{{(int)pos.x,(int)pos.y}}));
+        ImGui::SFML::ProcessEvent(*window, sf::Event(sf::Event::MouseMoved{{(int)pos.x, (int)pos.y}}));
         complete = true;
     }
     void MacroTypeText::Execute(State *state, Macro *macro)
@@ -174,7 +171,7 @@ namespace Kosmic
         for (auto &line : lines)
         {
             // skip blank lines and comments
-            if (line.size() == 0 || line.size() >= 2 && line[0] == '/' && line[1] == '/')
+            if (line.size() == 0 || (line.size() >= 2 && line[0] == '/' && line[1] == '/'))
             {
                 continue;
             }
@@ -317,10 +314,11 @@ namespace Kosmic
             }
         }
     }
-    Macro::~Macro(){
-        for (int i = 0; i < commands.size(); i ++){
+    Macro::~Macro()
+    {
+        for (int i = 0; i < commands.size(); i++)
+        {
             delete commands[i];
         }
     }
-
 }
