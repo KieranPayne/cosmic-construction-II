@@ -65,7 +65,8 @@ namespace cc
                     p->entities[i]->Serialize(sr);
                     //TODO: ADD PACKET SENDING HERE
                     sf::Packet packet;
-                    packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITY;
+                    packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;
+                    packet << (int)1;
                     packet << i;
                     AppendEntityToPacket(packet,p->entities[i].get());
                     p->client->SendPacket(packet);

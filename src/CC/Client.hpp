@@ -41,6 +41,7 @@ namespace cc
         void OnServerClosed();
         void ReceivePackets();
         void SendUsername();
+        public:
         enum class MessageOrigin
         {
             SELF,
@@ -48,8 +49,9 @@ namespace cc
             PLAYER
         };
         char chatInput[256] = "";
-        void SendChatMessage(const std::string& text);
         void LogMessage(std::string message, MessageOrigin origin = MessageOrigin::SELF, std::string username = "");
+        private:
+        void SendChatMessage(const std::string& text);
         void DrawLogWindow();
         void LoadChunks(sf::Packet& packet);
         void DrawOtherPlayers();

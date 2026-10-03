@@ -26,6 +26,8 @@ namespace cc
 		bool isServerPlanet = false;
 		std::vector<std::pair<sf::Vector2i, std::pair<Tile,TileEntity*>>> tileSetRequests; 
 		std::unordered_set<sf::Vector2i, ChunkHash> chunksRequested;
+		std::vector<std::pair<sf::Vector2i, std::pair<Tile,TileEntity*>>> tilesToSend; 
+		
 
 		// for display
 		double currFps;

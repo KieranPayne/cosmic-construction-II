@@ -13,12 +13,12 @@ namespace cc
         CHAT_MESSAGE,
         REQUEST_CHUNKS,
         CHUNK_DATA, //result from requesting chunks
-        REQUEST_SET_TILE,
-        SET_TILE,
-        REQUEST_ADD_ENTITY,
-        ADD_ENTITY,
-        REQUEST_UPDATE_ENTITY,
-        UPDATE_ENTITY,
+        REQUEST_SET_TILES,
+        SET_TILES,
+        REQUEST_ADD_ENTITIES,
+        ADD_ENTITIES,
+        REQUEST_UPDATE_ENTITIES,
+        UPDATE_ENTITIES,
         UPDATE_PLAYER_DATA,
     };
 }

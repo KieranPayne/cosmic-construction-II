@@ -39,6 +39,10 @@ namespace cc
 		}
 		else
 		{
+			for (auto& p : planets)
+			{
+				p->Update(deltaTime);
+			}
 			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 			auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
 			if (chunks.size() > 0)
@@ -69,7 +73,7 @@ namespace cc
 		}
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
-			std::string path = "cohtent/resources/images/borzoi.png";
+			std::string path = "content/resources/images/borzoi.png";
 			planets[activePlanet]->MakeImageFromTiles(path,{30,30},150);
 		}
 	}
@@ -168,34 +172,49 @@ namespace cc
 		}else if (type == CSMessageType::CHUNK_DATA)
 		{
 			LoadChunks(packet);
-		}else if (type == CSMessageType::SET_TILE)
+		}else if (type == CSMessageType::SET_TILES)
 		{
-			LogMessage("Setting tile");
-			sf::Vector2i position;
-            packet >> position.x >> position.y;
-            uint16_t tileType;
-            packet >> tileType;
-            bool hasTileEntity;
-            packet >> hasTileEntity;
-            TileEntity* e = nullptr;
-            if (hasTileEntity)
-            {
-                auto data = ReadBytesFromPacket(packet);
-                Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
-                e = CreateTileEntityFromType(tileType);
-                e->Serialize(s);
-            }
-            planets[activePlanet]->SetTileAt(position,Tile(tileType),e,true);
-		}else if (type == CSMessageType::ADD_ENTITY)
+			// LogMessage("Setting tiles");
+			int n;
+			packet >> n;
+			for (int i = 0; i < n; i ++)
+			{
+				sf::Vector2i position;
+				packet >> position.x >> position.y;
+				uint16_t tileType;
+				packet >> tileType;
+				bool hasTileEntity;
+				packet >> hasTileEntity;
+				TileEntity* e = nullptr;
+				if (hasTileEntity)
+				{
+					auto data = ReadBytesFromPacket(packet);
+					Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+					e = CreateTileEntityFromType(tileType);
+					e->Serialize(s);
+				}
+				planets[activePlanet]->SetTileAt(position,Tile(tileType),e,true);
+			}
+		}else if (type == CSMessageType::ADD_ENTITIES)
 		{
-			Entity* e = LoadEntityFromPacket(packet);
-            planets[activePlanet]->AddEntity(e, true);
-		}else if (type == CSMessageType::UPDATE_ENTITY)
+			int n;
+			packet >> n;
+			for (int i = 0; i < n; i ++)
+			{
+				Entity* e = LoadEntityFromPacket(packet);
+				planets[activePlanet]->AddEntity(e, true);
+			}
+		}else if (type == CSMessageType::UPDATE_ENTITIES)
 		{
-			int index;
-			packet >> index;
-			Entity* e = LoadEntityFromPacket(packet);
-			planets[activePlanet]->ReplaceEntity(index,e);
+			int n;
+			packet >> n;
+			for (int i = 0; i < n; i ++)
+			{
+				int index;
+				packet >> index;
+				Entity* e = LoadEntityFromPacket(packet);
+				planets[activePlanet]->ReplaceEntity(index,e);
+			}
 		}else if (type == CSMessageType::UPDATE_PLAYER_DATA)
 		{
 			std::string username;
@@ -510,6 +529,10 @@ namespace cc
 			// 	packet >> byte;
 			// 	chunkData.push_back(byte);
 			// }
+			if (planets[activePlanet]->chunks.contains({posX,posY}))
+			{
+				std::cerr << "Received chunk that already have data for" << std::endl;
+			}
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);

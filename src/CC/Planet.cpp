@@ -42,10 +42,11 @@ namespace cc
 		}
 		if (tileSetRequests.size() > 0)
 		{
+			client->LogMessage("num tile set requests: " + std::to_string(tileSetRequests.size()));
 			for (int i = 0; i < tileSetRequests.size(); i ++)
 			{
 				auto& t = tileSetRequests[i];
-				sf::Vector2i chunkPos = t.first;
+				sf::Vector2i chunkPos = TileToChunkPos(t.first);
 				if (chunks.contains(chunkPos))
 				{
 					SetTileAt(t.first,t.second.first,t.second.second);
@@ -53,6 +54,32 @@ namespace cc
 					i --;
 				}
 			}
+		}
+		if (tilesToSend.size() > 0)
+		{
+			sf::Packet p;
+			p << (uint16_t)CSMessageType::REQUEST_SET_TILES;
+			p << (int)tilesToSend.size();
+			for (int i = 0; i < tilesToSend.size(); i ++)
+			{
+				sf::Vector2i& position = tilesToSend[i].first;
+				Tile& tile = tilesToSend[i].second.first;
+				TileEntity* tileEntity = tilesToSend[i].second.second;
+				p << position.x << position.y;
+				p << tile.type;
+				p << (bool)(tileEntity != nullptr);
+				if (tileEntity != nullptr)
+				{
+					Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+					
+					tileEntity->Serialize(s);
+					auto data = s.binary();
+					p << (uint64_t)data.size();
+					p.append(data.data(), data.size());
+				}
+			}
+			client->SendPacket(p);
+			tilesToSend.clear();
 		}
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
@@ -258,7 +285,8 @@ namespace cc
 		if (!sentByServer)
 		{
 			sf::Packet p;
-			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITY;
+			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITIES;
+			p << (int)1;
 			AppendEntityToPacket(p, entity);
 			client->SendPacket(p);
 		}
@@ -378,21 +406,7 @@ namespace cc
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		if (client != nullptr && !sentByServer)
 		{
-			sf::Packet p;
-			p << (uint16_t)CSMessageType::REQUEST_SET_TILE;
-			p << position.x << position.y;
-			p << tile.type;
-			p << (bool)(tileEntity != nullptr);
-			if (tileEntity != nullptr)
-			{
-				Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-
-				tileEntity->Serialize(s);
-				auto data = s.binary();
-				p << (uint64_t)data.size();
-				p.append(data.data(), data.size());
-			}
-			client->SendPacket(p);
+			tilesToSend.push_back({position,{tile,tileEntity}});
 		}
 		chunks[chunkPos]->SetTile(subChunkPos, tile, tileEntity);
 		// chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y] = tile;

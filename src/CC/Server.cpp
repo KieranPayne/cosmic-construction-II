@@ -174,23 +174,40 @@ namespace cc
             }
             SendChunks(clientId, positions);
         }
-        else if (type == CSMessageType::REQUEST_SET_TILE)
+        else if (type == CSMessageType::REQUEST_SET_TILES)
         {
             // create clone of packet to send to other players
             sf::Packet out;
-            out << (uint16_t)CSMessageType::SET_TILE;
+            out << (uint16_t)CSMessageType::SET_TILES;
 
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
-
-            sf::Vector2i position;
-            packet >> position.x >> position.y;
-            sf::Vector2i chunkPos = TileToChunkPos(position);
+            int n;
+            packet >> n;
             int planetIndex = currPlayers[GetIndexOfId(clientId)].planet;
-            if (!planets[planetIndex]->chunks.contains(chunkPos))
+            for (int i = 0; i < n; i ++)
             {
-                planets[planetIndex]->GenerateChunk(chunkPos);
+                sf::Vector2i position;
+                packet >> position.x >> position.y;
+                sf::Vector2i chunkPos = TileToChunkPos(position);
+                if (!planets[planetIndex]->chunks.contains(chunkPos))
+                {
+                    planets[planetIndex]->GenerateChunk(chunkPos);
+                }
+                uint16_t tileType;
+                packet >> tileType;
+                bool hasTileEntity;
+                packet >> hasTileEntity;
+                TileEntity *e = nullptr;
+                if (hasTileEntity)
+                {
+                    auto data = ReadBytesFromPacket(packet);
+                    Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+                    e = CreateTileEntityFromType(tileType);
+                    e->Serialize(s);
+                }
+                planets[currPlayers[GetIndexOfId(clientId)].planet]->SetTileAt(position, Tile(tileType), e);
             }
 
             for (int i = 0; i < currPlayers.size(); i++)
@@ -200,27 +217,11 @@ namespace cc
                     SendToClient(clients[i].id, out);
                 }
             }
-
-           
-            // BroadcastServerLog("Setting tile at " + std::to_string(position.x) + " " + std::to_string(position.y));
-            uint16_t tileType;
-            packet >> tileType;
-            bool hasTileEntity;
-            packet >> hasTileEntity;
-            TileEntity *e = nullptr;
-            if (hasTileEntity)
-            {
-                auto data = ReadBytesFromPacket(packet);
-                Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
-                e = CreateTileEntityFromType(tileType);
-                e->Serialize(s);
-            }
-            planets[currPlayers[GetIndexOfId(clientId)].planet]->SetTileAt(position, Tile(tileType), e);
         }
-        else if (type == CSMessageType::REQUEST_ADD_ENTITY)
+        else if (type == CSMessageType::REQUEST_ADD_ENTITIES)
         {
             sf::Packet out;
-            out << (uint16_t)CSMessageType::ADD_ENTITY;
+            out << (uint16_t)CSMessageType::ADD_ENTITIES;
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
@@ -232,12 +233,17 @@ namespace cc
                     SendToClient(clients[i].id, out);
                 }
             }
-            Entity* e = LoadEntityFromPacket(packet);
-            planets[currPlayers[GetIndexOfId(clientId)].planet]->AddEntity(e, true);
-        }else if (type == CSMessageType::REQUEST_UPDATE_ENTITY)
+            int n;
+            packet >>n;
+            for (int i = 0; i < n; i ++)
+            {
+                Entity* e = LoadEntityFromPacket(packet);
+                planets[currPlayers[GetIndexOfId(clientId)].planet]->AddEntity(e, true);
+            }
+        }else if (type == CSMessageType::REQUEST_UPDATE_ENTITIES)
         {
             sf::Packet out;
-            out << (uint16_t)CSMessageType::UPDATE_ENTITY;
+            out << (uint16_t)CSMessageType::UPDATE_ENTITIES;
             const uint8_t *data = static_cast<const uint8_t *>(packet.getData());
             std::size_t pos = packet.getReadPosition(); // just past the type you already read
             out.append(data + pos, packet.getDataSize() - pos);
@@ -249,10 +255,15 @@ namespace cc
                     SendToClient(clients[i].id, out);
                 }
             }
-            int index;
-            packet >> index;
-            Entity* e = LoadEntityFromPacket(packet);
-            planets[currPlayers[GetIndexOfId(clientId)].planet]->ReplaceEntity(index,e);
+            int n;
+            packet >> n;
+            for (int i = 0; i < n; i ++)
+            {
+                int index;
+                packet >> index;
+                Entity* e = LoadEntityFromPacket(packet);
+                planets[currPlayers[GetIndexOfId(clientId)].planet]->ReplaceEntity(index,e);
+            }
         }else if (type == CSMessageType::UPDATE_PLAYER_DATA)
         {
             PlayerData& playerData = currPlayers[GetIndexOfId(clientId)];
