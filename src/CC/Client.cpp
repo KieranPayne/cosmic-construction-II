@@ -548,6 +548,7 @@ namespace cc
 	PlayerData Client::GetPlayerData()
 	{
 		PlayerData p;
+		p.username = SaveManager::username;
 		p.cameraPosition = planets[activePlanet]->camera.position;
 		p.cameraZoom = planets[activePlanet]->camera.targetZoom;
 		p.planet = activePlanet;

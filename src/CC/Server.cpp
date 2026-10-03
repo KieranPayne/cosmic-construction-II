@@ -302,7 +302,10 @@ namespace cc
                 data2.push_back(byte);
             }
             Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
+            std::string name = playerData.username;
             playerData.Serialize(s);
+            playerData.username = name;
+            if (playerData.planet < 0 || playerData.planet >= (int)planets.size()) playerData.planet = 0;
         }
     }
     
