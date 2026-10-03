@@ -197,11 +197,6 @@ namespace cc
             {
                 if (currPlayers[i].planet == planetIndex && clients[i].id != clientId)
                 {
-                    if (!clients[i].sentChunks.contains(position))
-                    {
-                        std::vector<sf::Vector2i> poses = {chunkPos};
-                        SendChunks(clients[i].id,poses);
-                    }
                     SendToClient(clients[i].id, out);
                 }
             }
@@ -344,15 +339,6 @@ namespace cc
         // add number of chunks to packet
         packet << (int)((maxX - minX + 1) * (maxY - minY + 1));
         Planet *planet = planets[p.planet].get();
-        ServerClient* client;
-        for (auto& c : clients)
-        {
-            if (c.id == clientId)
-            {
-                client = &c;
-                break;
-            }
-        }
         for (int x = minX; x <= maxX; x++)
         {
             for (int y = minY; y <= maxY; y++)
@@ -369,7 +355,6 @@ namespace cc
                 packet << b.size();
                 // put chunk data into packet
                 packet.append(b.data(), b.size());
-                client->sentChunks.emplace(sf::Vector2i{x,y});
             }
         }
         //send entities
@@ -437,16 +422,6 @@ namespace cc
             p << b.size();
             // put chunk data into packet
             p.append(b.data(), b.size());
-        }
-        for (auto& c : clients)
-        {
-            if (c.id == clientId)
-            {
-                for (auto& p : positions)
-                {
-                    c.sentChunks.emplace(p);
-                }
-            }
         }
         SendToClient(clientId, p);
     }

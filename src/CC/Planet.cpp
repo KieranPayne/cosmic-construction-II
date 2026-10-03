@@ -327,7 +327,13 @@ namespace cc
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
-			chunks[chunkPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(chunkPos));
+			if (isServerPlanet)
+			{
+				GenerateChunk(chunkPos);
+			}else
+			{
+				return {nullptr,nullptr};
+			}
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		// return &chunks[chunkPos]->tiles[subChunkPos.x][subChunkPos.y];
@@ -423,7 +429,13 @@ namespace cc
 		chunks[entity->chunkPos]->RemoveEntity(entity);
 		if (!chunks.contains(newPos))
 		{
-			chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
+			if (isServerPlanet)
+			{
+				chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
+			}else
+			{
+				entity->isInChunk = false;
+			}
 		}
 		chunks[newPos]->AddEntity(entity);
 		entity->chunkPos = newPos;

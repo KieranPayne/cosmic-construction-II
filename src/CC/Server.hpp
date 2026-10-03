@@ -14,7 +14,6 @@ namespace cc
         {
             sf::TcpSocket socket;
             uint64_t id;
-            std::unordered_set<sf::Vector2i, ChunkHash> sentChunks;
         };
         sf::TcpListener listener;
         //every player that has joined this save

@@ -69,8 +69,8 @@ namespace cc
 		}
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
-			std::string path = "C:\\Users\\kiera\\Downloads\\borzoi.png";
-			planets[activePlanet]->MakeImageFromTiles(path,{10,10},60);
+			std::string path = "cohtent/resources/images/borzoi.png";
+			planets[activePlanet]->MakeImageFromTiles(path,{30,30},150);
 		}
 	}
 	void Client::DerivedRender()
