@@ -381,4 +381,12 @@ namespace cc
 			static_cast<std::uint8_t>(std::round(g * 255.f)),
 			static_cast<std::uint8_t>(std::round(b * 255.f)));
 	}
+	float Lerp(float a, float b, float t)
+	{
+		return a + (b-a) * t;
+	}
+	sf::Vector2f Lerp(sf::Vector2f a, sf::Vector2f b, float t)
+	{
+		return {Lerp(a.x,b.x,t),Lerp(a.y,b.y,t)};
+	}
 }

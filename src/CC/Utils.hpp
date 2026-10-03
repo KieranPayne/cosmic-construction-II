@@ -16,4 +16,6 @@ namespace cc
     void AppendEntityToPacket(sf::Packet& packet,Entity* e);
     Entity* LoadEntityFromPacket(sf::Packet& packet);
     sf::Color UsernameToColor(std::string& username);
+    float Lerp(float a, float b,float t);
+    sf::Vector2f Lerp(sf::Vector2f a, sf::Vector2f b, float t);
 }

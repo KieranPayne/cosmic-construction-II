@@ -14,11 +14,13 @@ namespace cc
         bool loadedJoinData = false;
         sf::TcpSocket socket;
         std::vector<PlayerData> otherPlayers = {};
+        std::vector<PlayerData> prevOtherPlayers = {};
+        std::vector<sf::Clock> prevOtherClocks = {};
         std::vector<std::unique_ptr<Planet>> planets = {};
         std::vector<std::string> chatLog = {};
         int activePlanet = 0;
         sf::Clock sendPlayerDataClock;
-        float timePerPlayerDataUpdate = 0.5f;
+        float timePerPlayerDataUpdate = 0.2f;
         void DisplayPauseMenu();
         public:
         void AddPlanet(Planet* planet);

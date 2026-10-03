@@ -143,6 +143,8 @@ namespace cc
 				if (otherPlayers[i].username == username)
 				{
 					otherPlayers.erase(otherPlayers.begin() + i);
+					prevOtherPlayers.erase(prevOtherPlayers.begin() + i);
+					prevOtherClocks.erase(prevOtherClocks.begin() + i);
 					break;
 				}
 			}
@@ -207,7 +209,10 @@ namespace cc
 			{
 				if (otherPlayers[i].username == username)
 				{
+					prevOtherPlayers[i] = otherPlayers[i];
+					prevOtherClocks[i].restart();
 					otherPlayers[i].Serialize(s);
+
 				}
 			}
 		}
@@ -270,6 +275,10 @@ namespace cc
 				continue;
 			}
 			otherPlayers.push_back(p);
+			prevOtherPlayers.push_back(p);
+			prevOtherClocks.push_back(sf::Clock());
+			prevOtherClocks.back().start();	
+
 		}
 
 		// --- Read chunk data ---
@@ -395,6 +404,9 @@ namespace cc
 		PlayerData p;
 		s.field("player", p);
 		otherPlayers.push_back(p);
+		prevOtherPlayers.push_back(p);
+		prevOtherClocks.push_back(sf::Clock());
+		prevOtherClocks.back().start();
 		LogMessage("Player Connected: " + p.username);
 	}
 	void Client::OnServerClosed()
@@ -501,20 +513,25 @@ namespace cc
 	void Client::DrawOtherPlayers()
 	{
 		sf::RectangleShape rect;
-		for (auto& p : otherPlayers)
+		for (int i = 0; i < otherPlayers.size(); i ++)
 		{
+			PlayerData& p = otherPlayers[i];
+			PlayerData& oldP = prevOtherPlayers[i];
 			if (p.planet != activePlanet)
 			{
 				continue;
 			}
+			float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate,0.f,1.f);
 			sf::Color col = UsernameToColor(p.username);
-			sf::Vector2f targetResolution = p.resolution;
+			sf::Vector2f targetResolution = Lerp(oldP.resolution,p.resolution,t);
+			float zoom = Lerp(oldP.cameraZoom,p.cameraZoom,t);
+			sf::Vector2f position = Lerp(oldP.cameraPosition,p.cameraPosition,t);
 			rect.setFillColor(sf::Color::Transparent);
 			rect.setOutlineColor(col);
 			rect.setOutlineThickness(3.f);
-			rect.setOrigin(p.resolution/2.f * p.cameraZoom);
-			rect.setPosition(p.cameraPosition);
-			rect.setSize(p.cameraZoom * p.resolution);
+			rect.setOrigin(targetResolution/2.f * zoom);
+			rect.setPosition(position);
+			rect.setSize(zoom * targetResolution);
 			renderTarget->draw(rect);
 		}
 	}
