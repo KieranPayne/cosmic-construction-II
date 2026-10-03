@@ -13,11 +13,13 @@ namespace cc
 		AddPlanet(new Planet());
 		sendPlayerDataClock.start();
 	}
+
 	void Client::AddPlanet(Planet *planet)
 	{
 		planet->client = this;
 		planets.push_back(std::unique_ptr<Planet>(planet));
 	}
+
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
@@ -26,14 +28,12 @@ namespace cc
 		{
 			return;
 		}
-		// for (auto &p : planets)
-		// {
-		// 	p->VisibleUpdate(renderTarget, inputState, deltaTime);
-		// }
+
 		if (inputState.Pressed(sf::Keyboard::Key::Escape))
 		{
 			paused = !paused;
 		}
+
 		if (paused)
 		{
 			DisplayPauseMenu();
@@ -45,6 +45,8 @@ namespace cc
 				p->Update(deltaTime);
 			}
 			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
+
+			// ask the server for any chunks that are in view but not loaded yet
 			auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
 			if (chunks.size() > 0)
 			{
@@ -57,8 +59,10 @@ namespace cc
 				}
 				SendPacket(p);
 			}
+
 			DrawLogWindow();
 
+			// periodically tell the server where this player is looking
 			if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
 			{
 				sendPlayerDataClock.restart();
@@ -72,12 +76,15 @@ namespace cc
 				SendPacket(p);
 			}
 		}
+
+		// debug shortcut: place a test image made of tiles
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
 			std::string path = "content/resources/images/borzoi.png";
 			planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
 		}
 	}
+
 	void Client::DerivedRender()
 	{
 		if (!loadedJoinData || !connected)
@@ -90,6 +97,7 @@ namespace cc
 		DrawOtherPlayers();
 		renderTarget->setView(original);
 	}
+
 	void Client::DisplayPauseMenu()
 	{
 		ImGuiIO &io = ImGui::GetIO();
@@ -107,8 +115,10 @@ namespace cc
 		}
 		if (server.get() != nullptr)
 		{
+			// this client is hosting the server
 			if (ImGui::Button("save and quit"))
 			{
+				server->Stop();
 				SaveManager::SaveServer(server.get());
 				server.reset(nullptr);
 				state = std::unique_ptr<Kosmic::State>(new MainMenu(renderTarget));
@@ -133,61 +143,55 @@ namespace cc
 	{
 		uint16_t t;
 		packet >> t;
-		// LogMessage("Received message of type " + std::to_string(t));
-		CSMessageType type = (CSMessageType)t;
-		if (type == CSMessageType::JOIN_DATA)
+		switch ((CSMessageType)t)
 		{
+		case CSMessageType::JOIN_DATA:
 			LoadJoinData(packet);
-		}
-		else if (type == CSMessageType::PLAYER_JOINED)
-		{
+			break;
+
+		case CSMessageType::PLAYER_JOINED:
 			NewPlayerJoined(packet);
-		}
-		else if (type == CSMessageType::PLAYER_LEFT)
+			break;
+
+		case CSMessageType::PLAYER_LEFT:
 		{
 			std::string username;
 			packet >> username;
 			LogMessage("Player " + username + " disconnected.");
-			for (int i = 0; i < otherPlayers.size(); i++)
-			{
-				if (otherPlayers[i].username == username)
-				{
-					otherPlayers.erase(otherPlayers.begin() + i);
-					prevOtherPlayers.erase(prevOtherPlayers.begin() + i);
-					prevOtherClocks.erase(prevOtherClocks.begin() + i);
-					break;
-				}
-			}
+			RemoveOtherPlayer(username);
+			break;
 		}
-		else if (type == CSMessageType::SERVER_MESSAGE)
+
+		case CSMessageType::SERVER_MESSAGE:
 		{
 			std::string message;
 			packet >> message;
 			LogMessage(message, MessageOrigin::SERVER);
+			break;
 		}
-		else if (type == CSMessageType::CHAT_MESSAGE)
+
+		case CSMessageType::CHAT_MESSAGE:
 		{
 			std::string username, message;
 			packet >> username >> message;
 			LogMessage(message, MessageOrigin::PLAYER, username);
+			break;
 		}
-		else if (type == CSMessageType::CHUNK_DATA)
-		{
+
+		case CSMessageType::CHUNK_DATA:
 			LoadChunks(packet);
-		}
-		else if (type == CSMessageType::SET_TILES)
+			break;
+
+		case CSMessageType::SET_TILES:
 		{
-			// LogMessage("Setting tiles");
 			int n;
 			packet >> n;
 			for (int i = 0; i < n; i++)
 			{
 				sf::Vector2i position;
-				packet >> position.x >> position.y;
 				uint16_t tileType;
-				packet >> tileType;
 				bool hasTileEntity;
-				packet >> hasTileEntity;
+				packet >> position.x >> position.y >> tileType >> hasTileEntity;
 				TileEntity *e = nullptr;
 				if (hasTileEntity)
 				{
@@ -198,8 +202,10 @@ namespace cc
 				}
 				planets[activePlanet]->SetTileAt(position, Tile(tileType), e, true);
 			}
+			break;
 		}
-		else if (type == CSMessageType::ADD_ENTITIES)
+
+		case CSMessageType::ADD_ENTITIES:
 		{
 			int n;
 			packet >> n;
@@ -208,8 +214,10 @@ namespace cc
 				Entity *e = LoadEntityFromPacket(packet);
 				planets[activePlanet]->AddEntity(e, true);
 			}
+			break;
 		}
-		else if (type == CSMessageType::UPDATE_ENTITIES)
+
+		case CSMessageType::UPDATE_ENTITIES:
 		{
 			int n;
 			packet >> n;
@@ -220,22 +228,16 @@ namespace cc
 				Entity *e = LoadEntityFromPacket(packet);
 				planets[activePlanet]->ReplaceEntity(index, e);
 			}
+			break;
 		}
-		else if (type == CSMessageType::UPDATE_PLAYER_DATA)
+
+		case CSMessageType::UPDATE_PLAYER_DATA:
 		{
 			std::string username;
 			packet >> username;
-			uint64_t n;
-			packet >> n;
-			std::vector<uint8_t> data2;
-			for (int i = 0; i < n; i++)
-			{
-				uint8_t byte;
-				packet >> byte;
-				data2.push_back(byte);
-			}
-			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data2);
-			for (int i = 0; i < otherPlayers.size(); i++)
+			auto data = ReadBytesFromPacket(packet);
+			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+			for (size_t i = 0; i < otherPlayers.size(); i++)
 			{
 				if (otherPlayers[i].username == username)
 				{
@@ -244,77 +246,53 @@ namespace cc
 					otherPlayers[i].Serialize(s);
 				}
 			}
+			break;
+		}
+
+		default:
+			break;
 		}
 	}
 
 	void Client::SendPacket(sf::Packet &packet)
 	{
-		// if (server.get() != nullptr)
-		// {
-		// 	server->HandlePacket(id, packet);
-		// 	return;
-		// }
 		if (!IsConnected())
 		{
 			return;
 		}
 		outgoingPackets.push_back(packet);
-		// sf::Socket::Status status = socket.send(packet);
-
-		// if (status == sf::Socket::Status::Disconnected)
-		// {
-		// OnServerClosed();
-		// }
 	}
 
 	void Client::LoadJoinData(sf::Packet &packet)
 	{
 		loadedJoinData = true;
-		// --- Read list of current players ---
 
-		// NOTE: `packet << data.size()` on the sending side pushes a std::size_t,
-		// which on a 64-bit build resolves to sf::Packet's Uint64 overload.
-		// Reading it back needs a matching type or the stream will misalign.
-		uint64_t playerDataSize;
-		packet >> playerDataSize;
-
-		// sf::Packet has no built-in "extract N raw bytes mid-stream" call,
-		// so pull them out one byte at a time via the Uint8 overload.
-		std::vector<uint8_t> playerData;
-		playerData.reserve(playerDataSize);
-		for (uint64_t i = 0; i < playerDataSize; i++)
-		{
-			uint8_t byte;
-			packet >> byte;
-			playerData.push_back(byte);
-		}
-
+		// players currently on the server, including this one
+		auto playerData = ReadBytesFromPacket(packet);
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, playerData);
 
-		int n;
-		s.field("n", n);
-		for (int i = 0; i < n; i++)
+		int numPlayers;
+		s.field("n", numPlayers);
+		for (int i = 0; i < numPlayers; i++)
 		{
 			PlayerData p;
 			s.field(std::to_string(i), p);
 			if (p.username == SaveManager::username)
 			{
+				// this is us: restore our saved planet and camera
 				activePlanet = p.planet;
 				planets[activePlanet]->camera.position = p.cameraPosition;
 				planets[activePlanet]->camera.targetZoom = p.cameraZoom;
 				continue;
 			}
-			otherPlayers.push_back(p);
-			prevOtherPlayers.push_back(p);
-			prevOtherClocks.push_back(sf::Clock());
-			prevOtherClocks.back().start();
+			AddOtherPlayer(p);
 		}
 
-		// --- Read chunk data ---
+		Planet &planet = *planets[activePlanet];
 
+		// chunks around the player
 		int numChunks;
 		packet >> numChunks;
-
 		for (int i = 0; i < numChunks; i++)
 		{
 			int posX, posY;
@@ -322,16 +300,17 @@ namespace cc
 			auto chunkData = ReadBytesFromPacket(packet);
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
-			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
-			planets[activePlanet]->chunksRequested.emplace(sf::Vector2i{posX, posY});
+			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
+			planet.chunksRequested.emplace(sf::Vector2i{posX, posY});
 		}
-		// load entities;
+
+		// entities on the planet
 		uint64_t numEntities;
 		packet >> numEntities;
-		for (int i = 0; i < numEntities; i++)
+		for (uint64_t i = 0; i < numEntities; i++)
 		{
 			Entity *e = LoadEntityFromPacket(packet);
-			planets[activePlanet]->AddEntity(e, true);
+			planet.AddEntity(e, true);
 		}
 
 		std::string msg = "Join data processed. Other players:";
@@ -344,12 +323,11 @@ namespace cc
 
 	bool Client::ConnectToServer(sf::IpAddress &ip, unsigned short port)
 	{
-		// If we're already connected, don't reconnect.
+		// if we're already connected, don't reconnect
 		if (connected)
 			return true;
 
-		// Temporarily make the socket blocking so connect() can
-		// actually wait for the connection to be established.
+		// the socket must be blocking so connect() waits for the connection to be established
 		socket.setBlocking(true);
 
 		if (socket.connect(ip, port) != sf::Socket::Status::Done)
@@ -374,7 +352,6 @@ namespace cc
 		while (true)
 		{
 			sf::Packet packet;
-
 			sf::Socket::Status status = socket.receive(packet);
 
 			if (status == sf::Socket::Status::Done)
@@ -383,7 +360,7 @@ namespace cc
 			}
 			else if (status == sf::Socket::Status::NotReady)
 			{
-				// No more packets currently waiting.
+				// no more packets waiting right now
 				break;
 			}
 			else if (status == sf::Socket::Status::Disconnected)
@@ -393,12 +370,13 @@ namespace cc
 			}
 			else
 			{
-				// Error
+				// socket error
 				connected = false;
 				break;
 			}
 		}
 	}
+
 	void Client::SendUsername()
 	{
 		sf::Packet packet;
@@ -406,28 +384,39 @@ namespace cc
 		packet << SaveManager::username;
 		SendPacket(packet);
 	}
+
 	void Client::NewPlayerJoined(sf::Packet &packet)
 	{
 		auto data = ReadBytesFromPacket(packet);
-		// uint64_t n;
-		// packet >> n;
-		// // std::vector<uint8_t> data;
-		// data.reserve(n);
-		// for (int i = 0; i < n; i++)
-		// {
-		// 	uint8_t byte;
-		// 	packet >> byte;
-		// 	data.push_back(byte);
-		// }
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		PlayerData p;
 		s.field("player", p);
-		otherPlayers.push_back(p);
-		prevOtherPlayers.push_back(p);
-		prevOtherClocks.push_back(sf::Clock());
-		prevOtherClocks.back().start();
+		AddOtherPlayer(p);
 		LogMessage("Player Connected: " + p.username);
 	}
+
+	void Client::AddOtherPlayer(const PlayerData &player)
+	{
+		otherPlayers.push_back(player);
+		prevOtherPlayers.push_back(player);
+		prevOtherClocks.push_back(sf::Clock());
+		prevOtherClocks.back().start();
+	}
+
+	void Client::RemoveOtherPlayer(const std::string &username)
+	{
+		for (size_t i = 0; i < otherPlayers.size(); i++)
+		{
+			if (otherPlayers[i].username == username)
+			{
+				otherPlayers.erase(otherPlayers.begin() + i);
+				prevOtherPlayers.erase(prevOtherPlayers.begin() + i);
+				prevOtherClocks.erase(prevOtherClocks.begin() + i);
+				return;
+			}
+		}
+	}
+
 	void Client::OnServerClosed()
 	{
 		connected = false;
@@ -436,6 +425,7 @@ namespace cc
 		InputState inputState;
 		state->Update(inputState, 0);
 	}
+
 	void Client::LogMessage(std::string message, MessageOrigin origin, std::string username)
 	{
 		if (origin == MessageOrigin::SELF)
@@ -452,13 +442,14 @@ namespace cc
 		}
 		chatLogScrollToBottom = true;
 	}
+
 	void Client::DrawLogWindow()
 	{
 		ImGui::SetNextWindowPos({897, 3}, ImGuiCond_Once);
 		ImGui::SetNextWindowSize({379, 189}, ImGuiCond_Once);
 		ImGui::Begin("Chat Log");
 
-		// Reserve space at the bottom for the separator + input row
+		// reserve space at the bottom for the separator and input row
 		const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 
 		ImGui::BeginChild("ChatScrollRegion", ImVec2(0, -footerHeight), false);
@@ -480,7 +471,8 @@ namespace cc
 		if (ImGui::InputText("##ChatInput", chatInput, sizeof(chatInput), ImGuiInputTextFlags_EnterReturnsTrue))
 		{
 			send = true;
-			ImGui::SetKeyboardFocusHere(-1); // keep the field focused after pressing Enter
+			// keep the field focused after pressing Enter
+			ImGui::SetKeyboardFocusHere(-1);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Send"))
@@ -496,6 +488,7 @@ namespace cc
 
 		ImGui::End();
 	}
+
 	void Client::SendChatMessage(const std::string &text)
 	{
 		LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
@@ -504,26 +497,30 @@ namespace cc
 		p << text;
 		SendPacket(p);
 	}
+
 	void Client::LoadChunks(sf::Packet &packet)
 	{
+		Planet &planet = *planets[activePlanet];
 		uint64_t n;
 		packet >> n;
-		for (int i = 0; i < n; i++)
+		for (uint64_t i = 0; i < n; i++)
 		{
 			int posX, posY;
 			packet >> posX >> posY;
-			auto chunkData = ReadBytesFromPacket(packet); // already consumed, keep this first
-			if (planets[activePlanet]->chunks.contains({posX, posY}))
+			// always read the chunk's bytes, even when skipping it, so the rest of the packet stays aligned
+			auto chunkData = ReadBytesFromPacket(packet);
+			if (planet.chunks.contains({posX, posY}))
 				continue;
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
-			planets[activePlanet]->chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
+			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
 		}
 	}
+
 	void Client::DrawOtherPlayers()
 	{
 		sf::RectangleShape rect;
-		for (int i = 0; i < otherPlayers.size(); i++)
+		for (size_t i = 0; i < otherPlayers.size(); i++)
 		{
 			PlayerData &p = otherPlayers[i];
 			PlayerData &oldP = prevOtherPlayers[i];
@@ -531,11 +528,14 @@ namespace cc
 			{
 				continue;
 			}
+
+			// how far between their previous and latest update we are, from 0 to 1
 			float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate, 0.f, 1.f);
 			sf::Color col = UsernameToColor(p.username);
 			sf::Vector2f targetResolution = Lerp(oldP.resolution, p.resolution, t);
 			float zoom = Lerp(oldP.cameraZoom, p.cameraZoom, t);
 			sf::Vector2f position = Lerp(oldP.cameraPosition, p.cameraPosition, t);
+
 			rect.setFillColor(sf::Color::Transparent);
 			rect.setOutlineColor(col);
 			rect.setOutlineThickness(3.f);
@@ -545,6 +545,7 @@ namespace cc
 			renderTarget->draw(rect);
 		}
 	}
+
 	PlayerData Client::GetPlayerData()
 	{
 		PlayerData p;
@@ -555,6 +556,7 @@ namespace cc
 		p.resolution = (sf::Vector2f)renderTarget->getSize();
 		return p;
 	}
+
 	void Client::FlushOutgoing()
 	{
 		while (!outgoingPackets.empty())
@@ -564,8 +566,9 @@ namespace cc
 				outgoingPackets.pop_front();
 			else if (status == sf::Socket::Status::Disconnected)
 			{
+				// OnServerClosed replaces the state, which destroys this client: touch nothing after it
 				OnServerClosed();
-				return; // 'this' may be destroyed by OnServerClosed, touch nothing after it
+				return;
 			}
 			else
 				break;

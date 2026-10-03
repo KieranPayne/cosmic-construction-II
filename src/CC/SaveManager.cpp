@@ -70,6 +70,7 @@ namespace cc
 			server->planets[0]->AddEntity(item,true);
 			SaveServer(server.get());
 			server->Start(5000);
+			server->StartThread();
 			Client *client = new Client(state->renderTarget);
 			// sf::IpAddress ip = sf::IpAddress::resolve("127.0.0.1").value();
 			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
@@ -100,6 +101,7 @@ namespace cc
 				p->Load();
 			}
 			server->Start(5000);
+			server->StartThread();
 			// server->Update(inputState,0);
 			Client *client = new Client(state->renderTarget);
 			state = std::unique_ptr<Kosmic::State>(client);

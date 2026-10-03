@@ -2,76 +2,96 @@
 #include "SaveManager.hpp"
 namespace cc
 {
-	Atlas::Atlas(std::vector<sf::Texture> &textures)
+	// Pixels of duplicated edge colour added around every texture, so that rounding errors when
+	// sampling next to a texture's edge never pick up a neighbouring texture.
+	constexpr int PADDING = 1;
+
+	Atlas::Atlas()
 	{
-		positions = {};
-		//to make vertices with tex coords 0 have no colour
-		sf::Image i({1,1},sf::Color::White);
-		sf::Texture t;
-		t.loadFromImage(i);
-		AddTexture(t);
-		// algorithm that finds the position of each texture. Added in rows with the height of the maximum height of the texture.
-		for (int i = 0; i < textures.size(); i++)
+		// A 1x1 white pixel at the start of the atlas: vertices without texture coordinates
+		// sample it, so they are drawn with just their vertex colour.
+		sf::Image whitePixel({1, 1}, sf::Color::White);
+		sf::Texture whiteTexture;
+		whiteTexture.loadFromImage(whitePixel);
+		AddTexture(whiteTexture);
+	}
+
+	Atlas::Atlas(std::vector<sf::Texture> &initialTextures) : Atlas()
+	{
+		for (const sf::Texture &t : initialTextures)
 		{
-			AddTexture(textures[i]);
+			AddTexture(t);
 		}
 		Build();
 	}
-	Atlas::Atlas()
-	{
-		sf::Image i({1,1},sf::Color::White);
-		sf::Texture t;
-		t.loadFromImage(i);
-		AddTexture(t);
-	}
+
 	void Atlas::AddTexture(sf::Texture texture)
 	{
-		// increase width by width of texture
-		int newWidth = rowWidth + texture.getSize().x;
-		// if too big, move on to new row
-		if (newWidth > maxSize)
+		// each texture occupies its size plus a border on every side
+		int w = texture.getSize().x + 2 * PADDING;
+		int h = texture.getSize().y + 2 * PADDING;
+
+		// start a new row if this texture would not fit in the current one
+		if (rowWidth + w > maxSize)
 		{
 			totalHeight += rowHeight;
 			rowHeight = 0;
 			rowWidth = 0;
 		}
-		// if width of row is greater than width of texture, expand width of texture
-		if (newWidth > totalWidth)
-		{
-			totalWidth = newWidth;
-		}
-		// if height greater than row height, increase row height
-		if (texture.getSize().y > rowHeight)
-		{
-			rowHeight = texture.getSize().y;
-		}
-		// add position and expand size of row
-		positions.push_back(sf::Vector2i(rowWidth, totalHeight));
-		rowWidth += texture.getSize().x;
+
+		// the position is the top-left of the texture's real pixels, not of its border
+		positions.push_back(sf::Vector2i(rowWidth + PADDING, totalHeight + PADDING));
+
+		rowWidth += w;
+		if (rowWidth > totalWidth)
+			totalWidth = rowWidth;
+		if (h > rowHeight)
+			rowHeight = h;
+
 		textures.push_back(texture);
 	}
+
 	void Atlas::Build()
 	{
-		// add height of final row
+		// include the height of the final row
 		totalHeight += rowHeight;
-		sf::Image im(sf::Vector2u(totalWidth, totalHeight));
-		// create image and add textures in positions calculated
-		for (int i = 0; i < textures.size(); i++)
+		sf::Image atlasImage(sf::Vector2u(totalWidth, totalHeight));
+
+		for (std::size_t i = 0; i < textures.size(); i++)
 		{
-			auto i2 = textures[i].copyToImage();
-			if (!im.copy(i2, {(unsigned int)positions[i].x, (unsigned int)positions[i].y}))
+			sf::Image src = textures[i].copyToImage();
+			int srcWidth = (int)src.getSize().x;
+			int srcHeight = (int)src.getSize().y;
+			int originX = positions[i].x;
+			int originY = positions[i].y;
+
+			if (!atlasImage.copy(src, {(unsigned)originX, (unsigned)originY}))
+				std::cerr << "failed to copy image to atlas\n";
+
+			// fill the border: every pixel outside the texture copies its nearest edge pixel
+			for (int py = -PADDING; py < srcHeight + PADDING; py++)
 			{
-				std::cerr << "failed to copy image to atlas";
+				for (int px = -PADDING; px < srcWidth + PADDING; px++)
+				{
+					bool insideTexture = px >= 0 && px < srcWidth && py >= 0 && py < srcHeight;
+					if (insideTexture)
+						continue;
+					int sourceX = std::clamp(px, 0, srcWidth - 1);
+					int sourceY = std::clamp(py, 0, srcHeight - 1);
+					atlasImage.setPixel({(unsigned)(originX + px), (unsigned)(originY + py)},
+										src.getPixel({(unsigned)sourceX, (unsigned)sourceY}));
+				}
 			}
 		}
-		// convert to texture
-		if (!texture.loadFromImage(im))
-		{
-			std::cerr << "failed to convert to texture";
-		}
-		//remove the single white pixel placed at the start of the atlas
+
+		if (!texture.loadFromImage(atlasImage))
+			std::cerr << "failed to convert atlas image to texture\n";
+
+		// remove the white pixel entry so indices match the order textures were added
 		textures.erase(textures.begin());
 		positions.erase(positions.begin());
+
+		// write the atlas to disk so it can be inspected
 		texture.copyToImage().saveToFile(SaveManager::GetSavedataDir() + "/atlas.png");
 	}
 }

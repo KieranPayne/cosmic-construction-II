@@ -88,10 +88,6 @@ int main()
 			InputState copy = InputState(macro.inputState);
 			inputState = copy;
 		}
-		if (server.get() != nullptr)
-		{
-			server->Update(dt);
-		}
 		state->Update(inputState, dt);
 		window->clear(sf::Color(0, 0, 0));
 		// window->clear(sf::Color(8, 38, 19));
@@ -100,5 +96,6 @@ int main()
 
 		window->display();
 	}
+	if (server) server->Stop();
 	return 0;
 }

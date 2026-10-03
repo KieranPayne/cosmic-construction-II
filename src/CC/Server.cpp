@@ -176,8 +176,10 @@ namespace cc
         packet >> t;
         CSMessageType type = (CSMessageType)t;
         ServerClient *client = GetClient(clientId);
-        if (!client) return;
-        if (type == CSMessageType::SEND_USERNAME ? client->joined : !client->joined) return;
+        if (!client)
+            return;
+        if (type == CSMessageType::SEND_USERNAME ? client->joined : !client->joined)
+            return;
         if (type == CSMessageType::SEND_USERNAME)
         {
             SendJoinData(clientId, packet);
@@ -305,14 +307,16 @@ namespace cc
             std::string name = playerData.username;
             playerData.Serialize(s);
             playerData.username = name;
-            if (playerData.planet < 0 || playerData.planet >= (int)planets.size()) playerData.planet = 0;
+            if (playerData.planet < 0 || playerData.planet >= (int)planets.size())
+                playerData.planet = 0;
         }
     }
-    
+
     void Server::SendJoinData(uint64_t clientId, sf::Packet &usernamePacket)
     {
         ServerClient *client = GetClient(clientId);
-        if (!client) return;
+        if (!client)
+            return;
         // REGISTERING PLAYER
         std::string username;
         usernamePacket >> username;
@@ -333,8 +337,7 @@ namespace cc
             p.username = username;
             allPlayers.push_back(p);
         }
-        
-        
+
         client->player = p;
         client->joined = true;
 
@@ -346,14 +349,15 @@ namespace cc
         Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
         std::vector<PlayerData *> joinedPlayers;
         for (auto &c : clients)
-            if (c.joined) joinedPlayers.push_back(&c.player);
+            if (c.joined)
+                joinedPlayers.push_back(&c.player);
         int n = joinedPlayers.size();
         s.field("n", n);
         for (int i = 0; i < n; i++)
             s.field(std::to_string(i), *joinedPlayers[i]);
         auto data = s.binary();
         // put number of bytes in packet
-        packet << (uint64_t) data.size();
+        packet << (uint64_t)data.size();
         // put bytes into packet
         packet.append(data.data(), data.size());
         // next, want to send all the chunks visible to the player
@@ -378,7 +382,7 @@ namespace cc
                 packet << c->position.x << c->position.y;
                 auto b = c->GetByteData();
                 // put size of bytes into packet
-                packet << (uint64_t) b.size();
+                packet << (uint64_t)b.size();
                 // put chunk data into packet
                 packet.append(b.data(), b.size());
             }
@@ -445,7 +449,7 @@ namespace cc
             p << c->position.x << c->position.y;
             auto b = c->GetByteData();
             // put size of bytes into packet
-            p << (uint64_t) b.size();
+            p << (uint64_t)b.size();
             // put chunk data into packet
             p.append(b.data(), b.size());
         }
@@ -472,5 +476,52 @@ namespace cc
             if (c.id == id)
                 return &c;
         return nullptr;
+    }
+    bool Server::StartThread()
+    {
+        if (running.exchange(true))
+            return false; // already running
+        thread = std::thread(&Server::Run, this);
+        return true;
+    }
+
+    void Server::Stop()
+    {
+        if (!running.exchange(false))
+            return;
+        if (thread.joinable())
+            thread.join();
+    }
+
+    Server::~Server() { Stop(); }
+
+    void Server::Run()
+    {
+        sf::Clock clock;
+        while (running)
+        {
+            // Sleep until a socket has data (or a short timeout) instead of busy-looping.
+            // Only this thread mutates `clients`, so no lock is needed to build the selector.
+            sf::SocketSelector selector;
+            selector.add(listener);
+            bool backlog = false;
+            for (auto &c : clients)
+            {
+                selector.add(c.socket);
+                backlog |= !c.outgoing.empty(); // partial sends need a quick retry
+            }
+            selector.wait(backlog ? sf::milliseconds(1) : sf::milliseconds(5));
+
+            double dt = clock.restart().asSeconds();
+            try
+            {
+                std::lock_guard lock(mutex);
+                Update(dt); // your existing Update, unchanged
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "Server thread error: " << e.what() << '\n';
+            }
+        }
     }
 }
