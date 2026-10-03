@@ -21,7 +21,7 @@ namespace cc
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
-		if (!connected)
+		if (!connected || !loadedJoinData)
 		{
 			return;
 		}
@@ -70,6 +70,10 @@ namespace cc
 	}
 	void Client::DerivedRender()
 	{
+		if (!loadedJoinData || !connected)
+		{
+			return;
+		}
 		sf::View original = renderTarget->getView();
 		planets[activePlanet]->camera.SetView(renderTarget);
 		planets[activePlanet]->Render(renderTarget);
@@ -230,6 +234,7 @@ namespace cc
 
 	void Client::LoadJoinData(sf::Packet &packet)
 	{
+		loadedJoinData = true;
 		// --- Read list of current players ---
 
 		// NOTE: `packet << data.size()` on the sending side pushes a std::size_t,

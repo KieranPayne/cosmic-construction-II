@@ -11,6 +11,7 @@ namespace cc
         bool chatLogScrollToBottom = false;
         bool paused = false;
         bool connected = false;
+        bool loadedJoinData = false;
         sf::TcpSocket socket;
         std::vector<PlayerData> otherPlayers = {};
         std::vector<std::unique_ptr<Planet>> planets = {};

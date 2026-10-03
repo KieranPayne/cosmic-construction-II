@@ -13,7 +13,7 @@ constexpr int CHUNK_NUM_BYTES = CHUNK_SIZE * CHUNK_SIZE * (2 + 4);
 		Tile tiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 		BackgroundTile backgroundTiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 		sf::Vector2i position;
-		std::vector<Entity*> entities;
+		std::vector<Entity*> entities = {};
 		std::unordered_map<uint16_t,std::unique_ptr<TileEntity>> tileEntities;
 		Chunk(sf::Vector2i position);
 		Chunk();
