@@ -12,6 +12,7 @@ namespace cc
 		activePlanet = 0;
 		AddPlanet(new Planet());
 		sendPlayerDataClock.start();
+		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget);
 	}
 
 	void Client::AddPlanet(Planet *planet)
@@ -40,49 +41,64 @@ namespace cc
 		}
 		else
 		{
-			for (auto &p : planets)
+			if (inputState.Pressed(sf::Keyboard::Key::T))
 			{
-				p->Update(deltaTime);
-			}
-			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
-
-			// ask the server for any chunks that are in view but not loaded yet
-			auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
-			if (chunks.size() > 0)
-			{
-				sf::Packet p;
-				p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
-				p << (uint64_t)chunks.size();
-				for (auto &c : chunks)
+				showingKnowledgeGraph = !showingKnowledgeGraph;
+				if (!showingKnowledgeGraph)
 				{
-					p << c.x << c.y;
+					knowledgeGraph->SaveToFile();
 				}
-				SendPacket(p);
 			}
-
-			DrawLogWindow();
-
-			// periodically tell the server where this player is looking
-			if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
+			if (showingKnowledgeGraph)
 			{
-				sendPlayerDataClock.restart();
-				sf::Packet p;
-				p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
-				Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-				GetPlayerData().Serialize(s);
-				auto data = s.binary();
-				p << (uint64_t)data.size();
-				p.append(data.data(), data.size());
-				SendPacket(p);
+				knowledgeGraph->Update(deltaTime, inputState);
+			}else
+			{
+				for (auto &p : planets)
+				{
+					p->Update(deltaTime);
+				}
+				planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
+				
+				// ask the server for any chunks that are in view but not loaded yet
+				auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
+				if (chunks.size() > 0)
+				{
+					sf::Packet p;
+					p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
+					p << (uint64_t)chunks.size();
+					for (auto &c : chunks)
+					{
+						p << c.x << c.y;
+					}
+					SendPacket(p);
+				}
+				
+				DrawLogWindow();
+				
+				// periodically tell the server where this player is looking
+				if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
+				{
+					sendPlayerDataClock.restart();
+					sf::Packet p;
+					p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
+					Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+					GetPlayerData().Serialize(s);
+					auto data = s.binary();
+					p << (uint64_t)data.size();
+					p.append(data.data(), data.size());
+					SendPacket(p);
+				}
+				// debug shortcut: place a test image made of tiles
+				if (inputState.Pressed(sf::Keyboard::Key::I))
+				{
+					std::string path = "content/resources/images/borzoi.png";
+					planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
+				}
 			}
 		}
 
-		// debug shortcut: place a test image made of tiles
-		if (inputState.Pressed(sf::Keyboard::Key::I))
-		{
-			std::string path = "content/resources/images/borzoi.png";
-			planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
-		}
+		
 	}
 
 	void Client::DerivedRender()
@@ -91,11 +107,17 @@ namespace cc
 		{
 			return;
 		}
-		sf::View original = renderTarget->getView();
-		planets[activePlanet]->camera.SetView(renderTarget);
-		planets[activePlanet]->Render(renderTarget);
-		DrawOtherPlayers();
-		renderTarget->setView(original);
+		if (showingKnowledgeGraph)
+		{
+			knowledgeGraph->Render(inputState);
+		}else
+		{
+			sf::View original = renderTarget->getView();
+			planets[activePlanet]->camera.SetView(renderTarget);
+			planets[activePlanet]->Render(renderTarget);
+			DrawOtherPlayers();
+			renderTarget->setView(original);
+		}
 	}
 
 	void Client::DisplayPauseMenu()

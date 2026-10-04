@@ -111,4 +111,14 @@ namespace cc
      * @return The colour, fully opaque.
      */
     sf::Color HsvToRgb(float h, float s, float v);
+
+
+    // --- UNDOCUMENTED STUFF ---
+    void DrawArrow(sf::RenderTarget* target,
+               sf::Vector2f start,
+               sf::Vector2f end,
+               sf::Color color = sf::Color::White,
+               float thickness = 6.f,
+               float headLength = 20.f,
+               float headWidth = 16.f);
 }

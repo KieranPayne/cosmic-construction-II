@@ -33,13 +33,13 @@ namespace cc
 
 	void Camera::Update(float dt, InputState &input)
 	{
-		// dragging with the left mouse button pans the camera
-		if (input.Pressed(sf::Mouse::Button::Left))
+		// dragging with the middle mouse button pans the camera
+		if (input.Pressed(sf::Mouse::Button::Middle))
 		{
 			mouseStartPos = input.mousePosition;
 			cameraStartPos = position;
 		}
-		if (input.Down(sf::Mouse::Button::Left))
+		if (input.Down(sf::Mouse::Button::Middle))
 		{
 			sf::Vector2f offset = input.mousePosition - mouseStartPos;
 			offset *= zoom;
@@ -77,14 +77,26 @@ namespace cc
 
 	sf::FloatRect Camera::toFloatRect(sf::RenderTarget *target)
 	{
-		int width = target->getSize().x;
-		int height = target->getSize().y;
-		sf::FloatRect rect = sf::FloatRect({position.x - width * zoom / 2.f, position.y - height * zoom / 2.f}, {width * zoom, height * zoom});
+		float zoomStepSize = 0.0001f;
+		float effectiveZoom = std::round(zoom / zoomStepSize) * zoomStepSize;
+		sf::Vector2f effectivePos{std::round(position.x),std::round(position.y)};
+		float width = static_cast<float>(target->getSize().x);
+		float height = static_cast<float>(target->getSize().y);
 
-		// snap the top-left corner to a multiple of one screen pixel (in world units)
-		double pixelSize = zoom;
+		float viewWidth = width * effectiveZoom;
+		float viewHeight = height * effectiveZoom;
+
+		sf::FloatRect rect(
+			{effectivePos.x - viewWidth / 2.f,
+			 effectivePos.y - viewHeight / 2.f},
+			{viewWidth, viewHeight});
+
+		// Snap the camera to the world-space size of one screen pixel.
+		float pixelSize = effectiveZoom;
+
 		rect.position.x = std::round(rect.position.x / pixelSize) * pixelSize;
 		rect.position.y = std::round(rect.position.y / pixelSize) * pixelSize;
+
 		return rect;
 	}
 

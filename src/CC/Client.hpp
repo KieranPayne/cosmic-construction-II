@@ -3,6 +3,7 @@
 #include "Planet.hpp"
 #include "../State.hpp"
 #include "PlayerData.hpp"
+#include "KnowledgeGraph.hpp"
 namespace cc
 {
     /**
@@ -210,5 +211,10 @@ namespace cc
         /// @brief Returns this client's current player data (username, camera position and zoom, planet and
         ///        window size) for sending to the server.
         PlayerData GetPlayerData();
+
+
+        // --- UNDOCUMENTED STUFF --- 
+        std::unique_ptr<KnowledgeGraph> knowledgeGraph;
+        bool showingKnowledgeGraph = false;
     };
 }

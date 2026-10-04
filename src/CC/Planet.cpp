@@ -321,6 +321,7 @@ namespace cc
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
+		ImGui::Text(("Time: " + std::format("{:.3g}", 1.0 / currFps * 1000.f) + "ms").c_str());
 		const char *currentLabel = "None";
 		switch (currentView)
 		{
@@ -552,7 +553,7 @@ namespace cc
 				}
 				ImGui::EndCombo();
 			}
-			if (inputState.Down(sf::Mouse::Button::Right))
+			if (inputState.Down(sf::Mouse::Button::Left))
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
