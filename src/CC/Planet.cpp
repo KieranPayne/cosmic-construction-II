@@ -107,7 +107,7 @@ namespace cc
 		camera.Update(dt, inputState);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
-		jsonEditor.Draw(this);
+		entityEditor.Draw(this);
 	}
 	std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
 	{

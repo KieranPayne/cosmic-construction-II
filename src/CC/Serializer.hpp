@@ -83,7 +83,8 @@ namespace cc
                 }
                 else
                 {
-                    value = j_.at(name).get<T>();
+                    if (j_.contains(name))
+                        value = j_.at(name).get<T>();
                 }
             }
             else // BINARY
@@ -134,9 +135,13 @@ namespace cc
                 }
                 else
                 {
+                    if (!j_.contains(name))
+                        return;
                     const auto &j = j_.at(name);
-                    value.x = j.at("x").get<T>();
-                    value.y = j.at("y").get<T>();
+                    if (j.contains("x"))
+                        value.x = j.at("x").get<T>();
+                    if (j.contains("y"))
+                        value.y = j.at("y").get<T>();
                 }
             }
             else // BINARY
@@ -174,10 +179,15 @@ namespace cc
                 }
                 else
                 {
+                    if (!j_.contains(name))
+                        return;
                     const auto &j = j_.at(name);
-                    value.x = j.at("x").get<T>();
-                    value.y = j.at("y").get<T>();
-                    value.z = j.at("z").get<T>();
+                    if (j.contains("x"))
+                        value.x = j.at("x").get<T>();
+                    if (j.contains("y"))
+                        value.y = j.at("y").get<T>();
+                    if (j.contains("z"))
+                        value.z = j.at("z").get<T>();
                 }
             }
             else // BINARY
@@ -218,6 +228,8 @@ namespace cc
                 }
                 else
                 {
+                    if (!j_.contains(name))
+                        return;
                     Serializer sub(mode, format, j_.at(name));
                     value.Serialize(sub);
                 }
@@ -251,6 +263,8 @@ namespace cc
                 }
                 else
                 {
+                    if (!j_.contains(name))
+                        return;
                     if (!value)
                         value = new T();
                     Serializer sub(mode, format, j_.at(name));
@@ -291,7 +305,8 @@ namespace cc
                 }
                 else
                 {
-                    value = j_.at(name).get<std::vector<T>>();
+                    if (j_.contains(name))
+                        value = j_.at(name).get<std::vector<T>>();
                 }
             }
             else // BINARY
@@ -341,6 +356,8 @@ namespace cc
                 }
                 else
                 {
+                    if (!j_.contains(name))
+                        return;
                     value.clear();
                     for (auto &elem_json : j_.at(name))
                     {
@@ -391,7 +408,8 @@ namespace cc
                 }
                 else
                 {
-                    value = j_.at(name).get<std::size_t>();
+                    if (j_.contains(name))
+                        value = j_.at(name).get<std::size_t>();
                 }
             }
             else // BINARY
@@ -400,6 +418,62 @@ namespace cc
                     writeRaw(value);
                 else
                     readRaw(value);
+            }
+        }
+
+        /**
+         * @brief Writes or reads an sf::Color. In JSON it is stored as {"r": ..., "g": ..., "b": ..., "a": ...}.
+         *
+         * In BINARY it is 4 bytes, in the order r, g, b, a.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The color to store, or to fill in when reading.
+         * @note sf::Color has no Serialize() function of its own, so it gets its own overload.
+         */
+        void field(const std::string name, sf::Color &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    nlohmann::json j;
+                    // Cast to unsigned so the channels are stored as numbers rather than characters.
+                    j["r"] = static_cast<unsigned>(value.r);
+                    j["g"] = static_cast<unsigned>(value.g);
+                    j["b"] = static_cast<unsigned>(value.b);
+                    j["a"] = static_cast<unsigned>(value.a);
+                    j_[name] = j;
+                }
+                else
+                {
+                    if (!j_.contains(name))
+                        return;
+                    const auto &j = j_.at(name);
+                    if (j.contains("r"))
+                        value.r = static_cast<uint8_t>(j.at("r").get<unsigned>());
+                    if (j.contains("g"))
+                        value.g = static_cast<uint8_t>(j.at("g").get<unsigned>());
+                    if (j.contains("b"))
+                        value.b = static_cast<uint8_t>(j.at("b").get<unsigned>());
+                    if (j.contains("a"))
+                        value.a = static_cast<uint8_t>(j.at("a").get<unsigned>());
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    writeRaw(value.r);
+                    writeRaw(value.g);
+                    writeRaw(value.b);
+                    writeRaw(value.a);
+                }
+                else
+                {
+                    readRaw(value.r);
+                    readRaw(value.g);
+                    readRaw(value.b);
+                    readRaw(value.a);
+                }
             }
         }
 

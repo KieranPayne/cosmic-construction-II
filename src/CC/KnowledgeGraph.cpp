@@ -1,4 +1,3 @@
-
 #include "KnowledgeGraph.hpp"
 
 #include "Utils.hpp"
@@ -10,6 +9,8 @@ namespace cc
     KnowledgeGraph::KnowledgeGraph(sf::RenderTarget *renderTarget)
     {
         this->renderTarget = renderTarget;
+        // Change this path to your font file.
+        fontLoaded = font.openFromFile("content/resources/fonts/default font.ttf");
         LoadFromFile();
     }
 
@@ -21,7 +22,7 @@ namespace cc
         // Edit mode dropdown
         ImGui::Text("Edit Mode");
 
-        const char *editModes[] = {"Add", "Remove", "Move"};
+        const char *editModes[] = {"Add", "Remove", "Move", "Edit Data"};
         int currentMode = static_cast<int>(editMode);
 
         if (ImGui::Combo("", &currentMode, editModes, IM_ARRAYSIZE(editModes)))
@@ -31,16 +32,24 @@ namespace cc
             // Cancel any pending connection creation when changing modes.
             connectionStartIndex = -1;
             moving = false;
+            selectedNodeIndex = -1;
+            selectedConnectionIndex = -1;
+            placingNode = false;
         }
         ImGui::End();
 
-        camera.Update(dt, inputState);
+        // The canvas is locked while the New Node popup is open.
+        if (!placingNode)
+        {
+            camera.Update(dt, inputState);
+        }
 
         int hoverIndex = HoveringNodeIndex(inputState);
 
         if (editMode == EditMode::ADD)
         {
-            if (inputState.Pressed(sf::Mouse::Button::Left))
+            // Clicks on the canvas are ignored while the new node's widget is open.
+            if (!placingNode && inputState.Pressed(sf::Mouse::Button::Left))
             {
                 if (connectionStartIndex != -1)
                 {
@@ -62,16 +71,23 @@ namespace cc
                 {
                     if (hoverIndex == -1)
                     {
-                        Node n(nodeColor);
-                        n.position = camera.ToWorldPos(
+                        // Open the widget; the node is added when "Done" is pressed.
+                        pendingNode = Node();
+                        pendingNode.position = camera.ToWorldPos(
                             inputState.mousePosition, renderTarget);
-                        nodes.push_back(n);
+                        placingNode = true;
+                        newNodeJustOpened = true;
                     }
                     else
                     {
                         connectionStartIndex = hoverIndex;
                     }
                 }
+            }
+
+            if (placingNode)
+            {
+                DrawNewNodeEditor();
             }
         }
         else if (editMode == EditMode::REMOVE)
@@ -109,6 +125,18 @@ namespace cc
                     // Remove the node itself.
                     nodes.erase(nodes.begin() + hoverIndex);
 
+                    selectedConnectionIndex = -1;
+
+                    // Keep the editor selection pointing at the same node.
+                    if (selectedNodeIndex == hoverIndex)
+                    {
+                        selectedNodeIndex = -1;
+                    }
+                    else if (selectedNodeIndex > hoverIndex)
+                    {
+                        --selectedNodeIndex;
+                    }
+
                     // Cancel any pending connection creation.
                     connectionStartIndex = -1;
                 }
@@ -122,6 +150,7 @@ namespace cc
                     {
                         connections.erase(
                             connections.begin() + connectionIndex);
+                        selectedConnectionIndex = -1;
                     }
                 }
             }
@@ -133,6 +162,7 @@ namespace cc
                 if (hoverIndex != -1)
                 {
                     moving = true;
+                    moveIndex = hoverIndex;
                     moveMouseStartPos = camera.ToWorldPos(inputState.mousePosition, renderTarget);
                     moveNodeStartPos = nodes[hoverIndex].position;
                 }
@@ -140,13 +170,143 @@ namespace cc
             if (moving)
             {
                 sf::Vector2f newPos = camera.ToWorldPos(inputState.mousePosition, renderTarget);
-                nodes[hoverIndex].position = moveNodeStartPos + newPos - moveMouseStartPos;
+                nodes[moveIndex].position = moveNodeStartPos + newPos - moveMouseStartPos;
                 if (inputState.Released(sf::Mouse::Button::Left))
                 {
                     moving = false;
                 }
             }
         }
+        else if (editMode == EditMode::EDIT)
+        {
+            // Ignore clicks that land on an ImGui window (including the node editor itself).
+            if (inputState.Pressed(sf::Mouse::Button::Left) &&
+                !ImGui::GetIO().WantCaptureMouse)
+            {
+                // Clicking empty space keeps the current selection; close the widget to deselect.
+                if (hoverIndex != -1)
+                {
+                    selectedNodeIndex = hoverIndex;
+                    selectedConnectionIndex = -1;
+                }
+                else
+                {
+                    int connectionIndex = HoveringConnectionIndex(inputState);
+                    if (connectionIndex != -1)
+                    {
+                        selectedConnectionIndex = connectionIndex;
+                        selectedNodeIndex = -1;
+                    }
+                }
+            }
+            DrawSelectionEditor();
+        }
+    }
+
+    void KnowledgeGraph::DrawSelectionEditor()
+    {
+        if (selectedNodeIndex >= static_cast<int>(nodes.size()))
+        {
+            selectedNodeIndex = -1;
+        }
+        if (selectedConnectionIndex >= static_cast<int>(connections.size()))
+        {
+            selectedConnectionIndex = -1;
+        }
+        if (selectedNodeIndex < 0 && selectedConnectionIndex < 0)
+        {
+            return;
+        }
+
+        bool open = true;
+        ImGui::SetNextWindowPos({0, 100}, ImGuiCond_Once);
+        ImGui::SetNextWindowSize({300, 250}, ImGuiCond_Once);
+        ImGui::Begin("Data Editor", &open);
+
+        if (selectedNodeIndex >= 0)
+        {
+            EditObject(nodes[selectedNodeIndex], "node");
+        }
+        else
+        {
+            EditObject(connections[selectedConnectionIndex], "connection");
+        }
+
+        ImGui::End();
+
+        if (!open)
+        {
+            selectedNodeIndex = -1;
+            selectedConnectionIndex = -1;
+        }
+    }
+
+    void KnowledgeGraph::DrawNewNodeEditor()
+    {
+        if (newNodeJustOpened)
+        {
+            ImGui::OpenPopup("New Node");
+        }
+
+        // Centre of the screen. The modal popup dims and blocks everything behind it.
+        ImVec2 display = ImGui::GetIO().DisplaySize;
+        ImGui::SetNextWindowPos(
+            ImVec2(display.x * 0.5f, display.y * 0.5f),
+            ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(350, 350), ImGuiCond_Appearing);
+
+        if (!ImGui::BeginPopupModal("New Node", nullptr, ImGuiWindowFlags_NoCollapse))
+        {
+            // Closed some other way (e.g. Escape): cancel.
+            placingNode = false;
+            return;
+        }
+
+        // Fields fill the window, leaving room for the Done button underneath.
+        float footerHeight = ImGui::GetStyle().ItemSpacing.y * 2.f + ImGui::GetFrameHeight() + 1.f;
+        ImGui::BeginChild("fields", ImVec2(0, -footerHeight));
+        EditObject(pendingNode, "node", newNodeJustOpened);
+        ImGui::EndChild();
+
+        newNodeJustOpened = false;
+
+        ImGui::Separator();
+        if (ImGui::Button("Done"))
+        {
+            nodes.push_back(pendingNode);
+            placingNode = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+
+    void KnowledgeGraph::DrawNodeLabel(Node &node)
+    {
+        if (node.Name().empty())
+        {
+            return;
+        }
+
+        // The text is 16 world units tall. Rasterise the glyphs at the size they appear on screen
+        // (zoom * 16 pixels), then scale back down to world units, so they stay sharp at any zoom.
+        // Rounding to a multiple of 4 limits how many glyph sizes get cached.
+        const float worldTextSize = 16.f;
+        float zoom = static_cast<float>(renderTarget->getSize().x) /
+                     renderTarget->getView().getSize().x;
+        int pixelSize = static_cast<int>(std::lround(worldTextSize * zoom / 4.f)) * 4;
+        pixelSize = std::clamp(pixelSize, 8, 256);
+
+        sf::Text text(font, node.Name(), pixelSize);
+        text.setScale({worldTextSize / pixelSize, worldTextSize / pixelSize});
+        text.setFillColor(sf::Color::White);
+
+        sf::FloatRect bounds = text.getLocalBounds();
+        text.setOrigin({bounds.position.x + bounds.size.x / 2.f,
+                        bounds.position.y + bounds.size.y});
+        text.setPosition({node.position.x, node.position.y - node.radius - 4.f});
+
+        renderTarget->draw(text);
     }
 
     void KnowledgeGraph::Render(InputState &inputState)
@@ -154,9 +314,12 @@ namespace cc
         sf::View original = renderTarget->getView();
         camera.SetView(renderTarget);
 
-        for (auto &c : connections)
+        for (int i = 0; i < static_cast<int>(connections.size()); ++i)
         {
-            c.Draw(renderTarget, nodes);
+            connections[i].Draw(
+                renderTarget, nodes,
+                HasReverseConnection(i),
+                i == selectedConnectionIndex);
         }
 
         for (auto &n : nodes)
@@ -164,10 +327,43 @@ namespace cc
             n.Draw(renderTarget);
         }
 
+        // The node waiting for "Done" in the New Node widget.
+        if (placingNode)
+        {
+            pendingNode.Draw(renderTarget);
+        }
+
+        // Node names above the nodes.
+        if (fontLoaded)
+        {
+            for (auto &n : nodes)
+            {
+                DrawNodeLabel(n);
+            }
+            if (placingNode)
+            {
+                DrawNodeLabel(pendingNode);
+            }
+        }
+
+        // Outline the node open in the editor.
+        if (selectedNodeIndex >= 0 &&
+            selectedNodeIndex < static_cast<int>(nodes.size()))
+        {
+            Node &selected = nodes[selectedNodeIndex];
+            sf::CircleShape outline(selected.radius);
+            outline.setOrigin({selected.radius, selected.radius});
+            outline.setPosition(selected.position);
+            outline.setFillColor(sf::Color::Transparent);
+            outline.setOutlineColor(sf::Color::White);
+            outline.setOutlineThickness(3.f);
+            renderTarget->draw(outline);
+        }
+
         if (connectionStartIndex != -1)
         {
             Connection c(sf::Color::White);
-            Node n(sf::Color::Transparent);
+            Node n;
 
             n.position = camera.ToWorldPos(
                 inputState.mousePosition, renderTarget);
@@ -187,9 +383,8 @@ namespace cc
         renderTarget->setView(original);
     }
 
-    KnowledgeGraph::Node::Node(sf::Color color)
+    KnowledgeGraph::Node::Node()
     {
-        this->color = color;
         this->position = {0.f, 0.f};
         radius = 20.f;
         circle = sf::CircleShape(radius);
@@ -198,6 +393,7 @@ namespace cc
     void KnowledgeGraph::Node::Serialize(Serializer &s)
     {
         s.field("position", position);
+        s.field("data",data);
     }
 
     void KnowledgeGraph::Node::Draw(sf::RenderTarget *target)
@@ -205,7 +401,7 @@ namespace cc
         circle.setPosition(position);
         circle.setRadius(radius);
         circle.setOrigin({radius, radius});
-        circle.setFillColor(color);
+        circle.setFillColor(data.color);
         target->draw(circle);
     }
 
@@ -221,10 +417,34 @@ namespace cc
     {
         s.field("start", start);
         s.field("end", end);
+        s.field("weight", weight);
+    }
+
+    sf::Vector2f KnowledgeGraph::Connection::OffsetVector(
+        const std::vector<Node> &nodes) const
+    {
+        if (start < 0 || start >= static_cast<int>(nodes.size()) ||
+            end < 0 || end >= static_cast<int>(nodes.size()))
+        {
+            return {0.f, 0.f};
+        }
+
+        sf::Vector2f delta = nodes[end].position - nodes[start].position;
+
+        if (delta.lengthSquared() == 0.f)
+        {
+            return {0.f, 0.f};
+        }
+
+        // Perpendicular to this connection's own direction, so the reverse
+        // connection (opposite direction) is pushed to the opposite side.
+        sf::Vector2f dir = delta.normalized();
+        return sf::Vector2f(-dir.y, dir.x) * (thickness * 1.5f);
     }
 
     void KnowledgeGraph::Connection::Draw(
-        sf::RenderTarget *target, std::vector<Node> &nodes)
+        sf::RenderTarget *target, std::vector<Node> &nodes,
+        bool offsetLine, bool highlight)
     {
         if (start < 0 || start >= static_cast<int>(nodes.size()) ||
             end < 0 || end >= static_cast<int>(nodes.size()))
@@ -247,43 +467,72 @@ namespace cc
 
         sf::Vector2f dirVector = delta.normalized();
 
+        if (offsetLine)
+        {
+            sf::Vector2f offset = OffsetVector(nodes);
+            startPos += offset;
+            endPos += offset;
+        }
+
         startPos += dirVector * (nodes[start].radius - thickness);
         endPos -= dirVector * nodes[end].radius;
 
         DrawArrow(
-            target, startPos, endPos, color,
+            target, startPos, endPos,
+            highlight ? sf::Color::Yellow : color,
             thickness, headLength, headWidth);
+    }
+
+    bool KnowledgeGraph::HasReverseConnection(int index)
+    {
+        for (int j = 0; j < static_cast<int>(connections.size()); ++j)
+        {
+            if (j != index &&
+                connections[j].start == connections[index].end &&
+                connections[j].end == connections[index].start)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void KnowledgeGraph::LoadFromFile()
     {
         std::string path =
             SaveManager::GetSavedataDir() + "/knowledge graph.json";
-
-        // std::string path = "content/resources/knowledge graph.json";
-        std::string data = SaveManager::ReadData(path);
-        nlohmann::json json = nlohmann::json::parse(data);
-
-        for (auto &j : json["nodes"])
+        if (!SaveManager::FileExists(path))
         {
-            Serializer s(
+            nodes = {};
+            connections = {};
+        }else
+        {
+
+            // std::string path = "content/resources/knowledge graph.json";
+            std::string data = SaveManager::ReadData(path);
+            nlohmann::json json = nlohmann::json::parse(data);
+            
+            for (auto &j : json["nodes"])
+            {
+                Serializer s(
                 Serializer::Mode::READ,
                 Serializer::Format::JSON, j);
 
-            Node n(nodeColor);
-            n.Serialize(s);
-            nodes.push_back(n);
-        }
-
-        for (auto &j : json["connections"])
-        {
-            Serializer s(
+                Node n;
+                n.Serialize(s);
+                nodes.push_back(n);
+            }
+            
+            for (auto &j : json["connections"])
+            {
+                Serializer s(
                 Serializer::Mode::READ,
                 Serializer::Format::JSON, j);
 
-            Connection c(sf::Color::White);
-            c.Serialize(s);
-            connections.push_back(c);
+                Connection c(sf::Color::White);
+                c.Serialize(s);
+                connections.push_back(c);
+            }
         }
     }
 
@@ -367,8 +616,13 @@ namespace cc
                 continue;
             }
 
-            sf::Vector2f start = nodes[connection.start].position;
-            sf::Vector2f end = nodes[connection.end].position;
+            // Match the sideways shift used when drawing reciprocal connections.
+            sf::Vector2f offset = HasReverseConnection(i)
+                                      ? connection.OffsetVector(nodes)
+                                      : sf::Vector2f(0.f, 0.f);
+
+            sf::Vector2f start = nodes[connection.start].position + offset;
+            sf::Vector2f end = nodes[connection.end].position + offset;
 
             sf::Vector2f segment = end - start;
             sf::Vector2f toMouse = mouseWorld - start;
@@ -414,5 +668,15 @@ namespace cc
         }
 
         return -1;
+    }
+    KnowledgeNodeData::KnowledgeNodeData()
+    {
+
+    }
+    void KnowledgeNodeData::Serialize(Serializer& s)
+    {
+        s.field("name",name);
+        s.field("description",description);
+        s.field("color",color);
     }
 }
