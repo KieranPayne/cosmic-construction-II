@@ -25,7 +25,7 @@ namespace cc
         const char *editModes[] = {"Add", "Remove", "Move", "Edit Data"};
         int currentMode = static_cast<int>(editMode);
 
-        if (ImGui::Combo("", &currentMode, editModes, IM_ARRAYSIZE(editModes)))
+        if (ImGui::Combo("##test", &currentMode, editModes, IM_ARRAYSIZE(editModes)))
         {
             editMode = static_cast<EditMode>(currentMode);
 
