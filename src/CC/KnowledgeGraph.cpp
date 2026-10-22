@@ -304,14 +304,35 @@ namespace cc
         sf::FloatRect bounds = text.getLocalBounds();
         text.setOrigin({bounds.position.x + bounds.size.x / 2.f,
                         bounds.position.y + bounds.size.y});
-        text.setPosition({node.position.x, node.position.y - node.radius - 4.f});
 
+        // Translucent black box behind the text. Sizes are in world units.
+        const float padding = 3.f;
+        float textWidth = bounds.size.x * text.getScale().x;
+        float textHeight = bounds.size.y * text.getScale().y;
+
+        sf::Vector2f textPos = {node.position.x,
+                                node.position.y - node.radius - 4.f - padding};
+        text.setPosition(textPos);
+
+        sf::RectangleShape box({textWidth + padding * 2.f, textHeight + padding * 2.f});
+        box.setPosition({textPos.x - textWidth / 2.f - padding,
+                         textPos.y - textHeight - padding});
+        box.setFillColor(sf::Color(0, 0, 0, 150));
+
+        renderTarget->draw(box);
         renderTarget->draw(text);
     }
 
     void KnowledgeGraph::Render(InputState &inputState)
     {
         sf::View original = renderTarget->getView();
+
+        // Dark grey background, drawn in screen space before the camera view is applied.
+        renderTarget->setView(renderTarget->getDefaultView());
+        sf::RectangleShape background(sf::Vector2f(renderTarget->getSize()));
+        background.setFillColor(sf::Color(45, 45, 48));
+        renderTarget->draw(background);
+
         camera.SetView(renderTarget);
 
         for (int i = 0; i < static_cast<int>(connections.size()); ++i)
