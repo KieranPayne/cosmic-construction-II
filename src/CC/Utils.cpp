@@ -340,7 +340,10 @@ namespace cc
 	{
 		return {Lerp(a.x, b.x, t), Lerp(a.y, b.y, t)};
 	}
-
+	sf::Color Lerp(sf::Color a, sf::Color b, float t)
+	{
+		return {Lerp(a.r, b.r, t), Lerp(a.g, b.g, t), Lerp(a.b,b.b,t), Lerp(a.a,b.a,t)};
+	}
 	sf::Color HsvToRgb(float h, float s, float v)
 	{
 		// Wrap hue into [0, 360) and clamp s and v to [0, 1]

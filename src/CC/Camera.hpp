@@ -96,5 +96,9 @@ namespace cc
 		 * @param s The serializer to use (its mode decides whether this reads or writes).
 		 */
 		void Serialize(Serializer &s);
+
+		//--- UNDOCUMENTED ---
+		bool panning = false;
+		bool GetPanning();
 	};
 }

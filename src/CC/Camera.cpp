@@ -33,14 +33,16 @@ namespace cc
 
 	void Camera::Update(float dt, InputState &input)
 	{
+		panning = false;
 		// dragging with the middle mouse button pans the camera
-		if (input.Pressed(sf::Mouse::Button::Middle))
+		if (input.Pressed(sf::Mouse::Button::Middle) || (input.Down(sf::Keyboard::Key::Space) && input.Pressed(sf::Mouse::Button::Left)))
 		{
 			mouseStartPos = input.mousePosition;
 			cameraStartPos = position;
 		}
-		if (input.Down(sf::Mouse::Button::Middle))
+		if (input.Down(sf::Mouse::Button::Middle) || (input.Down(sf::Keyboard::Key::Space) && input.Down(sf::Mouse::Button::Left)))
 		{
+			panning = true;
 			sf::Vector2f offset = input.mousePosition - mouseStartPos;
 			offset *= zoom;
 			position = cameraStartPos - offset;
@@ -116,5 +118,9 @@ namespace cc
 	sf::Vector2f Camera::ToWorldPos(sf::Vector2f screenPosition, sf::RenderTarget *target)
 	{
 		return (screenPosition - (sf::Vector2f)target->getSize() / 2.f) * zoom + position;
+	}
+	bool Camera::GetPanning()
+	{
+		return panning;
 	}
 }

@@ -4,15 +4,37 @@
 #include "../Input/Input.hpp"
 #include "Serializer.hpp"
 #include "JsonEditor.hpp"
+#include "KnowledgeEditor.hpp"
+#include "UnlockRequirement.hpp"
 namespace cc
 {
+    
+
     class KnowledgeNodeData
     {
         private:
         std::string name = "";
         std::string description = "";
         public:
-        sf::Color color = sf::Color(226,121,16);
+        enum class Type : uint8_t
+        {
+            ITEM,
+            ACTION,
+            CONCEPT
+        };
+        enum class UnlockMethod : uint8_t
+        {
+            OBSERVATION,
+            COMBINATION,
+            THRESHOLD,
+            STUDY
+        };
+        sf::Color GetColor();
+        Type type = Type::ITEM;
+        UnlockMethod unlockMethod = UnlockMethod::COMBINATION;
+        /// Everything that must be true at once for a human to discover this technology.
+        std::vector<UnlockRequirement> requirements;
+        // sf::Color color = sf::Color(226,121,16);
         const std::string &GetName() const { return name; }
         KnowledgeNodeData();
         void Serialize(Serializer& s);
@@ -72,7 +94,7 @@ namespace cc
         /// Connection shown in the data editor widget (EDIT mode). -1 when none is selected.
         int selectedConnectionIndex = -1;
         /// Draws any node's data as editable fields, so the widget never needs updating when the data changes.
-        JsonEditor jsonEditor;
+        KnowledgeEditor jsonEditor;
         /// True while a newly added node is waiting in the "New Node" widget for "Done".
         bool placingNode = false;
         /// True for the first frame of the "New Node" popup, to open it and its root tree node.
@@ -87,6 +109,7 @@ namespace cc
         template <typename T>
         void EditObject(T &object, const char *label, bool openRoot = false)
         {
+            RefreshNodeNames();
             Serializer sw(Serializer::Mode::WRITE, Serializer::Format::JSON);
             object.Serialize(sw);
             nlohmann::json j = sw.json();
@@ -111,6 +134,8 @@ namespace cc
         void DrawNewNodeEditor();
         /// Draws a node's name centred above it.
         void DrawNodeLabel(Node &node);
+        /// Gives the editor the current node names, for its node dropdowns.
+        void RefreshNodeNames();
     public:
         KnowledgeGraph(sf::RenderTarget *renderTarget);
         void LoadFromFile();

@@ -49,7 +49,7 @@ namespace cc
         if (editMode == EditMode::ADD)
         {
             // Clicks on the canvas are ignored while the new node's widget is open.
-            if (!placingNode && inputState.Pressed(sf::Mouse::Button::Left))
+            if (!placingNode && inputState.Pressed(sf::Mouse::Button::Left) && !camera.GetPanning())
             {
                 if (connectionStartIndex != -1)
                 {
@@ -92,7 +92,7 @@ namespace cc
         }
         else if (editMode == EditMode::REMOVE)
         {
-            if (inputState.Pressed(sf::Mouse::Button::Left))
+            if (inputState.Pressed(sf::Mouse::Button::Left) && !camera.GetPanning())
             {
                 // Prefer removing a node if the mouse is over one.
                 if (hoverIndex != -1)
@@ -157,7 +157,7 @@ namespace cc
         }
         else if (editMode == EditMode::MOVE)
         {
-            if (inputState.Pressed(sf::Mouse::Button::Left))
+            if (inputState.Pressed(sf::Mouse::Button::Left) && !camera.GetPanning())
             {
                 if (hoverIndex != -1)
                 {
@@ -180,7 +180,7 @@ namespace cc
         else if (editMode == EditMode::EDIT)
         {
             // Ignore clicks that land on an ImGui window (including the node editor itself).
-            if (inputState.Pressed(sf::Mouse::Button::Left) &&
+            if (inputState.Pressed(sf::Mouse::Button::Left) && !camera.GetPanning() &&
                 !ImGui::GetIO().WantCaptureMouse)
             {
                 // Clicking empty space keeps the current selection; close the widget to deselect.
@@ -279,6 +279,15 @@ namespace cc
         }
 
         ImGui::EndPopup();
+    }
+
+    void KnowledgeGraph::RefreshNodeNames()
+    {
+        jsonEditor.nodeNames.clear();
+        for (auto &n : nodes)
+        {
+            jsonEditor.nodeNames.push_back(n.Name());
+        }
     }
 
     void KnowledgeGraph::DrawNodeLabel(Node &node)
@@ -422,10 +431,23 @@ namespace cc
         circle.setPosition(position);
         circle.setRadius(radius);
         circle.setOrigin({radius, radius});
-        circle.setFillColor(data.color);
+        circle.setFillColor(data.GetColor());
         target->draw(circle);
     }
-
+    sf::Color KnowledgeNodeData::GetColor()
+    {
+        if (type == Type::ACTION)
+        {
+            return sf::Color(235, 94, 52);
+        }else if (type == Type::ITEM)
+        {
+            return sf::Color(55, 235, 49);
+        }else if (type == Type::CONCEPT)
+        {
+            return sf::Color(49, 142, 235);
+        }
+        return sf::Color::White;
+    }
     KnowledgeGraph::Connection::Connection(sf::Color color)
     {
         thickness = 3.f;
@@ -497,10 +519,11 @@ namespace cc
 
         startPos += dirVector * (nodes[start].radius - thickness);
         endPos -= dirVector * nodes[end].radius;
-
+    sf::Color minWeightColor(color.r,color.g,color.b,100);
+        sf::Color drawColor = Lerp(minWeightColor,color,weight);
         DrawArrow(
             target, startPos, endPos,
-            highlight ? sf::Color::Yellow : color,
+            highlight ? sf::Color::Yellow : drawColor,
             thickness, headLength, headWidth);
     }
 
@@ -698,6 +721,13 @@ namespace cc
     {
         s.field("name",name);
         s.field("description",description);
-        s.field("color",color);
+        uint8_t m = (uint8_t)unlockMethod;
+        uint8_t t = (uint8_t)type;
+        s.field("unlockMethod",m);
+        s.field("type",t);
+        unlockMethod = (UnlockMethod)m;
+        type = (Type)t;
+        s.field("requirements", requirements);
+
     }
 }
