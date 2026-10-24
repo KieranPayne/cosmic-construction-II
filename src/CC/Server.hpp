@@ -2,6 +2,7 @@
 #include "../PCH.hpp"
 #include "Planet.hpp"
 #include "PlayerData.hpp"
+#include "KnowledgeDatabase.hpp"
 namespace cc
 {
     /**
@@ -288,5 +289,13 @@ namespace cc
         std::mutex mutex;
         /// The server thread. Joined by Stop().
         std::thread thread;
+
+        //---UNDOCUMENTED---
+        KnowledgeDatabase knowledgeDatabase;
+        public:
+        //pass path without file extension pls
+        void LoadKnowledgeDatabase(std::string path);
+        //pass path without file extension pls
+        void SaveKnowledgeDatabase(std::string path);
     };
 }

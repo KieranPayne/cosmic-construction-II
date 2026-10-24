@@ -82,5 +82,9 @@ namespace cc
         /// Client to server: bytes (the sender's serialized player data: camera, planet, etc.).
         /// Server to the other clients: string username of the sender, then bytes (their player data).
         UPDATE_PLAYER_DATA,
+
+        //---UNDOCUMENTED---
+        REQUEST_UPDATE_KNOWLEDGE_DB,
+        UPDATE_KNOWLEDGE_DB
     };
 }

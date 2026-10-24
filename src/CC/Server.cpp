@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include "CSMessage.hpp"
 #include "Utils.hpp"
+#include "SaveManager.hpp"
 namespace cc
 {
     void Server::Start(unsigned short port)
@@ -297,6 +298,21 @@ namespace cc
             playerData.username = name;
             if (playerData.planet < 0 || playerData.planet >= (int)planets.size())
                 playerData.planet = 0;
+        }else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
+        {
+            Serializer s = ReadSerializerFromPacket(packet);
+            sf::Packet out;
+            out << (uint16_t)CSMessageType::UPDATE_KNOWLEDGE_DB;
+            AppendSerializerToPacket(out,s);
+            Broadcast(out,{clientId});
+            knowledgeDatabase.Serialize(s);
+            if (SaveManager::debuggingKnowledgeGraph)
+            {
+                SaveKnowledgeDatabase(SaveManager::GetSavedataDir() + "/knowledge graph");
+            }else
+            {
+                SaveKnowledgeDatabase(SaveManager::savePath + "/knowledge graph");
+            }
         }
     }
 
@@ -382,7 +398,9 @@ namespace cc
         {
             AppendEntityToPacket(packet, planet->entities[i].get());
         }
-
+        Serializer db(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+        knowledgeDatabase.Serialize(db);
+        AppendSerializerToPacket(packet,db);
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;
@@ -511,5 +529,16 @@ namespace cc
                 std::cerr << "Server thread error: " << e.what() << '\n';
             }
         }
+    }
+    void Server::LoadKnowledgeDatabase(std::string path)
+    {
+        Serializer s = SaveManager::LoadSerializerFromFile(path);
+        knowledgeDatabase.Serialize(s);
+    }
+    void Server::SaveKnowledgeDatabase(std::string path)
+    {
+        Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+        knowledgeDatabase.Serialize(s);
+        SaveManager::WriteSerializerToFile(s, path);
     }
 }

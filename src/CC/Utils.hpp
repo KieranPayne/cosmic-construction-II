@@ -2,6 +2,7 @@
 #include "../PCH.hpp"
 #include "../json.hpp"
 #include "../imgui/imgui.h"
+#include "Serializer.hpp"
 namespace cc
 {
     class Entity;
@@ -129,4 +130,7 @@ namespace cc
                float thickness = 6.f,
                float headLength = 20.f,
                float headWidth = 16.f);
+
+    void AppendSerializerToPacket(sf::Packet& packet, Serializer& s);
+    Serializer ReadSerializerFromPacket(sf::Packet& packet);
 }

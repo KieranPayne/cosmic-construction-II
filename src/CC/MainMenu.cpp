@@ -49,6 +49,13 @@ namespace cc
 				currentState = TITLE_SCREEN;
 			}
 		}
+		if (pendingAction)
+		{
+			auto action = std::move(pendingAction);  // move out of the member first
+			pendingAction = nullptr;
+			action();                                // may destroy *this; return immediately
+			return;                                  // do NOT touch any members after this
+		}
 	}
 	void MainMenu::DisplayTitleScreen()
 	{
@@ -92,7 +99,8 @@ namespace cc
 		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x * 0.5f, windowCenter.y + 20 + buttonSize.y));
 		if (ImGui::Button("Quick Start", buttonSize))
 		{
-			SaveManager::CreateSave("quick start save", "");
+			pendingAction = []
+			{ SaveManager::CreateSave("quick start save", ""); };
 		}
 
 		ImGui::End();
@@ -161,7 +169,9 @@ namespace cc
 		ImGui::InputText("##Seed", seed, IM_ARRAYSIZE(seed));
 		if (ImGui::Button("Done"))
 		{
-			SaveManager::CreateSave(saveName, seed);
+			std::string name = saveName, s = seed; // copy! members may be gone later
+			pendingAction = [name, s]
+			{ SaveManager::CreateSave(name.c_str(), s.c_str()); };
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Back"))
@@ -273,7 +283,9 @@ namespace cc
 						break;
 					}
 				}
-				SaveManager::LoadServer(index);
+				int idx = index;
+				pendingAction = [idx]
+				{ SaveManager::LoadServer(idx); };
 			}
 			ImGui::EndGroup();
 
@@ -322,7 +334,8 @@ namespace cc
 		ImGui::SetCursorPos(ImVec2(windowCenter.x - buttonSize.x - 10, windowCenter.y + 10));
 		if (ImGui::Button("Connect", buttonSize))
 		{
-			ConnectToHost();
+			pendingAction = [this]
+			{ ConnectToHost(); };
 			ImGui::End();
 			return;
 		}
@@ -344,11 +357,17 @@ namespace cc
 	}
 	void MainMenu::ConnectToHost()
 	{
-		auto ipResult = sf::IpAddress::resolve(ipAddress);
-		// TODO: handle an invalid address (value() throws if resolve failed)
-		Client *c = new Client(state->renderTarget);
-		c->ConnectToServer(ipResult.value(), 5000);
-		state = std::unique_ptr<Kosmic::State>(c);
+		std::string ip = ipAddress; // copy before we die
+		auto ipResult = sf::IpAddress::resolve(ip);
+		if (!ipResult) // fixes your TODO too
+		{
+			connectError = "Invalid address";
+			return; // we're still alive here
+		}
+
+		auto c = std::make_unique<Client>(state->renderTarget);
+		c->ConnectToServer(*ipResult, 5000);
+		state = std::move(c);
 	}
 
 	MainMenu::~MainMenu()

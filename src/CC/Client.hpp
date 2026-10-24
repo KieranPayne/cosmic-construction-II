@@ -4,6 +4,7 @@
 #include "../State.hpp"
 #include "PlayerData.hpp"
 #include "KnowledgeGraph.hpp"
+#include "KnowledgeDatabase.hpp"
 namespace cc
 {
     /**
@@ -72,6 +73,7 @@ namespace cc
         void DisplayPauseMenu();
 
     public:
+        KnowledgeDatabase knowledgeDatabase;
         /**
          * @brief Adds a planet to the client.
          * @param planet The planet to add. The client takes ownership and sets the planet's `client` pointer.
@@ -216,5 +218,7 @@ namespace cc
         // --- UNDOCUMENTED STUFF --- 
         std::unique_ptr<KnowledgeGraph> knowledgeGraph;
         bool showingKnowledgeGraph = false;
+        void SendKnowledgeDB();
+        void LoadKnowledgeDB(sf::Packet& packet);
     };
 }

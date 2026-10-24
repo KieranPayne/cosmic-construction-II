@@ -452,4 +452,18 @@ namespace cc
 
 		target->draw(head);
 	}
+
+	void AppendSerializerToPacket(sf::Packet& packet, Serializer& s)
+	{
+		auto data = s.binary();
+		uint64_t numBytes = data.size();
+		packet << numBytes;
+		packet.append(data.data(),data.size());
+	}
+	Serializer ReadSerializerFromPacket(sf::Packet& packet)
+	{
+		std::vector<uint8_t> data = ReadBytesFromPacket(packet);
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+		return s;
+	}
 }

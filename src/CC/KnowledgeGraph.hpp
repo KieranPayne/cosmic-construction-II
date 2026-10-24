@@ -107,7 +107,7 @@ namespace cc
             return false;
         }
         /// All the technology data. The editor reads and edits this directly.
-        KnowledgeDatabase database;
+        KnowledgeDatabase& database;
         Camera camera;
         /// Visual nodes and connections. Each points at its database entry by index.
         std::vector<Node> nodes;
@@ -135,7 +135,7 @@ namespace cc
         void LoadOldFormat(const std::string &path);
 
     public:
-        KnowledgeGraph(sf::RenderTarget *renderTarget);
+        KnowledgeGraph(sf::RenderTarget *renderTarget, KnowledgeDatabase& db);
         void LoadFromFile();
         void SaveToFile();
         void Update(double dt, InputState &inputState);

@@ -99,4 +99,10 @@ namespace cc
         nodes.erase(nodes.begin() + index);
         BuildOutgoingAndIncoming();
     }
+    void KnowledgeDatabase::Serialize(Serializer& s)
+    {
+        s.field("nodes",nodes);
+        s.field("connections",connections);
+        BuildOutgoingAndIncoming();
+    }
 }

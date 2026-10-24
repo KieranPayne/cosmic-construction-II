@@ -17,6 +17,7 @@ namespace cc
 {
 	namespace SaveManager
 	{
+		bool debuggingKnowledgeGraph = true;
 		std::string username = "";
 		Serializer::Format saveFormat = Serializer::Format::JSON;
 		std::string saveName;
@@ -50,6 +51,19 @@ namespace cc
 			savePath = dir + "/" + std::to_string(maxIndex);
 			CreateDirectory(savePath);
 			server = std::make_unique<Server>();
+			std::string knowledgeDBPath;
+			if (debuggingKnowledgeGraph)
+			{
+				knowledgeDBPath = GetSavedataDir() + "/knowledge graph";
+				if (!FileExists(knowledgeDBPath + ".json"))
+				{
+					knowledgeDBPath = "content/resources/knowledge graph";
+				}
+			}else
+			{
+				knowledgeDBPath = "content/resources/knowledge graph";
+			}
+			server->LoadKnowledgeDatabase(knowledgeDBPath);
 
 			const bool randomize = false;
 			if (seed == "" && randomize)
@@ -85,6 +99,15 @@ namespace cc
 			nlohmann::json j = nlohmann::json::parse(ReadData(savePath + "/metadata.json"));
 			saveName = j["saveName"];
 			server = std::make_unique<Server>();
+			std::string knowledgeDBPath;
+			if (debuggingKnowledgeGraph)
+			{
+				knowledgeDBPath = GetSavedataDir() + "/knowledge graph";
+			}else
+			{
+				knowledgeDBPath = savePath + "/knowledge graph";
+			}
+			server->LoadKnowledgeDatabase(knowledgeDBPath);
 			Serializer s = LoadSerializerFromFile(savePath + "/players");
 			s.field("players", server->allPlayers);
 			server->SetSeed(j["seed"]);
@@ -105,6 +128,15 @@ namespace cc
 			{
 				p->Save();
 			}
+			std::string knowledgeDBPath;
+			if (debuggingKnowledgeGraph)
+			{
+				knowledgeDBPath = GetSavedataDir() + "/knowledge graph";
+			}else
+			{
+				knowledgeDBPath = savePath = "/knowledge graph";
+			}
+			server->SaveKnowledgeDatabase(knowledgeDBPath);
 			Serializer s(Serializer::Mode::WRITE, saveFormat);
 			for (auto &c : server->clients)
 				if (c.joined)

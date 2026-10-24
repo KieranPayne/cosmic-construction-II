@@ -22,6 +22,7 @@ namespace cc
         /// The local player's username.
         extern std::string username;
 
+
         // ---- saves ----
 
         /**
@@ -172,5 +173,8 @@ namespace cc
          * @param username The name to save.
          */
         void WriteUsername(std::string username);
+
+        //---UNDOCUMENTED---
+        extern bool debuggingKnowledgeGraph;
     }
 }

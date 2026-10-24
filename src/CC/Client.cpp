@@ -12,7 +12,7 @@ namespace cc
 		activePlanet = 0;
 		AddPlanet(new Planet());
 		sendPlayerDataClock.start();
-		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget);
+		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget,knowledgeDatabase);
 	}
 
 	void Client::AddPlanet(Planet *planet)
@@ -47,6 +47,7 @@ namespace cc
 				if (!showingKnowledgeGraph)
 				{
 					knowledgeGraph->SaveToFile();
+					SendKnowledgeDB();
 				}
 			}
 			if (showingKnowledgeGraph)
@@ -270,7 +271,10 @@ namespace cc
 			}
 			break;
 		}
-
+		case CSMessageType::UPDATE_KNOWLEDGE_DB:
+		{
+			LoadKnowledgeDB(packet);
+		}
 		default:
 			break;
 		}
@@ -334,7 +338,9 @@ namespace cc
 			Entity *e = LoadEntityFromPacket(packet);
 			planet.AddEntity(e, true);
 		}
-
+		Serializer db = ReadSerializerFromPacket(packet);
+		knowledgeDatabase.Serialize(db);
+		knowledgeGraph->LoadFromFile();
 		std::string msg = "Join data processed. Other players:";
 		for (auto &p : otherPlayers)
 		{
@@ -595,6 +601,20 @@ namespace cc
 			else
 				break;
 		}
+	}
+	void Client::SendKnowledgeDB()
+	{
+		sf::Packet packet;
+		packet << (uint16_t)CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB;
+		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		knowledgeDatabase.Serialize(s);
+		AppendSerializerToPacket(packet,s);
+		SendPacket(packet);
+	}
+	void Client::LoadKnowledgeDB(sf::Packet& packet)
+	{
+		Serializer s = ReadSerializerFromPacket(packet);
+		knowledgeDatabase.Serialize(s);
 	}
 
 }

@@ -6,12 +6,12 @@
 
 namespace cc
 {
-    KnowledgeGraph::KnowledgeGraph(sf::RenderTarget *renderTarget)
+    KnowledgeGraph::KnowledgeGraph(sf::RenderTarget *renderTarget, KnowledgeDatabase &db) : database(db)
     {
         this->renderTarget = renderTarget;
         // Change this path to your font file.
         fontLoaded = font.openFromFile("content/resources/fonts/default font.ttf");
-        LoadFromFile();
+        // LoadFromFile();
     }
 
     void KnowledgeGraph::Update(double dt, InputState &inputState)
@@ -593,55 +593,51 @@ namespace cc
 
     void KnowledgeGraph::LoadFromFile()
     {
-        std::string dir = SaveManager::GetSavedataDir();
-        std::string databasePath = dir + "/knowledge database.json";
-        std::string layoutPath = dir + "/knowledge layout.json";
-        std::string oldPath = dir + "/knowledge graph.json";
+        std::string path;
+        if (SaveManager::debuggingKnowledgeGraph)
+        {
+            path = SaveManager::GetSavedataDir() + "/knowledge layout.json";
+            if (!SaveManager::FileExists(path))
+            {
+                path = "content/resources/knowledge layout.json";
+            }
+        }
+        else
+        {
+            path = "content/resources/knowledge layout.json";
+        }
 
         nodes = {};
         connections = {};
-        database = KnowledgeDatabase();
+        // database = KnowledgeDatabase();
 
-        if (SaveManager::FileExists(databasePath))
+        // Positions come from the layout file.
+        std::vector<Node> layout;
+        nlohmann::json json = nlohmann::json::parse(SaveManager::ReadData(path));
+        Serializer s(Serializer::Mode::READ, Serializer::Format::JSON, json);
+        s.field("nodes", layout);
+
+        // One visual node per database node, in database order. Any without a saved position sit at the origin.
+        for (int i = 0; i < database.NodeCount(); ++i)
         {
-            database.LoadFromFile(databasePath);
-
-            // Positions come from the layout file.
-            std::vector<Node> layout;
-            if (SaveManager::FileExists(layoutPath))
+            Node n;
+            n.dataIndex = i;
+            for (auto &saved : layout)
             {
-                nlohmann::json json = nlohmann::json::parse(SaveManager::ReadData(layoutPath));
-                Serializer s(Serializer::Mode::READ, Serializer::Format::JSON, json);
-                s.field("nodes", layout);
-            }
-
-            // One visual node per database node, in database order. Any without a saved position sit at the origin.
-            for (int i = 0; i < database.NodeCount(); ++i)
-            {
-                Node n;
-                n.dataIndex = i;
-                for (auto &saved : layout)
+                if (saved.dataIndex == i)
                 {
-                    if (saved.dataIndex == i)
-                    {
-                        n.position = saved.position;
-                        break;
-                    }
+                    n.position = saved.position;
+                    break;
                 }
-                nodes.push_back(n);
             }
-
-            for (int i = 0; i < database.ConnectionCount(); ++i)
-            {
-                Connection c(sf::Color::White);
-                c.dataIndex = i;
-                connections.push_back(c);
-            }
+            nodes.push_back(n);
         }
-        else if (SaveManager::FileExists(oldPath))
+
+        for (int i = 0; i < database.ConnectionCount(); ++i)
         {
-            // First run after the split: bring the old file across. It is left untouched on disk.
-            LoadOldFormat(oldPath);
+            Connection c(sf::Color::White);
+            c.dataIndex = i;
+            connections.push_back(c);
         }
     }
 
@@ -676,15 +672,13 @@ namespace cc
 
     void KnowledgeGraph::SaveToFile()
     {
-        std::string dir = SaveManager::GetSavedataDir();
-
-        // The technologies and their connections.
-        database.SaveToFile(dir + "/knowledge database.json");
 
         // Where each node sits in the editor.
         Serializer s(Serializer::Mode::WRITE, Serializer::Format::JSON);
         s.field("nodes", nodes);
-        SaveManager::WriteData(dir + "/knowledge layout.json", s.json().dump(2));
+        std::string savePath = SaveManager::GetSavedataDir() + "/knowledge layout.json";
+
+        SaveManager::WriteData(savePath, s.json().dump(2));
     }
 
     int KnowledgeGraph::HoveringNodeIndex(InputState &inputState)

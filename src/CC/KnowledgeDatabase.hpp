@@ -46,5 +46,6 @@ namespace cc
         void RemoveNode(int index);
         /// Indices of the connections touching a node, highest first (so they can be removed in this order).
         std::vector<int> ConnectionsAttachedTo(int nodeIndex) const;
+        void Serialize(Serializer& s);
     };
 }
