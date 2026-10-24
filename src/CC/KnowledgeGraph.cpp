@@ -41,7 +41,7 @@ namespace cc
         // The canvas is locked while the New Node popup is open.
         if (!placingNode)
         {
-            camera.Update(dt, inputState);
+            camera.Update(dt, inputState, renderTarget);
         }
 
         int hoverIndex = HoveringNodeIndex(inputState);

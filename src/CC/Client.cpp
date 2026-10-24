@@ -308,7 +308,7 @@ namespace cc
 				// this is us: restore our saved planet and camera
 				activePlanet = p.planet;
 				planets[activePlanet]->camera.position = p.cameraPosition;
-				planets[activePlanet]->camera.targetZoom = p.cameraZoom;
+				planets[activePlanet]->camera.zoom = p.cameraZoom;
 				continue;
 			}
 			AddOtherPlayer(p);
@@ -583,7 +583,7 @@ namespace cc
 		PlayerData p;
 		p.username = SaveManager::username;
 		p.cameraPosition = planets[activePlanet]->camera.position;
-		p.cameraZoom = planets[activePlanet]->camera.targetZoom;
+		p.cameraZoom = planets[activePlanet]->camera.zoom;
 		p.planet = activePlanet;
 		p.resolution = (sf::Vector2f)renderTarget->getSize();
 		return p;

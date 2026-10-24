@@ -9,12 +9,10 @@ namespace cc
 	{
 		this->position = position;
 		this->zoom = zoom;
-		targetZoom = zoom;
 		prevMousePos = {0.f, 0.f};
 		// the zoom rate is the (numScrollsToDouble)th root of 2, so that it takes that many scrolls to double the zoom
 		int numScrollsToDouble = 3;
 		zoomRate = std::pow(2.f, 1.f / numScrollsToDouble);
-		zoomSpeed = 25.f;
 		moveSpeed = 32.f;
 	}
 
@@ -22,17 +20,16 @@ namespace cc
 	{
 		position = sf::Vector2f(0.f, 0.f);
 		zoom = 1;
-		targetZoom = zoom;
 		prevMousePos = {0.f, 0.f};
 		// the zoom rate is the (numScrollsToDouble)th root of 2, so that it takes that many scrolls to double the zoom
 		int numScrollsToDouble = 3;
 		zoomRate = std::pow(2.f, 1.f / numScrollsToDouble);
-		zoomSpeed = 25.f;
 		moveSpeed = 512.f;
 	}
 
-	void Camera::Update(float dt, InputState &input)
+	void Camera::Update(float dt, InputState &input, sf::RenderTarget* target)
 	{
+		sf::Vector2f screenCenter = (sf::Vector2f)target->getSize() / 2.f;
 		panning = false;
 		// dragging with the middle mouse button pans the camera
 		if (input.Pressed(sf::Mouse::Button::Middle) || (input.Down(sf::Keyboard::Key::Space) && input.Pressed(sf::Mouse::Button::Left)))
@@ -48,32 +45,42 @@ namespace cc
 			position = cameraStartPos - offset;
 		}
 
-		// scrolling changes the target zoom (scroll up zooms in)
+		// scrolling zooms instantly towards/away from the mouse cursor (scroll up zooms in)
 		if (input.scroll.y != 0 && !input.Down(sf::Keyboard::Key::LControl))
 		{
 			float scrollAmount = std::abs(input.scroll.y);
+			float oldZoom = zoom;
+			float newZoom = zoom;
+
 			if (input.scroll.y > 0)
 			{
-				targetZoom /= ((zoomRate - 1) * scrollAmount) + 1;
+				newZoom /= ((zoomRate - 1) * scrollAmount) + 1;
 			}
 			else
 			{
-				targetZoom *= ((zoomRate - 1) * scrollAmount) + 1;
+				newZoom *= ((zoomRate - 1) * scrollAmount) + 1;
 			}
+
 			// minimum and maximum zoom
-			if (targetZoom < 0.01f)
+			newZoom = std::clamp(newZoom, 0.01f, 8.f);
+
+			if (newZoom != oldZoom)
 			{
-				targetZoom *= zoomRate;
-			}
-			if (targetZoom > 8.f)
-			{
-				targetZoom /= zoomRate;
+				// mouse offset from the screen centre, in screen pixels.
+				// `screenCenter` must be the size of the render target / 2
+				sf::Vector2f mouseFromCenter = input.mousePosition - screenCenter;
+
+				// world point under the mouse before zooming:
+				//   worldPoint = mouseFromCenter * oldZoom + position
+				// we want the same world point under the mouse after zooming:
+				//   worldPoint = mouseFromCenter * newZoom + newPosition
+				// so: newPosition = position + mouseFromCenter * (oldZoom - newZoom)
+				position += mouseFromCenter * (oldZoom - newZoom);
+
+				zoom = newZoom;
 			}
 		}
 
-		// ease the zoom towards the target using exponential decay, which is frame rate independent.
-		// from "Lerp smoothing is broken" https://www.youtube.com/watch?v=LSNQuFEDOyQ&t=3050s&ab_channel=FreyaHolm%C3%A9r
-		zoom = targetZoom + (zoom - targetZoom) * std::exp(-zoomSpeed * dt);
 		prevMousePos = input.mousePosition;
 	}
 
@@ -81,7 +88,7 @@ namespace cc
 	{
 		float zoomStepSize = 0.0001f;
 		float effectiveZoom = std::round(zoom / zoomStepSize) * zoomStepSize;
-		sf::Vector2f effectivePos{std::round(position.x),std::round(position.y)};
+		sf::Vector2f effectivePos{std::round(position.x), std::round(position.y)};
 		float width = static_cast<float>(target->getSize().x);
 		float height = static_cast<float>(target->getSize().y);
 
@@ -112,7 +119,7 @@ namespace cc
 	void Camera::Serialize(Serializer &s)
 	{
 		s.field("position", position);
-		s.field("targetZoom", targetZoom);
+		s.field("zoom", zoom);
 	}
 
 	sf::Vector2f Camera::ToWorldPos(sf::Vector2f screenPosition, sf::RenderTarget *target)

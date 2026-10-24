@@ -29,14 +29,9 @@ namespace cc
 		/// The zoom currently in effect. Eases towards `targetZoom` every Update().
 		float zoom;
 
-		/// The zoom the camera is moving towards. Changed by scrolling; clamped to roughly 0.01 to 8.
-		float targetZoom;
-
 		/// Factor `targetZoom` changes by per scroll step. Set so that three steps double (or halve) the zoom.
 		float zoomRate;
 
-		/// How quickly `zoom` catches up with `targetZoom`, per second. Higher is snappier.
-		float zoomSpeed;
 
 		/// Camera movement speed. Not used by Camera itself; kept for code that moves the camera.
 		float moveSpeed;
@@ -70,7 +65,7 @@ namespace cc
 		 * @param dt Seconds since the previous frame.
 		 * @param input This frame's input state.
 		 */
-		void Update(float dt, InputState &input);
+		void Update(float dt, InputState &input, sf::RenderTarget* target);
 
 		/**
 		 * @brief Returns the area of the world the camera can currently see.

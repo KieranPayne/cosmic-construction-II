@@ -104,7 +104,7 @@ namespace cc
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
-		camera.Update(dt, inputState);
+		camera.Update(dt, inputState, target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
 		entityEditor.Draw(this);
