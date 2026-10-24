@@ -20,6 +20,7 @@ namespace cc
     {
         planets.push_back(std::make_unique<Planet>());
         planets[0]->isServerPlanet = true;
+        RegisterBuiltinCommands(commandSystem);
     }
     void Server::SetSeed(uint64_t seed)
     {
@@ -177,7 +178,10 @@ namespace cc
         {
             std::string message;
             packet >> message;
-            BroadcastChatLog(message, clientId);
+            if (!commandSystem.TryExecute(*this, clientId, message))
+            {
+                BroadcastChatLog(message, clientId);
+            }
         }
         else if (type == CSMessageType::REQUEST_CHUNKS)
         {
@@ -298,18 +302,20 @@ namespace cc
             playerData.username = name;
             if (playerData.planet < 0 || playerData.planet >= (int)planets.size())
                 playerData.planet = 0;
-        }else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
+        }
+        else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
         {
             Serializer s = ReadSerializerFromPacket(packet);
             sf::Packet out;
             out << (uint16_t)CSMessageType::UPDATE_KNOWLEDGE_DB;
-            AppendSerializerToPacket(out,s);
-            Broadcast(out,{clientId});
+            AppendSerializerToPacket(out, s);
+            Broadcast(out, {clientId});
             knowledgeDatabase.Serialize(s);
             if (SaveManager::debuggingKnowledgeGraph)
             {
                 SaveKnowledgeDatabase(SaveManager::GetSavedataDir() + "/knowledge graph");
-            }else
+            }
+            else
             {
                 SaveKnowledgeDatabase(SaveManager::savePath + "/knowledge graph");
             }
@@ -398,9 +404,9 @@ namespace cc
         {
             AppendEntityToPacket(packet, planet->entities[i].get());
         }
-        Serializer db(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+        Serializer db(Serializer::Mode::WRITE, Serializer::Format::BINARY);
         knowledgeDatabase.Serialize(db);
-        AppendSerializerToPacket(packet,db);
+        AppendSerializerToPacket(packet, db);
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;
@@ -537,8 +543,16 @@ namespace cc
     }
     void Server::SaveKnowledgeDatabase(std::string path)
     {
-        Serializer s(Serializer::Mode::WRITE,SaveManager::saveFormat);
+        Serializer s(Serializer::Mode::WRITE, SaveManager::saveFormat);
         knowledgeDatabase.Serialize(s);
         SaveManager::WriteSerializerToFile(s, path);
+    }
+    bool Server::IsHost(uint64_t clientId)
+    {
+        ServerClient *client = GetClient(clientId);
+        if (!client)
+            return false;
+        auto address = client->socket.getRemoteAddress();
+        return address.has_value() && *address == sf::IpAddress::getLocalAddress();
     }
 }

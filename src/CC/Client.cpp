@@ -12,7 +12,7 @@ namespace cc
 		activePlanet = 0;
 		AddPlanet(new Planet());
 		sendPlayerDataClock.start();
-		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget,knowledgeDatabase);
+		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget, knowledgeDatabase);
 	}
 
 	void Client::AddPlanet(Planet *planet)
@@ -53,14 +53,15 @@ namespace cc
 			if (showingKnowledgeGraph)
 			{
 				knowledgeGraph->Update(deltaTime, inputState);
-			}else
+			}
+			else
 			{
 				for (auto &p : planets)
 				{
 					p->Update(deltaTime);
 				}
 				planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
-				
+
 				// ask the server for any chunks that are in view but not loaded yet
 				auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
 				if (chunks.size() > 0)
@@ -74,9 +75,9 @@ namespace cc
 					}
 					SendPacket(p);
 				}
-				
+
 				DrawLogWindow();
-				
+
 				// periodically tell the server where this player is looking
 				if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
 				{
@@ -98,8 +99,6 @@ namespace cc
 				}
 			}
 		}
-
-		
 	}
 
 	void Client::DerivedRender()
@@ -111,7 +110,8 @@ namespace cc
 		if (showingKnowledgeGraph)
 		{
 			knowledgeGraph->Render(inputState);
-		}else
+		}
+		else
 		{
 			sf::View original = renderTarget->getView();
 			planets[activePlanet]->camera.SetView(renderTarget);
@@ -519,7 +519,11 @@ namespace cc
 
 	void Client::SendChatMessage(const std::string &text)
 	{
-		LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
+		// Commands are run by the server and answered with server messages, so they aren't shown as player chat.
+		if (!text.empty() && text[0] == '/')
+			LogMessage(text);
+		else
+			LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
 		sf::Packet p;
 		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
 		p << text;
@@ -606,12 +610,12 @@ namespace cc
 	{
 		sf::Packet packet;
 		packet << (uint16_t)CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB;
-		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 		knowledgeDatabase.Serialize(s);
-		AppendSerializerToPacket(packet,s);
+		AppendSerializerToPacket(packet, s);
 		SendPacket(packet);
 	}
-	void Client::LoadKnowledgeDB(sf::Packet& packet)
+	void Client::LoadKnowledgeDB(sf::Packet &packet)
 	{
 		Serializer s = ReadSerializerFromPacket(packet);
 		knowledgeDatabase.Serialize(s);

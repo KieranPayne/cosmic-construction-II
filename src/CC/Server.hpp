@@ -3,6 +3,8 @@
 #include "Planet.hpp"
 #include "PlayerData.hpp"
 #include "KnowledgeDatabase.hpp"
+#include "CommandSystem.hpp"
+#include "KnowledgeSystem.hpp"
 namespace cc
 {
     /**
@@ -291,11 +293,16 @@ namespace cc
         std::thread thread;
 
         //---UNDOCUMENTED---
+    public:
         KnowledgeDatabase knowledgeDatabase;
-        public:
-        //pass path without file extension pls
+        KnowledgeSystem knowledgeSystem{knowledgeDatabase};
+        CommandSystem commandSystem;
+
+        // pass path without file extension pls
         void LoadKnowledgeDatabase(std::string path);
-        //pass path without file extension pls
+        // pass path without file extension pls
         void SaveKnowledgeDatabase(std::string path);
+        /// True if this client is the host (connected from this machine).
+        bool IsHost(uint64_t clientId);
     };
 }
