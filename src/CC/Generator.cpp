@@ -175,6 +175,63 @@ namespace cc
 				}
 			}
 		}
+
+		// Scrambles a 64-bit number so that similar inputs give unrelated outputs.
+		static uint64_t SplitMix64(uint64_t x)
+		{
+			x += 0x9E3779B97F4A7C15ULL;
+			x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+			x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+			return x ^ (x >> 31);
+		}
+
+		// One seed per (world seed, chunk, purpose). Different chunks, or different salts, give unrelated seeds.
+		uint64_t ChunkSeed(uint64_t worldSeed, sf::Vector2i chunkPos, uint64_t salt = 0)
+		{
+			uint64_t h = SplitMix64(worldSeed);
+			h = SplitMix64(h ^ (uint64_t)(uint32_t)chunkPos.x);
+			h = SplitMix64(h ^ (uint64_t)(uint32_t)chunkPos.y); // chained, so (1,2) and (2,1) differ
+			h = SplitMix64(h ^ salt);
+			return h;
+		}
+
+		// `count` distinct coordinates in [0, CHUNK_SIZE-1], decided entirely by the seed and the chunk.
+		std::vector<sf::Vector2i> ChunkRandomCoords(uint64_t worldSeed, sf::Vector2i chunkPos,
+													int count, uint64_t salt = 0)
+		{
+			std::mt19937_64 rng(ChunkSeed(worldSeed, chunkPos, salt));
+
+			int total = CHUNK_SIZE * CHUNK_SIZE;
+			count = std::min(count, total);
+
+			std::vector<int> cells(total);
+			std::iota(cells.begin(), cells.end(), 0);
+
+			std::vector<sf::Vector2i> coords;
+			for (int i = 0; i < count; ++i)
+			{
+				// Partial shuffle: swap a random remaining cell into position i.
+				int j = i + (int)(rng() % (uint64_t)(total - i));
+				std::swap(cells[i], cells[j]);
+				coords.push_back({cells[i] % CHUNK_SIZE, cells[i] / CHUNK_SIZE});
+			}
+			return coords;
+		}
+
+		void AddTrees(PartialChunk &p)
+		{
+			static uint16_t treeId = TileInfo::nameLookup["Tree"]->id;
+			//not the actual number of trees as most will land on sand, water etc.
+			int numTreesMax = 50;
+			std::vector<sf::Vector2i> treePoses = ChunkRandomCoords(p.generator->seed,p.position,numTreesMax);
+			for (auto& pos : treePoses)
+			{
+				if (p.chunk->backgroundTiles[pos.x][pos.y].type == BackgroundTileType::GRASS)
+				{
+					p.chunk->tiles[pos.x][pos.y] = Tile(treeId);
+				}
+			}
+		}
 	}
 
 	PartialChunk::PartialChunk(Generator *generator, sf::Vector2i position)
@@ -219,6 +276,9 @@ namespace cc
 		else if (nextStage == GenerationStage::SET_TILE_COLORS)
 		{
 			SetTileColors(*this);
+		}else if (nextStage == GenerationStage::ADD_TREES)
+		{
+			AddTrees(*this);
 		}
 
 		nextStage = static_cast<GenerationStage>(
