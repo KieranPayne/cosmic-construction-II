@@ -164,6 +164,14 @@ namespace cc
 
 	void Client::ProcessPacket(sf::Packet &packet)
 	{
+		static int bytesReceived = 0;
+		static sf::Clock byteTimer;
+		if (!byteTimer.isRunning())
+		{
+			byteTimer.start();
+		}
+		bytesReceived += packet.getDataSize();
+		std::cout << "Received: " << (int)(bytesReceived / 1024.f) << " per second: " << (int)(bytesReceived / 1024.f / byteTimer.getElapsedTime().asSeconds()) << std::endl;
 		uint16_t t;
 		packet >> t;
 		switch ((CSMessageType)t)
