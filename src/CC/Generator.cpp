@@ -232,6 +232,21 @@ namespace cc
 				}
 			}
 		}
+		void AddRocks(PartialChunk &p)
+		{
+			static uint16_t rockId = TileInfo::nameLookup["Rock"]->id;
+			//not the actual number of trees as most will land on sand, water etc.
+			int numRocksMax = 50;
+			std::vector<sf::Vector2i> treePoses = ChunkRandomCoords(p.generator->seed,p.position,numRocksMax,1);
+			for (auto& pos : treePoses)
+			{
+				BackgroundTileType type = p.chunk->backgroundTiles[pos.x][pos.y].type;
+				if (type == BackgroundTileType::STONE || type == BackgroundTileType::TALL_STONE)
+				{
+					p.chunk->tiles[pos.x][pos.y] = Tile(rockId);
+				}
+			}
+		}
 	}
 
 	PartialChunk::PartialChunk(Generator *generator, sf::Vector2i position)
@@ -279,6 +294,9 @@ namespace cc
 		}else if (nextStage == GenerationStage::ADD_TREES)
 		{
 			AddTrees(*this);
+		}else if (nextStage == GenerationStage::ADD_ROCKS)
+		{
+			AddRocks(*this);
 		}
 
 		nextStage = static_cast<GenerationStage>(

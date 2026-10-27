@@ -4,6 +4,7 @@
     "Item":
     [
         "images/wood.png",
-        "images/human.png"
+        "images/stone.png",
+        "images/flint.png"
     ]
 }

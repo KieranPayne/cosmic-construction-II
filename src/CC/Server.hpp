@@ -304,5 +304,6 @@ namespace cc
         void SaveKnowledgeDatabase(std::string path);
         /// True if this client is the host (connected from this machine).
         bool IsHost(uint64_t clientId);
+        void BroadcastAddedEntity(Planet* p, Entity* e);
     };
 }

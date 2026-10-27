@@ -19,6 +19,8 @@ namespace cc
 		SET_TYPES = 0,
 		///just spawn trees on random tiles with grass under
 		ADD_TREES,
+		//same as trees but rocks
+		ADD_ROCKS,
 
 		/// Turns each tile's terrain type and blend amount into its final colour, with some
 		/// random-looking brightness variation for sand, grass and grassy stone.

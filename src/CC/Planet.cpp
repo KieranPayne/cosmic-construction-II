@@ -287,23 +287,39 @@ namespace cc
 		Serialize(s);
 		generator.Load(path);
 	}
-	void Planet::AddEntity(Entity *entity, bool sentByServer)
+	void Planet::AddEntity(Entity *entity, bool sentByServer, bool broadcast)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
-		// TODO: handle the case where the chunk isn't loaded yet
-		if (!chunks.contains(chunkPos))
+
+		// Share the entity before the chunk check, so it is shared even if its chunk isn't loaded here yet.
+		if (isServerPlanet)
 		{
-			return;
+			if (broadcast)
+			{
+				server->BroadcastAddedEntity(this, entity);
+			}
 		}
-		if (!sentByServer)
+		else if (!sentByServer)
 		{
 			sf::Packet p;
 			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITIES;
 			p << (int)1;
 			AppendEntityToPacket(p, entity);
 			client->SendPacket(p);
+		}
+
+		// TODO: handle the case where the chunk isn't loaded yet
+		if (!chunks.contains(chunkPos))
+		{
+			if (isServerPlanet)
+			{
+				GenerateChunk(chunkPos);
+			}else
+			{
+				return;
+			}
 		}
 		entity->isInChunk = true;
 		chunks[chunkPos]->AddEntity(entity);
@@ -502,6 +518,7 @@ namespace cc
 			return;
 		}
 		ImGui::Text("Hovering over:");
+		ImGui::Text((std::to_string(worldTilePos.x) + " " + std::to_string(worldTilePos.y)).c_str());
 		std::string bgTile = "Background Tile:\n";
 
 		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;

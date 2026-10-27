@@ -54,6 +54,10 @@ namespace cc
             Tick();
             timeSinceTick -= interval;
         }
+        for (auto& p : planets)
+        {
+            p->Update(dt);
+        }
     }
     uint64_t Server::GetNextClientId()
     {
@@ -554,5 +558,31 @@ namespace cc
             return false;
         auto address = client->socket.getRemoteAddress();
         return address.has_value() && *address == sf::IpAddress::getLocalAddress();
+    }
+
+    void Server::BroadcastAddedEntity(Planet *planet, Entity *entity)
+    {
+        // The planet's own `index` isn't reliable on the server, so find it by pointer.
+        int planetIndex = -1;
+        for (int i = 0; i < (int)planets.size(); i++)
+        {
+            if (planets[i].get() == planet)
+            {
+                planetIndex = i;
+                break;
+            }
+        }
+        if (planetIndex == -1)
+            return;
+
+        sf::Packet p;
+        p << (uint16_t)CSMessageType::ADD_ENTITIES;
+        p << (int)1;
+        AppendEntityToPacket(p, entity);
+        for (auto &c : clients)
+        {
+            if (c.joined && c.player.planet == planetIndex)
+                c.outgoing.push_back(p);
+        }
     }
 }

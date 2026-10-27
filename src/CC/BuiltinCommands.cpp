@@ -1,7 +1,7 @@
 #include "CommandSystem.hpp"
 #include "Server.hpp"
 #include "Human.hpp"
-
+#include "CSMessage.hpp"
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -144,6 +144,56 @@ namespace cc
         ctx.SyncEntity(entityIndex);
     }
 
+    void RunDestroyTile(CommandContext &ctx)
+    {
+        int x, y;
+        if (!ctx.ArgInt(0, x) || !ctx.ArgInt(1, y))
+        {
+            ctx.ReplyUsage();
+            return;
+        }
+
+        Planet *planet = ctx.PlayerPlanet();
+        if (!planet)
+        {
+            ctx.ReplyError("you are not on a planet.");
+            return;
+        }
+
+        sf::Vector2i tilePos(x, y);
+        sf::Vector2i chunkPos = TileToChunkPos(tilePos);
+        sf::Vector2i subChunkPos = tilePos - chunkPos * CHUNK_SIZE;
+
+        // The server generates chunks on demand, like GetTileAt does.
+        if (!planet->chunks.contains(chunkPos))
+        {
+            planet->GenerateChunk(chunkPos);
+        }
+        Chunk *chunk = planet->chunks[chunkPos].get();
+
+        chunk->DestroyTile(planet,subChunkPos); // adjust to DestroyTile's real signature
+
+        // Tell the clients on this planet what the tile is now. Without this only the server sees the change.
+        uint16_t newType = (uint16_t)chunk->tiles[subChunkPos.x][subChunkPos.y].type;
+        int planetIndex = ctx.server.GetClient(ctx.clientId)->player.planet;
+
+        sf::Packet p;
+        p << (uint16_t)CSMessageType::SET_TILES;
+        p << (int)1;
+        p << x << y << newType << false; // false: no tile entity
+        for (auto &c : ctx.server.clients)
+        {
+            if (c.joined && c.player.planet == planetIndex)
+            {
+                c.outgoing.push_back(p);
+            }
+        }
+
+        ctx.Reply("Destroyed tile (" + std::to_string(x) + ", " + std::to_string(y) + ") in chunk (" +
+                  std::to_string(chunkPos.x) + ", " + std::to_string(chunkPos.y) + "), sub-chunk position (" +
+                  std::to_string(subChunkPos.x) + ", " + std::to_string(subChunkPos.y) + ").");
+    }
+
     void RegisterBuiltinCommands(CommandSystem &system)
     {
         Command help;
@@ -162,5 +212,12 @@ namespace cc
                             "otherwise give its entity index.";
         learn.run = RunLearn;
         system.Register(learn);
+
+        Command destroyTile;
+        destroyTile.name = "destroytile";
+        destroyTile.usage = "/destroytile <x> <y>";
+        destroyTile.description = "calls the on destroy function for a tile at the coordinates and given and erases it.";
+        destroyTile.run = RunDestroyTile;
+        system.Register(destroyTile);
     }
 }

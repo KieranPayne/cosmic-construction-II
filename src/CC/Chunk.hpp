@@ -144,6 +144,10 @@ namespace cc
 		 * @note The tile itself in `tiles` is not changed.
 		 */
 		void RemoveTileEntity(uint16_t index);
+
+
+		//--UNDOCUMENTED---
+		void DestroyTile(Planet* p, sf::Vector2i pos);
 	};
 
 	/**

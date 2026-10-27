@@ -162,7 +162,7 @@ namespace cc
 		 * @param sentByServer Pass true when the entity came from the server (or this is the server), so it is
 		 *                     not sent back. When false, an add request is sent to the server through `client`.
 		 */
-		void AddEntity(Entity *entity, bool sentByServer = false);
+		void AddEntity(Entity *entity, bool sentByServer = false, bool broadcast = true);
 
 		/**
 		 * @brief Gets the drawing data for a single tile.

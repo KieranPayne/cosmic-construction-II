@@ -15,12 +15,13 @@ namespace cc
         /// The kinds of item. Stored as a uint16_t. TEST1 and TEST2 are placeholders.
         enum ItemType : uint16_t
         {
-            TEST1 = 0,
-            TEST2
+            WOOD,
+            STONE,
+            FLINT
         };
 
         /// What kind of item this is. Also picks which sprite an Item entity draws.
-        ItemType type = TEST1;
+        ItemType type = WOOD;
 
         /// How many of the item there are (the size of the stack).
         unsigned int amount = 1;
