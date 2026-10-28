@@ -83,5 +83,10 @@
     "name":"Rock",
     "textures":["rock.png"],
     "isTileEntity":false
+},
+{
+    "name":"Tall grass",
+    "textures":["tall grass.png"],
+    "isTileEntity":false
 }
 ]

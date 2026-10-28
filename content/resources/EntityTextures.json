@@ -5,6 +5,12 @@
     [
         "images/wood.png",
         "images/stone.png",
-        "images/flint.png"
+        "images/flint.png",
+        "images/fiber.png",
+        "images/sharp stick.png",
+        "images/sharp stone.png",
+        "images/stone spear.png",
+        "images/flint spearhead.png",
+        "images/flint spear.png"
     ]
 }

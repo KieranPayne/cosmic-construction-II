@@ -46,7 +46,7 @@ namespace cc
 		constexpr int VARIATION_AMOUNT = 15;
 
 		// How stretched the terrain noise is: smaller values give larger features.
-		constexpr double TERRAIN_NOISE_SCALE = 0.03;
+		constexpr double TERRAIN_NOISE_SCALE = 0.01;
 
 		// The brightness variation uses the same Perlin generator and seed as the terrain, but samples a
 		// different part of the noise field (this offset) so the pattern doesn't line up with the terrain.
@@ -217,14 +217,55 @@ namespace cc
 			}
 			return coords;
 		}
-
+		double ChunkRandom01(uint64_t worldSeed, sf::Vector2i chunkPos, uint64_t salt = 0)
+		{
+			std::mt19937_64 rng(ChunkSeed(worldSeed, chunkPos, salt));
+			return std::generate_canonical<double, 53>(rng);
+		}
+		void AddTallGrass(PartialChunk &p)
+		{
+			static uint16_t tallGrassId = TileInfo::nameLookup["Tall grass"]->id;
+			static std::array<sf::Vector2i, 9> offsets({{0, 0},
+														{-1, -1},
+														{-1, 0},
+														{-1, 1},
+														{0, -1},
+														{0, 1},
+														{1, -1},
+														{1, 0},
+														{1, -1}});
+			// not the actual number of trees as most will land on sand, water etc.
+			int numGrassMax = 50;
+			std::vector<sf::Vector2i> grassPoses = ChunkRandomCoords(p.generator->seed, p.position, numGrassMax,2);
+			int salt = 1;
+			double chance = 0.8;
+			for (auto &pos : grassPoses)
+			{
+				for (auto offset : offsets)
+				{
+					sf::Vector2i newPos = pos + offset;
+					if (newPos.x < 0 || newPos.x >= CHUNK_SIZE || newPos.y < 0 || newPos.y >= CHUNK_SIZE)
+					{
+						continue;
+					}
+					if (p.chunk->backgroundTiles[newPos.x][newPos.y].type == BackgroundTileType::GRASS)
+					{
+						salt ++;
+						if (ChunkRandom01(p.generator->seed,p.position,salt) < chance)
+						{
+							p.chunk->tiles[newPos.x][newPos.y] = Tile(tallGrassId);
+						}
+					}
+				}
+			}
+		}
 		void AddTrees(PartialChunk &p)
 		{
 			static uint16_t treeId = TileInfo::nameLookup["Tree"]->id;
-			//not the actual number of trees as most will land on sand, water etc.
-			int numTreesMax = 50;
-			std::vector<sf::Vector2i> treePoses = ChunkRandomCoords(p.generator->seed,p.position,numTreesMax);
-			for (auto& pos : treePoses)
+			// not the actual number of trees as most will land on sand, water etc.
+			int numTreesMax = 20;
+			std::vector<sf::Vector2i> treePoses = ChunkRandomCoords(p.generator->seed, p.position, numTreesMax);
+			for (auto &pos : treePoses)
 			{
 				if (p.chunk->backgroundTiles[pos.x][pos.y].type == BackgroundTileType::GRASS)
 				{
@@ -235,10 +276,10 @@ namespace cc
 		void AddRocks(PartialChunk &p)
 		{
 			static uint16_t rockId = TileInfo::nameLookup["Rock"]->id;
-			//not the actual number of trees as most will land on sand, water etc.
+			// not the actual number of trees as most will land on sand, water etc.
 			int numRocksMax = 50;
-			std::vector<sf::Vector2i> treePoses = ChunkRandomCoords(p.generator->seed,p.position,numRocksMax,1);
-			for (auto& pos : treePoses)
+			std::vector<sf::Vector2i> treePoses = ChunkRandomCoords(p.generator->seed, p.position, numRocksMax, 1);
+			for (auto &pos : treePoses)
 			{
 				BackgroundTileType type = p.chunk->backgroundTiles[pos.x][pos.y].type;
 				if (type == BackgroundTileType::STONE || type == BackgroundTileType::TALL_STONE)
@@ -291,11 +332,11 @@ namespace cc
 		else if (nextStage == GenerationStage::SET_TILE_COLORS)
 		{
 			SetTileColors(*this);
-		}else if (nextStage == GenerationStage::ADD_TREES)
+		}
+		else if (nextStage == GenerationStage::ADD_DECORATION)
 		{
+			AddTallGrass(*this);
 			AddTrees(*this);
-		}else if (nextStage == GenerationStage::ADD_ROCKS)
-		{
 			AddRocks(*this);
 		}
 

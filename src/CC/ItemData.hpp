@@ -17,7 +17,13 @@ namespace cc
         {
             WOOD,
             STONE,
-            FLINT
+            FLINT,
+            FIBER,
+            SHARP_STICK,
+            SHARP_STONE,
+            STONE_SPEAR,
+            FLINT_SPEARHEAD,
+            FLINT_SPEAR
         };
 
         /// What kind of item this is. Also picks which sprite an Item entity draws.

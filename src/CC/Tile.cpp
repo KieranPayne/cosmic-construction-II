@@ -8,6 +8,7 @@ namespace cc
     {
         static uint16_t treeId = TileInfo::nameLookup["Tree"]->id;
         static uint16_t rockId = TileInfo::nameLookup["Rock"]->id;
+        static uint16_t tallGrassId = TileInfo::nameLookup["Tall grass"]->id;
         if (type == treeId)
         {
             Item *i = new Item();
@@ -32,6 +33,20 @@ namespace cc
                 i->itemData.type = ItemData::STONE;
             }
             p->AddEntity(i, true, true);
+        }else if (type == tallGrassId)
+        {
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+            float random = dist(gen);
+            if (random < 0.3f)
+            {
+                Item *i = new Item();
+                i->position = (sf::Vector2f)(chunkPos * CHUNK_SIZE + subChunkPos);
+                i->itemData.type = ItemData::FIBER;
+                p->AddEntity(i, true, true);
+            }
         }
     }
 }
