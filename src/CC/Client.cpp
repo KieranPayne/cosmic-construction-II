@@ -10,17 +10,18 @@ namespace cc
 	{
 		this->renderTarget = target;
 		activePlanet = 0;
-		AddPlanet(new Planet());
-		sendPlayerDataClock.start();
+		world = std::make_unique<World>();
+		for (auto &p : world->planets)
+		{
+			p->client = this;
+		}
 		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget, knowledgeDatabase);
 	}
 
-	void Client::AddPlanet(Planet *planet)
+	void Client::Tick()
 	{
-		planet->client = this;
-		planets.push_back(std::unique_ptr<Planet>(planet));
+		world->Tick();
 	}
-
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
@@ -29,75 +30,60 @@ namespace cc
 		{
 			return;
 		}
-
+		while (serverTickCounter > world->currentTick)
+		{
+			if (queuedInputs.contains(world->currentTick))
+			{
+				for (int i = 0; i < queuedInputs[world->currentTick].size(); i++)
+				{
+					world->EnactInputBundle(queuedInputs[world->currentTick][i]);
+				}
+				queuedInputs.erase(world->currentTick);
+			}
+			PlayerData currPlayerData = GetPlayerData();
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			currPlayerData.Serialize(s);
+			prevPlayerData.Serialize(s2);
+			auto data = s.binary();
+			auto data2 = s2.binary();
+			if (data != data2)
+			{
+				currInputBundle.playerData = currPlayerData;
+			}
+			prevPlayerData = currPlayerData;
+			SendInputBundle();
+			Tick();
+			currInputBundle = InputBundle();
+			// currInputBundle.playerData = GetPlayerData();
+			if (world->currentTick % 60 == 0)
+			{
+				sf::Packet p;
+				p << (uint16_t)CSMessageType::STATE_CHECK;
+				world->GenerateStateCheck(p);
+				SendPacket(p);
+			}
+		}
+		// std::cout << "on tick " << tickCounter << std::endl;
 		if (inputState.Pressed(sf::Keyboard::Key::Escape))
 		{
 			paused = !paused;
 		}
-
 		if (paused)
 		{
 			DisplayPauseMenu();
 		}
 		else
 		{
-			if (inputState.Pressed(sf::Keyboard::Key::T))
-			{
-				showingKnowledgeGraph = !showingKnowledgeGraph;
-				if (!showingKnowledgeGraph)
-				{
-					knowledgeGraph->SaveToFile();
-					SendKnowledgeDB();
-				}
-			}
-			if (showingKnowledgeGraph)
-			{
-				knowledgeGraph->Update(deltaTime, inputState);
-			}
-			else
-			{
-				for (auto &p : planets)
-				{
-					p->Update(deltaTime);
-				}
-				planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
+			world->planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
+			DrawLogWindow();
+		}
 
-				// ask the server for any chunks that are in view but not loaded yet
-				auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
-				if (chunks.size() > 0)
-				{
-					sf::Packet p;
-					p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
-					p << (uint64_t)chunks.size();
-					for (auto &c : chunks)
-					{
-						p << c.x << c.y;
-					}
-					SendPacket(p);
-				}
-
-				DrawLogWindow();
-
-				// periodically tell the server where this player is looking
-				if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
-				{
-					sendPlayerDataClock.restart();
-					sf::Packet p;
-					p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
-					Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-					GetPlayerData().Serialize(s);
-					auto data = s.binary();
-					p << (uint64_t)data.size();
-					p.append(data.data(), data.size());
-					SendPacket(p);
-				}
-				// debug shortcut: place a test image made of tiles
-				if (inputState.Pressed(sf::Keyboard::Key::I))
-				{
-					std::string path = "content/resources/images/borzoi.png";
-					planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
-				}
-			}
+		// debug shortcut: place a test image made of tiles
+		if (inputState.Pressed(sf::Keyboard::Key::I))
+		{
+			std::string path = "content/resources/images/herbert.png";
+			world->planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
 		}
 	}
 
@@ -114,8 +100,8 @@ namespace cc
 		else
 		{
 			sf::View original = renderTarget->getView();
-			planets[activePlanet]->camera.SetView(renderTarget);
-			planets[activePlanet]->Render(renderTarget);
+			world->planets[activePlanet]->camera.SetView(renderTarget);
+			world->planets[activePlanet]->Render(renderTarget);
 			DrawOtherPlayers();
 			renderTarget->setView(original);
 		}
@@ -164,6 +150,18 @@ namespace cc
 
 	void Client::ProcessPacket(sf::Packet &packet)
 	{
+		if (!loadedJoinData)
+		{
+			sf::Packet peek(packet);
+			uint16_t peekType;
+			peek >> peekType;
+			if ((CSMessageType)peekType != CSMessageType::JOIN_DATA)
+			{
+				packetBuffer.push_back(packet);
+				return;
+			}
+		}
+
 		static int bytesReceived = 0;
 		static sf::Clock byteTimer;
 		if (!byteTimer.isRunning())
@@ -197,7 +195,7 @@ namespace cc
 		{
 			std::string message;
 			packet >> message;
-			LogMessage(message, MessageOrigin::SERVER);
+			LogMessage(message, ChatMessageOrigin::SERVER);
 			break;
 		}
 
@@ -205,76 +203,46 @@ namespace cc
 		{
 			std::string username, message;
 			packet >> username >> message;
-			LogMessage(message, MessageOrigin::PLAYER, username);
+			LogMessage(message, ChatMessageOrigin::PLAYER, username);
 			break;
 		}
 
-		case CSMessageType::CHUNK_DATA:
-			LoadChunks(packet);
-			break;
-
-		case CSMessageType::SET_TILES:
+		case CSMessageType::BROADCAST_NEXT_TICK:
 		{
-			int n;
-			packet >> n;
-			for (int i = 0; i < n; i++)
+			packet >> serverTickCounter;
+			uint64_t numBundles;
+			packet >> numBundles;
+			// queuedInputs[serverTickCounter] = {};
+			for (int i = 0; i < numBundles; i++)
 			{
-				sf::Vector2i position;
-				uint16_t tileType;
-				bool hasTileEntity;
-				packet >> position.x >> position.y >> tileType >> hasTileEntity;
-				TileEntity *e = nullptr;
-				if (hasTileEntity)
+				auto data = ReadBytesFromPacket(packet);
+				Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+				InputBundle in;
+				in.Serialize(s);
+				queuedInputs[serverTickCounter].push_back(std::move(in));
+				// world->EnactInputBundle(in);
+			}
+			if (!tickTimer.isRunning())
+			{
+				tickTimer.start();
+			}
+			else
+			{
+				timesBetweenTicks.push_back(tickTimer.getElapsedTime().asSeconds() / (serverTickCounter - world->currentTick));
+				if (timesBetweenTicks.size() > 60)
 				{
-					auto data = ReadBytesFromPacket(packet);
-					Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
-					e = CreateTileEntityFromType(tileType);
-					e->Serialize(s);
+					timesBetweenTicks.erase(timesBetweenTicks.begin());
 				}
-				planets[activePlanet]->SetTileAt(position, Tile(tileType), e, true);
-			}
-			break;
-		}
-
-		case CSMessageType::ADD_ENTITIES:
-		{
-			int n;
-			packet >> n;
-			for (int i = 0; i < n; i++)
-			{
-				Entity *e = LoadEntityFromPacket(packet);
-				planets[activePlanet]->AddEntity(e, true);
-			}
-			break;
-		}
-
-		case CSMessageType::UPDATE_ENTITIES:
-		{
-			int n;
-			packet >> n;
-			for (int i = 0; i < n; i++)
-			{
-				int index;
-				packet >> index;
-				Entity *e = LoadEntityFromPacket(packet);
-				planets[activePlanet]->ReplaceEntity(index, e);
-			}
-			break;
-		}
-
-		case CSMessageType::UPDATE_PLAYER_DATA:
-		{
-			std::string username;
-			packet >> username;
-			auto data = ReadBytesFromPacket(packet);
-			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
-			for (size_t i = 0; i < otherPlayers.size(); i++)
-			{
-				if (otherPlayers[i].username == username)
+				tickTimer.restart();
+				if (timesBetweenTicks.size() >= 1 && serverTickCounter % 60 == 0)
 				{
-					prevOtherPlayers[i] = otherPlayers[i];
-					prevOtherClocks[i].restart();
-					otherPlayers[i].Serialize(s);
+					double total = 0;
+					for (auto t : timesBetweenTicks)
+					{
+						total += t;
+					}
+					total /= (double)timesBetweenTicks.size();
+					std::cout << "avg time between ticks: " << total << " tps: " << (1.0 / total) << std::endl;
 				}
 			}
 			break;
@@ -300,61 +268,26 @@ namespace cc
 	void Client::LoadJoinData(sf::Packet &packet)
 	{
 		loadedJoinData = true;
-
-		// players currently on the server, including this one
-		auto playerData = ReadBytesFromPacket(packet);
-		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, playerData);
-
-		int numPlayers;
-		s.field("n", numPlayers);
-		for (int i = 0; i < numPlayers; i++)
+		world->LoadJoinData(packet);
+		for (auto &p : world->planets)
 		{
-			PlayerData p;
-			s.field(std::to_string(i), p);
+			p->client = this;
+		}
+		serverTickCounter = world->currentTick;
+		std::string msg = "Join data processed. Other players:";
+		for (auto &p : world->players)
+		{
 			if (p.username == SaveManager::username)
 			{
-				// this is us: restore our saved planet and camera
-				activePlanet = p.planet;
-				planets[activePlanet]->camera.position = p.cameraPosition;
-				planets[activePlanet]->camera.zoom = p.cameraZoom;
 				continue;
 			}
-			AddOtherPlayer(p);
-		}
-
-		Planet &planet = *planets[activePlanet];
-
-		// chunks around the player
-		int numChunks;
-		packet >> numChunks;
-		for (int i = 0; i < numChunks; i++)
-		{
-			int posX, posY;
-			packet >> posX >> posY;
-			auto chunkData = ReadBytesFromPacket(packet);
-			Chunk *c = new Chunk({posX, posY});
-			c->LoadByteData(chunkData);
-			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
-			planet.chunksRequested.emplace(sf::Vector2i{posX, posY});
-		}
-
-		// entities on the planet
-		uint64_t numEntities;
-		packet >> numEntities;
-		for (uint64_t i = 0; i < numEntities; i++)
-		{
-			Entity *e = LoadEntityFromPacket(packet);
-			planet.AddEntity(e, true);
-		}
-		Serializer db = ReadSerializerFromPacket(packet);
-		knowledgeDatabase.Serialize(db);
-		knowledgeGraph->LoadFromFile();
-		std::string msg = "Join data processed. Other players:";
-		for (auto &p : otherPlayers)
-		{
 			msg += "\n" + p.username;
 		}
 		LogMessage(msg);
+		for (auto &p : packetBuffer)
+		{
+			ProcessPacket(p);
+		}
 	}
 
 	bool Client::ConnectToServer(sf::IpAddress &ip, unsigned short port)
@@ -427,27 +360,23 @@ namespace cc
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		PlayerData p;
 		s.field("player", p);
-		AddOtherPlayer(p);
+		AddPlayer(p);
 		LogMessage("Player Connected: " + p.username);
 	}
 
-	void Client::AddOtherPlayer(const PlayerData &player)
+	void Client::AddPlayer(const PlayerData &player)
 	{
-		otherPlayers.push_back(player);
-		prevOtherPlayers.push_back(player);
-		prevOtherClocks.push_back(sf::Clock());
-		prevOtherClocks.back().start();
+		world->AddPlayer(player);
 	}
 
 	void Client::RemoveOtherPlayer(const std::string &username)
 	{
-		for (size_t i = 0; i < otherPlayers.size(); i++)
+		for (size_t i = 0; i < world->players.size(); i++)
 		{
-			if (otherPlayers[i].username == username)
+			if (world->players[i].username == username)
 			{
-				otherPlayers.erase(otherPlayers.begin() + i);
-				prevOtherPlayers.erase(prevOtherPlayers.begin() + i);
-				prevOtherClocks.erase(prevOtherClocks.begin() + i);
+				world->SavePlayer(i);
+				world->players.erase(world->players.begin() + i);
 				return;
 			}
 		}
@@ -462,13 +391,13 @@ namespace cc
 		state->Update(inputState, 0);
 	}
 
-	void Client::LogMessage(std::string message, MessageOrigin origin, std::string username)
+	void Client::LogMessage(std::string message, ChatMessageOrigin origin, std::string username)
 	{
-		if (origin == MessageOrigin::SELF)
+		if (origin == ChatMessageOrigin::SELF)
 		{
 			chatLog.push_back("> " + message);
 		}
-		else if (origin == MessageOrigin::SERVER)
+		else if (origin == ChatMessageOrigin::SERVER)
 		{
 			chatLog.push_back("<SERVER> " + message);
 		}
@@ -538,43 +467,46 @@ namespace cc
 		SendPacket(p);
 	}
 
-	void Client::LoadChunks(sf::Packet &packet)
-	{
-		Planet &planet = *planets[activePlanet];
-		uint64_t n;
-		packet >> n;
-		for (uint64_t i = 0; i < n; i++)
-		{
-			int posX, posY;
-			packet >> posX >> posY;
-			// always read the chunk's bytes, even when skipping it, so the rest of the packet stays aligned
-			auto chunkData = ReadBytesFromPacket(packet);
-			if (planet.chunks.contains({posX, posY}))
-				continue;
-			Chunk *c = new Chunk({posX, posY});
-			c->LoadByteData(chunkData);
-			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
-		}
-	}
+	// void Client::LoadChunks(sf::Packet &packet)
+	// {
+	// 	Planet &planet = *planets[activePlanet];
+	// 	uint64_t n;
+	// 	packet >> n;
+	// 	for (uint64_t i = 0; i < n; i++)
+	// 	{
+	// 		int posX, posY;
+	// 		packet >> posX >> posY;
+	// 		// always read the chunk's bytes, even when skipping it, so the rest of the packet stays aligned
+	// 		auto chunkData = ReadBytesFromPacket(packet);
+	// 		if (planet.chunks.contains({posX, posY}))
+	// 			continue;
+	// 		Chunk *c = new Chunk({posX, posY});
+	// 		c->LoadByteData(chunkData);
+	// 		planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
+	// 	}
+	// }
 
 	void Client::DrawOtherPlayers()
 	{
 		sf::RectangleShape rect;
-		for (size_t i = 0; i < otherPlayers.size(); i++)
+		for (size_t i = 0; i < world->players.size(); i++)
 		{
-			PlayerData &p = otherPlayers[i];
-			PlayerData &oldP = prevOtherPlayers[i];
+			PlayerData &p = world->players[i];
+			if (p.username == SaveManager::username)
+			{
+				continue;
+			}
 			if (p.planet != activePlanet)
 			{
 				continue;
 			}
 
 			// how far between their previous and latest update we are, from 0 to 1
-			float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate, 0.f, 1.f);
+			// float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate, 0.f, 1.f);
 			sf::Color col = UsernameToColor(p.username);
-			sf::Vector2f targetResolution = Lerp(oldP.resolution, p.resolution, t);
-			float zoom = Lerp(oldP.cameraZoom, p.cameraZoom, t);
-			sf::Vector2f position = Lerp(oldP.cameraPosition, p.cameraPosition, t);
+			sf::Vector2f targetResolution = p.resolution;
+			float zoom = p.cameraZoom;
+			sf::Vector2f position = p.cameraPosition;
 
 			rect.setFillColor(sf::Color::Transparent);
 			rect.setOutlineColor(col);
@@ -590,8 +522,8 @@ namespace cc
 	{
 		PlayerData p;
 		p.username = SaveManager::username;
-		p.cameraPosition = planets[activePlanet]->camera.position;
-		p.cameraZoom = planets[activePlanet]->camera.zoom;
+		p.cameraPosition = world->planets[activePlanet]->camera.position;
+		p.cameraZoom = world->planets[activePlanet]->camera.targetZoom;
 		p.planet = activePlanet;
 		p.resolution = (sf::Vector2f)renderTarget->getSize();
 		return p;
@@ -627,6 +559,77 @@ namespace cc
 	{
 		Serializer s = ReadSerializerFromPacket(packet);
 		knowledgeDatabase.Serialize(s);
+	}
+
+	void Client::SendInputBundle()
+	{
+		bool playerDatSame = false;
+		PlayerData currPlayerData = GetPlayerData();
+		{
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			currPlayerData.Serialize(s);
+			prevPlayerData.Serialize(s2);
+			auto data = s.binary();
+			auto data2 = s2.binary();
+			if (data == data2)
+			{
+				playerDatSame = true;
+			}
+			prevPlayerData = currPlayerData;
+		}
+		{
+			InputBundle defaultBundle;
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			defaultBundle.Serialize(s);
+			currInputBundle.Serialize(s2);
+			auto data = s.binary();
+			auto data2 = s2.binary();
+			if (data == data2 && playerDatSame)
+			{
+				return;
+			}else
+			{
+				currInputBundle.playerData = currPlayerData;
+			}
+		}
+		
+		sf::Packet p;
+		p << (uint16_t)CSMessageType::CLIENT_INPUT_BUNDLE;
+		p << world->currentTick;
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+		currInputBundle.Serialize(s);
+		auto data = s.binary();
+		p << (uint64_t)data.size();
+		p.append(data.data(), data.size());
+		SendPacket(p);
+	}
+
+	void Client::ProcessTickBroadcast(sf::Packet &p)
+	{
+		p >> serverTickCounter;
+		std::vector<InputBundle> inputBundles;
+		uint64_t numInputBundles;
+		p >> numInputBundles;
+		for (int i = 0; i < numInputBundles; i++)
+		{
+			auto data = ReadBytesFromPacket(p);
+			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+			InputBundle in;
+			in.Serialize(s);
+			inputBundles.push_back(std::move(in));
+		}
+		// ensure any tile changes etc. are applied in the same order by everyone
+		std::sort(inputBundles.begin(), inputBundles.end(),
+				  [](const InputBundle &a, const InputBundle &b)
+				  {
+					  return a.clientId < b.clientId;
+				  });
+		for (auto &in : inputBundles)
+		{
+			world->EnactInputBundle(in);
+		}
 	}
 
 }

@@ -11,10 +11,21 @@ namespace cc
         return JsonAsVector(EntityInfo::texturesJson["Human"]);
     }
 
+    void Human::Tick()
+    {
+        movementCounter ++;
+        if (movementCounter == 60)
+        {
+            movementCounter = 0;
+            position.x ++;
+        }
+    }
+
     void Human::Serialize(Serializer &s)
     {
         Entity::Serialize(s);
         s.field("knowledge", knowledge);
+        s.field("movementCounter",movementCounter);
     }
 
     HumanKnowledge *Human::FindKnowledge(int techId)

@@ -35,9 +35,6 @@ namespace cc
 		/// Everything known about one kind of tile.
 		struct TileData
 		{
-			/// The tile's name.
-			std::string name;
-
 			/// Where each of the tile's textures is in `atlas`, in pixels. Same order as `paths`.
 			std::vector<sf::Vector2i> positions;
 
@@ -46,9 +43,11 @@ namespace cc
 
 			/// The file each texture was loaded from. Same order as `images`.
 			std::vector<std::string> paths;
-
+			/// The tile's name.
+			std::string name;
 			/// The tile's type id: its index in `tileRegistry`.
 			uint16_t id;
+
 
 			/// Whether tiles of this type have a TileEntity.
 			bool isTileEntity;

@@ -3,6 +3,8 @@
 #include "Planet.hpp"
 #include "../State.hpp"
 #include "PlayerData.hpp"
+#include "InputBundle.hpp"
+#include "World.hpp"
 #include "KnowledgeGraph.hpp"
 #include "KnowledgeDatabase.hpp"
 namespace cc
@@ -20,9 +22,18 @@ namespace cc
     class Client : public Kosmic::State
     {
     private:
+        PlayerData prevPlayerData;
+        //packets received before join data is received
+        std::vector<sf::Packet> packetBuffer;
+        std::vector<double> timesBetweenTicks;
+        sf::Clock tickTimer;
+        uint64_t serverTickCounter = 0;
+        std::unique_ptr<World> world;
+        int playerIndex;
+
         /// Set by LogMessage() so that the chat window scrolls to the newest message the next time it is drawn.
         bool chatLogScrollToBottom = false;
-
+        
         /// True while the pause menu is showing. While paused the world is not updated and no chunk requests
         /// or player data are sent, but incoming packets are still processed.
         bool paused = false;
@@ -36,22 +47,6 @@ namespace cc
         /// Connection to the server. Non-blocking after ConnectToServer() succeeds.
         sf::TcpSocket socket;
 
-        /// The other players on the server, not including this client. Parallel to `prevOtherPlayers`
-        /// and `prevOtherClocks`: index i in all three refers to the same player.
-        std::vector<PlayerData> otherPlayers = {};
-
-        /// Each other player's data from before their most recent update, used to interpolate their
-        /// on-screen rectangle. Parallel to `otherPlayers`.
-        std::vector<PlayerData> prevOtherPlayers = {};
-
-        /// Time since each other player's data last changed, used as the interpolation progress.
-        /// Parallel to `otherPlayers`.
-        std::vector<sf::Clock> prevOtherClocks = {};
-
-        /// The planets this client knows about, indexed by planet index. The constructor creates planet 0;
-        /// their contents (chunks, entities) are filled in from what the server sends.
-        std::vector<std::unique_ptr<Planet>> planets = {};
-
         /// Chat and server messages shown in the chat window, oldest first.
         std::vector<std::string> chatLog = {};
 
@@ -62,24 +57,21 @@ namespace cc
         /// Index into `planets` of the planet the player is on. Set from the server's data when joining.
         int activePlanet = 0;
 
-        /// Measures the time since this client's player data was last sent to the server.
-        sf::Clock sendPlayerDataClock;
-
-        /// Seconds between sending this client's player data (camera position, zoom, etc.) to the server.
-        /// Also the time over which other players' rectangles are interpolated.
-        float timePerPlayerDataUpdate = 0.2f;
 
         /// @brief Draws the full-screen pause menu: resume, plus "save and quit" for the host or "disconnect" for other players.
         void DisplayPauseMenu();
 
     public:
+
+        void Tick();
         KnowledgeDatabase knowledgeDatabase;
         /**
-         * @brief Adds a planet to the client.
-         * @param planet The planet to add. The client takes ownership and sets the planet's `client` pointer.
-         *               Its index is the number of planets before it was added.
+         * @brief Sends the current input bundle. note that if for example the tick label is tick 0, these are the inputs leading up to the
+         *        tick counter rolling over to 1.
+         *        
+         *
          */
-        void AddPlanet(Planet *planet);
+        void SendInputBundle();
 
         /**
          * @brief Per-frame update. Receives and sends network packets, then, once connected and joined,
@@ -142,7 +134,7 @@ namespace cc
         void NewPlayerJoined(sf::Packet &packet);
 
         /// @brief Adds a player to `otherPlayers`, `prevOtherPlayers` and `prevOtherClocks` together so they stay parallel.
-        void AddOtherPlayer(const PlayerData &player);
+        void AddPlayer(const PlayerData &player);
 
         /// @brief Removes the first other player with this username from all three parallel lists. Does nothing if not found.
         void RemoveOtherPlayer(const std::string &username);
@@ -167,17 +159,12 @@ namespace cc
         ///        and retrying it next time. Returns to the main menu if the server disconnected.
         void FlushOutgoing();
 
+        void ProcessTickBroadcast(sf::Packet& p);
+
     public:
-        /// Where a chat log message came from, which decides how it is shown.
-        enum class MessageOrigin
-        {
-            /// A message from this client itself, such as a status update. Shown as "> message".
-            SELF,
-            /// A message from the server. Shown as "<SERVER> message".
-            SERVER,
-            /// A chat message from a player. Shown as "<username> message".
-            PLAYER
-        };
+        std::unordered_map<uint64_t,std::vector<InputBundle>> queuedInputs;
+
+        InputBundle currInputBundle;
 
         /// Text typed so far into the chat input box (up to 255 characters).
         char chatInput[256] = "";
@@ -188,7 +175,7 @@ namespace cc
          * @param origin Where it came from, which sets the prefix.
          * @param username The sender's name. Only used when `origin` is PLAYER.
          */
-        void LogMessage(std::string message, MessageOrigin origin = MessageOrigin::SELF, std::string username = "");
+        void LogMessage(std::string message, ChatMessageOrigin origin = ChatMessageOrigin::SELF, std::string username = "");
 
     private:
         // ---- chat and drawing ----
@@ -199,12 +186,6 @@ namespace cc
         /// @brief Draws the chat window: the message log and the input box with a Send button.
         void DrawLogWindow();
 
-        /**
-         * @brief Handles a CHUNK_DATA packet by creating the chunks it contains in the active planet.
-         *        Chunks that are already loaded are skipped.
-         * @param packet The packet, positioned just after the message type.
-         */
-        void LoadChunks(sf::Packet &packet);
 
         /// @brief Draws an outline of each other player's visible area on the active planet, in a colour based
         ///        on their username, interpolating between their last two updates.

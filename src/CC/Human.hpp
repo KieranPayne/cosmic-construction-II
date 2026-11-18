@@ -10,6 +10,7 @@ namespace cc
     class Human : public Entity
     {
     public:
+        int movementCounter = 0;
         /// @brief Creates a human entity.
         Human();
 
@@ -19,6 +20,7 @@ namespace cc
          */
         sf::Vector2f GetTexCoords();
 
+        void Tick();
         /// @brief Saves or loads the entity's data plus this human's knowledge.
         void Serialize(Serializer &s);
 

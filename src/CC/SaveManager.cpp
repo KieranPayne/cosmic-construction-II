@@ -74,13 +74,14 @@ namespace cc
 			{
 				server->SetSeed(HashFromString(seed));
 			}
-			server->planets[0]->AddEntity(new Entity(), true);
+			server->world->planets[0]->AddEntity(new Entity());
+			// server->currentTick = 0;
 			Human *h = new Human();
 			h->position = {1.f, 0.f};
-			server->planets[0]->AddEntity(h, true);
+			server->world->planets[0]->AddEntity(h);
 			Item *item = new Item();
 			item->position = {2.f, 0.f};
-			server->planets[0]->AddEntity(item, true);
+			server->world->planets[0]->AddEntity(item);
 			SaveServer(server.get());
 			server->Start(5000);
 			server->StartThread();
@@ -108,13 +109,7 @@ namespace cc
 				knowledgeDBPath = savePath + "/knowledge graph";
 			}
 			server->LoadKnowledgeDatabase(knowledgeDBPath);
-			Serializer s = LoadSerializerFromFile(savePath + "/players");
-			s.field("players", server->allPlayers);
-			server->SetSeed(j["seed"]);
-			for (auto &p : server->planets)
-			{
-				p->Load();
-			}
+			server->world->Load();
 			server->Start(5000);
 			server->StartThread();
 			Client *client = new Client(state->renderTarget);
@@ -124,10 +119,8 @@ namespace cc
 		}
 		void SaveServer(Server *server)
 		{
-			for (auto &p : server->planets)
-			{
-				p->Save();
-			}
+			server->world->Save();
+			
 			std::string knowledgeDBPath;
 			if (debuggingKnowledgeGraph)
 			{
@@ -137,12 +130,6 @@ namespace cc
 				knowledgeDBPath = savePath = "/knowledge graph";
 			}
 			server->SaveKnowledgeDatabase(knowledgeDBPath);
-			Serializer s(Serializer::Mode::WRITE, saveFormat);
-			for (auto &c : server->clients)
-				if (c.joined)
-					server->SavePlayer(c.player);
-			s.field("players", server->allPlayers);
-			WriteSerializerToFile(s, savePath + "/players");
 			WriteServerMetadata(server);
 		}
 		void WriteServerMetadata(Server *server)

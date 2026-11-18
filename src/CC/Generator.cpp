@@ -453,4 +453,45 @@ namespace cc
 	{
 		partialChunks[p->position] = std::unique_ptr<PartialChunk>(p);
 	}
+
+	void Generator::AppendToPacket(sf::Packet& p)
+	{
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+		Serialize(s);
+		auto bytes = s.binary();
+		p << (uint64_t)bytes.size();
+		p.append(bytes.data(),bytes.size());
+		p << (uint64_t)partialChunks.size();
+		for (auto& partial : partialChunks)
+		{
+			p << partial.second->position.x << partial.second->position.y;
+			auto chunkData = partial.second->chunk->GetByteData();
+			p << (uint64_t)chunkData.size();
+			p.append(chunkData.data(),chunkData.size());
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			partial.second->Serialize(s2);
+			auto partialBytes = s2.binary();
+			p << (uint64_t)partialBytes.size();
+			p.append(partialBytes.data(),partialBytes.size());
+		}
+	}
+	void Generator::LoadFromPacket(sf::Packet& p)
+	{
+		auto bytes = ReadBytesFromPacket(p);
+		Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},bytes);
+		Serialize(s);
+		uint64_t numPartials; p >> numPartials;
+		for (int i = 0; i < numPartials; i ++)
+		{
+			sf::Vector2i pos;
+			p >> pos.x >> pos.y;
+			PartialChunk* partial = new PartialChunk(this,pos);
+			auto chunkData = ReadBytesFromPacket(p);
+			partial->chunk->LoadByteData(chunkData);
+			auto partialBytes = ReadBytesFromPacket(p);
+			Serializer s2(Serializer::Mode::READ,Serializer::Format::BINARY,{},partialBytes);
+			partial->Serialize(s2);
+			partialChunks[pos] = std::unique_ptr<PartialChunk>(partial);
+		}
+	}
 }

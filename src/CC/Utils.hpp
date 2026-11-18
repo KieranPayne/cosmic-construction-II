@@ -122,6 +122,7 @@ namespace cc
     sf::Color HsvToRgb(float h, float s, float v);
 
 
+    uint64_t ComputeChecksum(const uint8_t* data, size_t length);
     // --- UNDOCUMENTED STUFF ---
     void DrawArrow(sf::RenderTarget* target,
                sf::Vector2f start,

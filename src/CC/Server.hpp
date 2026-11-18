@@ -2,6 +2,7 @@
 #include "../PCH.hpp"
 #include "Planet.hpp"
 #include "PlayerData.hpp"
+#include "World.hpp"
 #include "KnowledgeDatabase.hpp"
 #include "CommandSystem.hpp"
 #include "KnowledgeSystem.hpp"
@@ -33,6 +34,7 @@ namespace cc
          */
         struct ServerClient
         {
+            uint64_t joinTick;
             /// Unique id for this connection, assigned by GetNextClientId(). Never reused while the server exists.
             uint64_t id;
             /// The client's TCP connection. Set to non-blocking in AcceptClients().
@@ -40,8 +42,6 @@ namespace cc
             /// Packets waiting to be sent, oldest first. FlushOutgoing() retries the front packet
             /// until it is fully sent (required because non-blocking sends can be partial).
             std::deque<sf::Packet> outgoing;
-            /// This client's player data (camera, planet, username, ...). Only meaningful when `joined` is true.
-            PlayerData player;
             /// True once the client has sent its username and been given its join data.
             /// Unjoined clients are ignored by HandlePacket() (except for the username packet).
             bool joined = false;
@@ -155,22 +155,7 @@ namespace cc
          */
         void RemoveClient(std::size_t index);
 
-        // ---- player data ----
-
-        /**
-         * @brief Stores a player's latest data in `allPlayers`.
-         *
-         * Overwrites the entry with the same username, or appends a new one if none exists.
-         * @param p The player data to store; matched by `p.username`.
-         */
-        void SavePlayer(const PlayerData &p);
-
-        /**
-         * @brief Intended to copy the current data of all connected players into `allPlayers`.
-         * @note Declared but not defined in the current Server.cpp. It appears to have been replaced by calling
-         *       SavePlayer() for each joined client. Remove the declaration if nothing uses it.
-         */
-        void RegisterCurrentPlayers();
+        void SendJoinData(uint64_t clientId, sf::Packet &usernamePacket);
 
         // ---- networking: receiving ----
 
@@ -221,25 +206,7 @@ namespace cc
          */
         void Broadcast(sf::Packet &packet, std::vector<uint64_t> exclusions = {});
 
-        /**
-         * @brief Completes a client's join: handles its SEND_USERNAME packet.
-         *
-         * Reads the username, restores that player's saved data from `allPlayers` (or registers a new player),
-         * marks the client as joined, and queues a JOIN_DATA packet containing the list of joined players,
-         * the chunks around the player's saved camera, and all entities on their planet. Then tells the other
-         * clients with PLAYER_JOINED.
-         * @param clientId Id of the joining client.
-         * @param usernamePacket The SEND_USERNAME packet, positioned just after the message type.
-         * @note Generates any visible chunks that do not exist yet, which can be slow for large views.
-         */
-        void SendJoinData(uint64_t clientId, sf::Packet &usernamePacket);
 
-        /**
-         * @brief Queues a CHUNK_DATA packet with the requested chunks from the client's current planet.
-         * @param clientId Id of the requesting client.
-         * @param positions Chunk coordinates (in chunks, not tiles). Missing chunks are generated on the spot.
-         */
-        void SendChunks(uint64_t clientId, std::vector<sf::Vector2i> &positions);
 
         /// @brief Sends a SERVER_MESSAGE (shown in the chat log as coming from the server) to all clients.
         void BroadcastServerLog(std::string message);
@@ -254,11 +221,7 @@ namespace cc
         // ---- state ----
 
         /// Ticks per second. Used as `1.0 / tps` in Update(), so it must be set to a positive value before the first Update().
-        int tps;
-
-        /// All planets in the world. The index in this vector is the planet index used by PlayerData::planet.
-        /// The constructor creates planet 0 only.
-        std::vector<std::unique_ptr<Planet>> planets = {};
+        int tps = 60;
 
         /// Accepts incoming connections. Non-blocking once Start() succeeds.
         sf::TcpListener listener;
@@ -269,16 +232,21 @@ namespace cc
         /// Id that will be given to the next accepted client. Use GetNextClientId() instead of reading this directly.
         uint64_t currClientId = 0;
 
-        /// Last known data for every player (matched by username) that has joined this save, including
-        /// players who are currently offline. Used to restore a returning player's camera and planet.
-        std::vector<PlayerData> allPlayers = {};
+        std::unique_ptr<World> world;
+        //state checks that have not been compared against all clients yet
+        std::vector<std::pair<uint64_t,sf::Packet>> stateChecks;
+        std::vector<std::vector<bool>> clientStateChecksVerified;
+
+        void BroadcastNextTick();
+
+        void CompareStateChecks(uint64_t clientId,sf::Packet& packet);
 
     private:
+        void ProcessInputBundle(uint64_t clientId, sf::Packet& p);
+        std::unordered_map<uint64_t,std::vector<InputBundle>> queuedInputs;
         /// Body of the server thread: loops while `running`, waiting briefly for network activity and calling Update() under `mutex`.
         void Run();
 
-        /// Base world seed, as set by SetSeed(). Uninitialized until then.
-        uint64_t seed;
 
         /// Seconds accumulated towards the next tick. Update() adds to it and subtracts one tick interval per Tick().
         /// Has no initial value; it should start at 0.

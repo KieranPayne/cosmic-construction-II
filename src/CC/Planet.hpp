@@ -22,6 +22,8 @@ namespace cc
 	class Planet
 	{
 	public:
+		//needed for tool guis etc.
+		Client* client = nullptr;
 		/// Every entity on the planet. The index in this vector is the entity's id in update packets. The planet owns them.
 		std::vector<std::unique_ptr<Entity>> entities;
 
@@ -47,22 +49,7 @@ namespace cc
 		/// The "Entity Editor" window.
 		EntityEditor entityEditor;
 
-		/// The connection to the server, used to send changes. Null on the server's own planet.
-		Client *client = nullptr;
 
-		/// True for the server's planet, which generates missing chunks itself instead of waiting for them to be sent.
-		bool isServerPlanet = false;
-
-		/// Tile changes (position, tile and optional tile entity) waiting for their chunk to arrive. Client only.
-		/// Update() applies each one once its chunk exists.
-		std::vector<std::pair<sf::Vector2i, std::pair<Tile, TileEntity *>>> tileSetRequests;
-
-		/// Chunk positions already asked for from the server, so they aren't asked for again.
-		std::unordered_set<sf::Vector2i, ChunkHash> chunksRequested;
-
-		/// Tile changes made on this client that have not been sent yet. Update() sends them all in one
-		/// REQUEST_SET_TILES packet and clears this.
-		std::vector<std::pair<sf::Vector2i, std::pair<Tile, TileEntity *>>> tilesToSend;
 
 		/// Smoothed frames per second, shown in the info window.
 		double currFps;
@@ -89,19 +76,6 @@ namespace cc
 
 		/// @brief Advances the planet by one fixed step: ticks every entity, then moves the ones that crossed into another chunk.
 		void Tick();
-
-		/**
-		 * @brief Works out which chunks the client needs to ask the server for.
-		 *
-		 * Includes the chunks in view (plus a one chunk border), the chunks of entities not yet in a chunk,
-		 * and the chunks of waiting `tileSetRequests`. Chunks that already exist or were already requested are left
-		 * out, and the rest are recorded in `chunksRequested`.
-		 *
-		 * Also puts entities into their chunk if it has arrived.
-		 * @param target The window being drawn to; its size and the camera decide what is in view.
-		 * @return The chunk positions to request.
-		 */
-		std::vector<sf::Vector2i> GetChunksToRequest(sf::RenderTarget *target);
 
 		/**
 		 * @brief Draws the visible chunks' tiles, then their entities.
@@ -162,7 +136,7 @@ namespace cc
 		 * @param sentByServer Pass true when the entity came from the server (or this is the server), so it is
 		 *                     not sent back. When false, an add request is sent to the server through `client`.
 		 */
-		void AddEntity(Entity *entity, bool sentByServer = false, bool broadcast = true);
+		void AddEntity(Entity *entity);
 
 		/**
 		 * @brief Gets the drawing data for a single tile.
@@ -188,9 +162,8 @@ namespace cc
 		 * @param position The tile's position in tiles.
 		 * @param tile The new tile.
 		 * @param tileEntity The tile's tile entity, or null if it has none.
-		 * @param sentByServer Pass true when the change came from the server, so it isn't sent back.
 		 */
-		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity = nullptr, bool sentByServer = false);
+		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity = nullptr);
 
 		/**
 		 * @brief Writes or reads the planet's own saved data: the camera and the seed.
@@ -232,6 +205,8 @@ namespace cc
 		 * @param width How many tiles wide to make the picture. The height follows the image's shape.
 		 */
 		void MakeImageFromTiles(std::string &imagePath, sf::Vector2i placePos, int width);
+
+		void GenerateStateCheck(sf::Packet& packet);
 
 		// A planet can't be copied (it holds unique_ptrs), but it can be moved, so it can be stored in a vector.
 		Planet(const Planet &) = delete;

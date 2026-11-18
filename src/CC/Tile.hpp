@@ -1,6 +1,6 @@
 #pragma once
 #include "../PCH.hpp"
-
+#include "Serializer.hpp"
 namespace cc
 {
 	/// Width and height of one tile, in pixels.
@@ -22,6 +22,10 @@ namespace cc
 
 		/// @brief Creates a tile of the given type.
 		Tile(uint16_t type) { this->type = type; }
+		void Serialize(Serializer& s)
+		{
+			s.field("type",type);
+		}
 
 		void OnDestroy(Planet* p, sf::Vector2i chunkPos, sf::Vector2i subChunkPos);
 	};
@@ -46,10 +50,10 @@ namespace cc
 	struct BackgroundTile
 	{
 	public:
+		/// The terrain type this tile was generated as.
+		BackgroundTileType type;
 		/// The colour this tile is drawn in.
 		sf::Color color;
 
-		/// The terrain type this tile was generated as.
-		BackgroundTileType type;
 	};
 }
