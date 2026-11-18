@@ -63,12 +63,13 @@ namespace cc
                 {
                     Serializer sr(Serializer::Mode::READ, Serializer::Format::JSON, j);
                     p->entities[i]->Serialize(sr);
-                    sf::Packet packet;
-                    packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;
-                    packet << (int)1;
-                    packet << i;
-                    AppendEntityToPacket(packet, p->entities[i].get());
-                    p->client->SendPacket(packet);
+                    //TODO: SEND ENTITY CHANGE TO SERVER
+                    // sf::Packet packet;
+                    // packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;
+                    // packet << (int)1;
+                    // packet << i;
+                    // AppendEntityToPacket(packet, p->entities[i].get());
+                    // p->client->SendPacket(packet);
                 }
             }
             ImGui::End();

@@ -60,13 +60,13 @@ namespace cc
 			{
 				server->SetSeed(HashFromString(seed));
 			}
-			server->planets[0]->AddEntity(new Entity(), true);
+			server->planets[0]->AddEntity(new Entity());
 			Human *h = new Human();
 			h->position = {1.f, 0.f};
-			server->planets[0]->AddEntity(h, true);
+			server->planets[0]->AddEntity(h);
 			Item *item = new Item();
 			item->position = {2.f, 0.f};
-			server->planets[0]->AddEntity(item, true);
+			server->planets[0]->AddEntity(item);
 			SaveServer(server.get());
 			server->Start(5000);
 			server->StartThread();

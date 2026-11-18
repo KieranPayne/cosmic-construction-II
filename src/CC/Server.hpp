@@ -162,12 +162,6 @@ namespace cc
          */
         void SavePlayer(const PlayerData &p);
 
-        /**
-         * @brief Intended to copy the current data of all connected players into `allPlayers`.
-         * @note Declared but not defined in the current Server.cpp. It appears to have been replaced by calling
-         *       SavePlayer() for each joined client. Remove the declaration if nothing uses it.
-         */
-        void RegisterCurrentPlayers();
 
         // ---- networking: receiving ----
 
@@ -231,12 +225,6 @@ namespace cc
          */
         void SendJoinData(uint64_t clientId, sf::Packet &usernamePacket);
 
-        /**
-         * @brief Queues a CHUNK_DATA packet with the requested chunks from the client's current planet.
-         * @param clientId Id of the requesting client.
-         * @param positions Chunk coordinates (in chunks, not tiles). Missing chunks are generated on the spot.
-         */
-        void SendChunks(uint64_t clientId, std::vector<sf::Vector2i> &positions);
 
         /// @brief Sends a SERVER_MESSAGE (shown in the chat log as coming from the server) to all clients.
         void BroadcastServerLog(std::string message);

@@ -40,41 +40,41 @@ namespace cc
 		}
 		else
 		{
-			for (auto &p : planets)
-			{
-				p->Update(deltaTime);
-			}
+			// for (auto &p : planets)
+			// {
+			// 	p->Update(deltaTime);
+			// }
 			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 
 			// ask the server for any chunks that are in view but not loaded yet
-			auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
-			if (chunks.size() > 0)
-			{
-				sf::Packet p;
-				p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
-				p << (uint64_t)chunks.size();
-				for (auto &c : chunks)
-				{
-					p << c.x << c.y;
-				}
-				SendPacket(p);
-			}
+			// auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
+			// if (chunks.size() > 0)
+			// {
+			// 	sf::Packet p;
+			// 	p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
+			// 	p << (uint64_t)chunks.size();
+			// 	for (auto &c : chunks)
+			// 	{
+			// 		p << c.x << c.y;
+			// 	}
+			// 	SendPacket(p);
+			// }
 
 			DrawLogWindow();
 
 			// periodically tell the server where this player is looking
-			if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
-			{
-				sendPlayerDataClock.restart();
-				sf::Packet p;
-				p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
-				Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-				GetPlayerData().Serialize(s);
-				auto data = s.binary();
-				p << (uint64_t)data.size();
-				p.append(data.data(), data.size());
-				SendPacket(p);
-			}
+			// if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
+			// {
+			// 	sendPlayerDataClock.restart();
+			// 	sf::Packet p;
+			// 	p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
+			// 	Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			// 	GetPlayerData().Serialize(s);
+			// 	auto data = s.binary();
+			// 	p << (uint64_t)data.size();
+			// 	p.append(data.data(), data.size());
+			// 	SendPacket(p);
+			// }
 		}
 
 		// debug shortcut: place a test image made of tiles
@@ -178,77 +178,6 @@ namespace cc
 			break;
 		}
 
-		case CSMessageType::CHUNK_DATA:
-			LoadChunks(packet);
-			break;
-
-		case CSMessageType::SET_TILES:
-		{
-			int n;
-			packet >> n;
-			for (int i = 0; i < n; i++)
-			{
-				sf::Vector2i position;
-				uint16_t tileType;
-				bool hasTileEntity;
-				packet >> position.x >> position.y >> tileType >> hasTileEntity;
-				TileEntity *e = nullptr;
-				if (hasTileEntity)
-				{
-					auto data = ReadBytesFromPacket(packet);
-					Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
-					e = CreateTileEntityFromType(tileType);
-					e->Serialize(s);
-				}
-				planets[activePlanet]->SetTileAt(position, Tile(tileType), e, true);
-			}
-			break;
-		}
-
-		case CSMessageType::ADD_ENTITIES:
-		{
-			int n;
-			packet >> n;
-			for (int i = 0; i < n; i++)
-			{
-				Entity *e = LoadEntityFromPacket(packet);
-				planets[activePlanet]->AddEntity(e, true);
-			}
-			break;
-		}
-
-		case CSMessageType::UPDATE_ENTITIES:
-		{
-			int n;
-			packet >> n;
-			for (int i = 0; i < n; i++)
-			{
-				int index;
-				packet >> index;
-				Entity *e = LoadEntityFromPacket(packet);
-				planets[activePlanet]->ReplaceEntity(index, e);
-			}
-			break;
-		}
-
-		case CSMessageType::UPDATE_PLAYER_DATA:
-		{
-			std::string username;
-			packet >> username;
-			auto data = ReadBytesFromPacket(packet);
-			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
-			for (size_t i = 0; i < otherPlayers.size(); i++)
-			{
-				if (otherPlayers[i].username == username)
-				{
-					prevOtherPlayers[i] = otherPlayers[i];
-					prevOtherClocks[i].restart();
-					otherPlayers[i].Serialize(s);
-				}
-			}
-			break;
-		}
-
 		default:
 			break;
 		}
@@ -301,7 +230,7 @@ namespace cc
 			Chunk *c = new Chunk({posX, posY});
 			c->LoadByteData(chunkData);
 			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
-			planet.chunksRequested.emplace(sf::Vector2i{posX, posY});
+			// planet.chunksRequested.emplace(sf::Vector2i{posX, posY});
 		}
 
 		// entities on the planet
@@ -310,7 +239,7 @@ namespace cc
 		for (uint64_t i = 0; i < numEntities; i++)
 		{
 			Entity *e = LoadEntityFromPacket(packet);
-			planet.AddEntity(e, true);
+			planet.AddEntity(e);
 		}
 
 		std::string msg = "Join data processed. Other players:";
@@ -498,24 +427,24 @@ namespace cc
 		SendPacket(p);
 	}
 
-	void Client::LoadChunks(sf::Packet &packet)
-	{
-		Planet &planet = *planets[activePlanet];
-		uint64_t n;
-		packet >> n;
-		for (uint64_t i = 0; i < n; i++)
-		{
-			int posX, posY;
-			packet >> posX >> posY;
-			// always read the chunk's bytes, even when skipping it, so the rest of the packet stays aligned
-			auto chunkData = ReadBytesFromPacket(packet);
-			if (planet.chunks.contains({posX, posY}))
-				continue;
-			Chunk *c = new Chunk({posX, posY});
-			c->LoadByteData(chunkData);
-			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
-		}
-	}
+	// void Client::LoadChunks(sf::Packet &packet)
+	// {
+	// 	Planet &planet = *planets[activePlanet];
+	// 	uint64_t n;
+	// 	packet >> n;
+	// 	for (uint64_t i = 0; i < n; i++)
+	// 	{
+	// 		int posX, posY;
+	// 		packet >> posX >> posY;
+	// 		// always read the chunk's bytes, even when skipping it, so the rest of the packet stays aligned
+	// 		auto chunkData = ReadBytesFromPacket(packet);
+	// 		if (planet.chunks.contains({posX, posY}))
+	// 			continue;
+	// 		Chunk *c = new Chunk({posX, posY});
+	// 		c->LoadByteData(chunkData);
+	// 		planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
+	// 	}
+	// }
 
 	void Client::DrawOtherPlayers()
 	{

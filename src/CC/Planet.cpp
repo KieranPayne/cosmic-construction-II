@@ -46,60 +46,17 @@ namespace cc
 	}
 	void Planet::Update(double dt)
 	{
-		if (isServerPlanet)
+		for (auto &e : entities)
 		{
-			for (auto &e : entities)
+			if (!e->isInChunk)
 			{
-				if (!e->isInChunk)
+				if (!chunks.contains(e->chunkPos))
 				{
-					if (!chunks.contains(e->chunkPos))
-					{
-						GenerateChunk(e->chunkPos);
-					}
-					chunks[e->chunkPos]->AddEntity(e.get());
-					e->isInChunk = true;
+					GenerateChunk(e->chunkPos);
 				}
+				chunks[e->chunkPos]->AddEntity(e.get());
+				e->isInChunk = true;
 			}
-		}
-		if (tileSetRequests.size() > 0)
-		{
-			for (int i = 0; i < tileSetRequests.size(); i++)
-			{
-				auto &t = tileSetRequests[i];
-				sf::Vector2i chunkPos = TileToChunkPos(t.first);
-				if (chunks.contains(chunkPos))
-				{
-					SetTileAt(t.first, t.second.first, t.second.second);
-					tileSetRequests.erase(tileSetRequests.begin() + i);
-					i--;
-				}
-			}
-		}
-		if (tilesToSend.size() > 0)
-		{
-			sf::Packet p;
-			p << (uint16_t)CSMessageType::REQUEST_SET_TILES;
-			p << (int)tilesToSend.size();
-			for (int i = 0; i < tilesToSend.size(); i++)
-			{
-				sf::Vector2i &position = tilesToSend[i].first;
-				Tile &tile = tilesToSend[i].second.first;
-				TileEntity *tileEntity = tilesToSend[i].second.second;
-				p << position.x << position.y;
-				p << tile.type;
-				p << (bool)(tileEntity != nullptr);
-				if (tileEntity != nullptr)
-				{
-					Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-
-					tileEntity->Serialize(s);
-					auto data = s.binary();
-					p << (uint64_t)data.size();
-					p.append(data.data(), data.size());
-				}
-			}
-			client->SendPacket(p);
-			tilesToSend.clear();
 		}
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
@@ -109,66 +66,66 @@ namespace cc
 		DrawToolGUI(inputState);
 		jsonEditor.Draw(this);
 	}
-	std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
-	{
-		sf::FloatRect view = camera.toFloatRect(target);
-		constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
-		sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
-		sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
-		topLeft -= {1, 1};
-		bottomRight += {1, 1};
-		std::vector<sf::Vector2i> positions = {};
-		for (int x = topLeft.x; x <= bottomRight.x; x++)
-		{
-			for (int z = topLeft.y; z <= bottomRight.y; z++)
-			{
+	// std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
+	// {
+	// 	sf::FloatRect view = camera.toFloatRect(target);
+	// 	constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
+	// 	sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
+	// 	sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
+	// 	topLeft -= {1, 1};
+	// 	bottomRight += {1, 1};
+	// 	std::vector<sf::Vector2i> positions = {};
+	// 	for (int x = topLeft.x; x <= bottomRight.x; x++)
+	// 	{
+	// 		for (int z = topLeft.y; z <= bottomRight.y; z++)
+	// 		{
 
-				if (!chunks.contains({x, z}))
-				{
-					positions.push_back({x, z});
-				}
-			}
-		}
-		for (auto &e : entities)
-		{
-			if (!e->isInChunk)
-			{
-				if (chunks.contains(e->chunkPos))
-				{
-					chunks[e->chunkPos]->AddEntity(e.get());
-					e->isInChunk = true;
-				}
-				else
-				{
-					if (std::find(positions.begin(), positions.end(), e->chunkPos) == positions.end())
-					{
-						positions.push_back(e->chunkPos);
-					}
-				}
-			}
-		}
-		for (int i = 0; i < tileSetRequests.size(); i++)
-		{
-			sf::Vector2i chunkPos = TileToChunkPos(tileSetRequests[i].first);
-			if (!chunks.contains(chunkPos) && std::find(positions.begin(), positions.end(), chunkPos) == positions.end())
-			{
-				positions.push_back(chunkPos);
-			}
-		}
-		for (int i = 0; i < positions.size(); i++)
-		{
-			if (chunksRequested.contains(positions[i]))
-			{
-				positions.erase(positions.begin() + i);
-				i--;
-			}
-			else
-			{
-				chunksRequested.emplace(positions[i]);
-			}
-		}
-		return positions;
-	}
+	// 			if (!chunks.contains({x, z}))
+	// 			{
+	// 				positions.push_back({x, z});
+	// 			}
+	// 		}
+	// 	}
+	// 	for (auto &e : entities)
+	// 	{
+	// 		if (!e->isInChunk)
+	// 		{
+	// 			if (chunks.contains(e->chunkPos))
+	// 			{
+	// 				chunks[e->chunkPos]->AddEntity(e.get());
+	// 				e->isInChunk = true;
+	// 			}
+	// 			else
+	// 			{
+	// 				if (std::find(positions.begin(), positions.end(), e->chunkPos) == positions.end())
+	// 				{
+	// 					positions.push_back(e->chunkPos);
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	for (int i = 0; i < tileSetRequests.size(); i++)
+	// 	{
+	// 		sf::Vector2i chunkPos = TileToChunkPos(tileSetRequests[i].first);
+	// 		if (!chunks.contains(chunkPos) && std::find(positions.begin(), positions.end(), chunkPos) == positions.end())
+	// 		{
+	// 			positions.push_back(chunkPos);
+	// 		}
+	// 	}
+	// 	for (int i = 0; i < positions.size(); i++)
+	// 	{
+	// 		if (chunksRequested.contains(positions[i]))
+	// 		{
+	// 			positions.erase(positions.begin() + i);
+	// 			i--;
+	// 		}
+	// 		else
+	// 		{
+	// 			chunksRequested.emplace(positions[i]);
+	// 		}
+	// 	}
+	// 	return positions;
+	// }
 	void Planet::Render(sf::RenderTarget *target)
 	{
 		sf::RenderStates states;
@@ -280,14 +237,14 @@ namespace cc
 			entityData.field(std::to_string(i) + " type", type);
 			Entity *e = CreateEntityFromType((Entity::EntityType)type);
 			entityData.field(std::to_string(i), e);
-			AddEntity(e, true);
+			AddEntity(e);
 		}
 		// load misc data
 		Serializer s = SaveManager::LoadSerializerFromFile(path + "/planet");
 		Serialize(s);
 		generator.Load(path);
 	}
-	void Planet::AddEntity(Entity *entity, bool sentByServer)
+	void Planet::AddEntity(Entity *entity)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
@@ -295,15 +252,7 @@ namespace cc
 		// TODO: handle the case where the chunk isn't loaded yet
 		if (!chunks.contains(chunkPos))
 		{
-			return;
-		}
-		if (!sentByServer)
-		{
-			sf::Packet p;
-			p << (uint16_t)CSMessageType::REQUEST_ADD_ENTITIES;
-			p << (int)1;
-			AppendEntityToPacket(p, entity);
-			client->SendPacket(p);
+			GenerateChunk(chunkPos);
 		}
 		entity->isInChunk = true;
 		chunks[chunkPos]->AddEntity(entity);
@@ -378,20 +327,12 @@ namespace cc
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		return chunks[chunkPos]->GetTile(subChunkPos);
 	}
-	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity, bool sentByServer)
+	void Planet::SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
-			if (isServerPlanet)
-			{
-				GenerateChunk(chunkPos);
-			}
-			else
-			{
-				tileSetRequests.push_back({position, {tile, tileEntity}});
-				return;
-			}
+			GenerateChunk(chunkPos);
 		}
 		auto current = GetTileAt(position);
 		if (current.first->type == tile.type)
@@ -416,10 +357,6 @@ namespace cc
 			}
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
-		if (client != nullptr && !sentByServer)
-		{
-			tilesToSend.push_back({position, {tile, tileEntity}});
-		}
 		chunks[chunkPos]->SetTile(subChunkPos, tile, tileEntity);
 		if (tileVertices.contains(chunkPos))
 		{
