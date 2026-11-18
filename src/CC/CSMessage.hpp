@@ -18,6 +18,8 @@ namespace cc
 
         STATE_CHECK,
 
-        BROADCAST_NEXT_TICK
+        BROADCAST_NEXT_TICK,
+
+        CLIENT_INPUT_BUNDLE
     };
 }

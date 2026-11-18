@@ -205,7 +205,7 @@ namespace cc
          * @param value The object to store, or to fill in when reading.
          */
         template <typename T>
-        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
+        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_enum_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, T &value)
         {
             if (format == Format::JSON)
@@ -376,6 +376,84 @@ namespace cc
             }
         }
 
+        template <typename T>
+        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
+        field(const std::string name, std::vector<std::unique_ptr<T>> &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    nlohmann::json arr = nlohmann::json::array();
+                    for (auto &elem : value)
+                    {
+                        if (!elem)
+                        {
+                            arr.push_back(nullptr);
+                            continue;
+                        }
+                        Serializer sub(mode, format);
+                        elem->Serialize(sub);
+                        arr.push_back(sub.json());
+                    }
+                    j_[name] = arr;
+                }
+                else
+                {
+                    if (!j_.contains(name))
+                        return;
+                    value.clear();
+                    for (auto &elem_json : j_.at(name))
+                    {
+                        if (elem_json.is_null())
+                        {
+                            value.push_back(nullptr);
+                            continue;
+                        }
+                        auto elem = std::make_unique<T>();
+                        Serializer sub(mode, format, elem_json);
+                        elem->Serialize(sub);
+                        value.push_back(std::move(elem));
+                    }
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    uint32_t count = static_cast<uint32_t>(value.size());
+                    writeRaw(count);
+                    for (auto &elem : value)
+                    {
+                        bool hasValue = (elem != nullptr);
+                        writeRaw(hasValue);
+                        if (hasValue)
+                            elem->Serialize(*this);
+                    }
+                }
+                else
+                {
+                    uint32_t count;
+                    readRaw(count);
+                    value.clear();
+                    value.reserve(count);
+                    for (uint32_t i = 0; i < count; i++)
+                    {
+                        bool hasValue = false;
+                        readRaw(hasValue);
+                        if (!hasValue)
+                        {
+                            value.push_back(nullptr);
+                            continue;
+                        }
+                        auto elem = std::make_unique<T>();
+                        elem->Serialize(*this);
+                        value.push_back(std::move(elem));
+                    }
+                }
+            }
+        }
+
         /**
          * @brief Writes or reads a std::size_t.
          * @param name The field's name (used in JSON; ignored in BINARY).
@@ -400,6 +478,92 @@ namespace cc
                     writeRaw(value);
                 else
                     readRaw(value);
+            }
+        }
+        /**
+         * @brief Writes or reads an optional object owned by a std::unique_ptr.
+         *
+         * In JSON, a null pointer is stored as `null` and a valid pointer as a nested object.
+         * In BINARY, a 1-byte bool flag precedes the object's bytes when non-null.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The unique_ptr to store, or to allocate/reset when reading.
+         */
+        template <typename T>
+        void field(const std::string name, std::unique_ptr<T> &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    if (!value)
+                    {
+                        j_[name] = nullptr;
+                    }
+                    else
+                    {
+                        Serializer sub(mode, format);
+                        value->Serialize(sub);
+                        j_[name] = sub.json();
+                    }
+                }
+                else // READ
+                {
+                    if (!j_.contains(name) || j_.at(name).is_null())
+                    {
+                        value.reset();
+                        return;
+                    }
+                    if (!value)
+                    {
+                        value = std::make_unique<T>();
+                    }
+                    Serializer sub(mode, format, j_.at(name));
+                    value->Serialize(sub);
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    bool hasValue = (value != nullptr);
+                    writeRaw(hasValue);
+                    if (hasValue)
+                    {
+                        value->Serialize(*this);
+                    }
+                }
+                else // READ
+                {
+                    bool hasValue = false;
+                    readRaw(hasValue);
+                    if (!hasValue)
+                    {
+                        value.reset();
+                        return;
+                    }
+                    if (!value)
+                    {
+                        value = std::make_unique<T>();
+                    }
+                    value->Serialize(*this);
+                }
+            }
+        }
+        /**
+         * @brief Writes or reads an enum or enum class using its underlying integer type.
+         * @param name The field's name (used in JSON; ignored in BINARY).
+         * @param value The enum value to store, or to fill in when reading.
+         */
+        template <typename T>
+        std::enable_if_t<std::is_enum_v<T>>
+        field(const std::string name, T &value)
+        {
+            using Underlying = std::underlying_type_t<T>;
+            Underlying raw = static_cast<Underlying>(value);
+            field(name, raw); // delegates to the existing arithmetic overload (JSON + BINARY)
+            if (mode == Mode::READ)
+            {
+                value = static_cast<T>(raw);
             }
         }
 

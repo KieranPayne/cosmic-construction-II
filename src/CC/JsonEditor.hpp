@@ -44,14 +44,14 @@ namespace cc
         }
 
     private:
+    
+        /// Text being typed into each string field, keyed by the field's path. Keeps edits stable between frames.
+        std::unordered_map<std::string, std::string> stringBuffers;
+        /// The new entity being built in adding mode. Null otherwise. Owned by the editor until "Done" hands it to the planet.
+        Entity *entity = nullptr;
         /// True while the editor is building a new entity (adding mode).
         bool addingEntity = false;
 
-        /// The new entity being built in adding mode. Null otherwise. Owned by the editor until "Done" hands it to the planet.
-        Entity *entity = nullptr;
-
-        /// Text being typed into each string field, keyed by the field's path. Keeps edits stable between frames.
-        std::unordered_map<std::string, std::string> stringBuffers;
 
         /**
          * @brief Draws one json value, recursing into objects and arrays, with a widget suited to its type.

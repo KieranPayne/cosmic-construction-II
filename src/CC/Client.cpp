@@ -10,16 +10,13 @@ namespace cc
 	{
 		this->renderTarget = target;
 		activePlanet = 0;
-		AddPlanet(new Planet());
-		sendPlayerDataClock.start();
+		world = std::make_unique<World>();
 	}
 
-	void Client::AddPlanet(Planet *planet)
+	void Client::Tick()
 	{
-		planet->client = this;
-		planets.push_back(std::unique_ptr<Planet>(planet));
+		world->Tick();
 	}
-
 	void Client::DerivedUpdate()
 	{
 		ReceivePackets();
@@ -28,23 +25,25 @@ namespace cc
 		{
 			return;
 		}
-		while (serverTickCounter > tickCounter)
+		while (serverTickCounter > world->currentTick)
 		{
-			tickCounter ++;
-			for (auto& p : planets)
+			if (queuedInputs.contains(world->currentTick))
 			{
-				p->Tick();
+				for (int i = 0; i < queuedInputs[world->currentTick].size(); i ++)
+				{
+					world->EnactInputBundle(queuedInputs[world->currentTick][i]);
+				}
+				queuedInputs.erase(world->currentTick);
 			}
-			if (tickCounter % 60 == 0)
+			SendInputBundle();
+			Tick();
+			currInputBundle = InputBundle();
+			currInputBundle.playerData = GetPlayerData();
+			if (world->currentTick % 60 == 0)
 			{
 				sf::Packet p;
 				p << (uint16_t)CSMessageType::STATE_CHECK;
-				p << tickCounter;
-				p << (uint64_t)planets.size();
-				for (auto& planet : planets)
-				{
-					planet->GenerateStateCheck(p);
-				}
+				world->GenerateStateCheck(p);
 				SendPacket(p);
 			}
 		}
@@ -53,55 +52,21 @@ namespace cc
 		{
 			paused = !paused;
 		}
-		for (auto &p : planets)
-		{
-			p->Update(deltaTime);
-		}
 		if (paused)
 		{
 			DisplayPauseMenu();
 		}
 		else
 		{
-			
-			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
-			
-			// ask the server for any chunks that are in view but not loaded yet
-			// auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
-			// if (chunks.size() > 0)
-			// {
-			// 	sf::Packet p;
-			// 	p << (uint16_t)CSMessageType::REQUEST_CHUNKS;
-			// 	p << (uint64_t)chunks.size();
-			// 	for (auto &c : chunks)
-			// 	{
-			// 		p << c.x << c.y;
-			// 	}
-			// 	SendPacket(p);
-			// }
-
+			world->planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 			DrawLogWindow();
-
-			// periodically tell the server where this player is looking
-			// if (sendPlayerDataClock.getElapsedTime().asSeconds() > timePerPlayerDataUpdate)
-			// {
-			// 	sendPlayerDataClock.restart();
-			// 	sf::Packet p;
-			// 	p << (uint16_t)CSMessageType::UPDATE_PLAYER_DATA;
-			// 	Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-			// 	GetPlayerData().Serialize(s);
-			// 	auto data = s.binary();
-			// 	p << (uint64_t)data.size();
-			// 	p.append(data.data(), data.size());
-			// 	SendPacket(p);
-			// }
 		}
 
 		// debug shortcut: place a test image made of tiles
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
 			std::string path = "content/resources/images/borzoi.png";
-			planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
+			world->planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
 		}
 	}
 
@@ -112,8 +77,8 @@ namespace cc
 			return;
 		}
 		sf::View original = renderTarget->getView();
-		planets[activePlanet]->camera.SetView(renderTarget);
-		planets[activePlanet]->Render(renderTarget);
+		world->planets[activePlanet]->camera.SetView(renderTarget);
+		world->planets[activePlanet]->Render(renderTarget);
 		DrawOtherPlayers();
 		renderTarget->setView(original);
 	}
@@ -161,15 +126,20 @@ namespace cc
 
 	void Client::ProcessPacket(sf::Packet &packet)
 	{
+		if (!loadedJoinData)
+		{
+			sf::Packet peek(packet);
+			uint16_t peekType;
+			peek >> peekType;
+			if ((CSMessageType)peekType != CSMessageType::JOIN_DATA)
+			{
+				packetBuffer.push_back(packet);
+				return;
+			}
+		}
+
 		uint16_t t;
 		packet >> t;
-		if (!loadedJoinData && (CSMessageType)t != CSMessageType::JOIN_DATA)
-		{
-			sf::Packet p;
-			p << t;
-			p.append(packet.getData(),packet.getDataSize());
-			packetBuffer.push_back(p);
-		}
 		switch ((CSMessageType)t)
 		{
 		case CSMessageType::JOIN_DATA:
@@ -193,7 +163,7 @@ namespace cc
 		{
 			std::string message;
 			packet >> message;
-			LogMessage(message, MessageOrigin::SERVER);
+			LogMessage(message, ChatMessageOrigin::SERVER);
 			break;
 		}
 
@@ -201,19 +171,31 @@ namespace cc
 		{
 			std::string username, message;
 			packet >> username >> message;
-			LogMessage(message, MessageOrigin::PLAYER, username);
+			LogMessage(message, ChatMessageOrigin::PLAYER, username);
 			break;
 		}
 
 		case CSMessageType::BROADCAST_NEXT_TICK:
 		{
 			packet >> serverTickCounter;
+			uint64_t numBundles;
+			packet >> numBundles;
+			// queuedInputs[serverTickCounter] = {};
+			for (int i = 0; i < numBundles; i ++)
+			{
+				auto data = ReadBytesFromPacket(packet);
+				Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+				InputBundle in;
+				in.Serialize(s);
+				queuedInputs[serverTickCounter].push_back(std::move(in));
+				// world->EnactInputBundle(in);
+			}
 			if (!tickTimer.isRunning())
 			{
 				tickTimer.start();
 			}else
 			{
-				timesBetweenTicks.push_back(tickTimer.getElapsedTime().asSeconds() / (serverTickCounter - tickCounter));
+				timesBetweenTicks.push_back(tickTimer.getElapsedTime().asSeconds() / (serverTickCounter - world->currentTick));
 				if (timesBetweenTicks.size() > 60)
 				{
 					timesBetweenTicks.erase(timesBetweenTicks.begin());
@@ -230,6 +212,7 @@ namespace cc
 					std::cout << "avg time between ticks: " << total << " tps: " << (1.0 / total) << std::endl;
 				}
 			}
+			break;
 		}
 
 		default:
@@ -249,61 +232,15 @@ namespace cc
 	void Client::LoadJoinData(sf::Packet &packet)
 	{
 		loadedJoinData = true;
-
-		
-		uint64_t numPlanets;
-		packet >> numPlanets;
-		while (numPlanets > planets.size())
+		world->LoadJoinData(packet);
+		serverTickCounter = world->currentTick;
+		std::string msg = "Join data processed. Other players:";
+		for (auto &p : world->players)
 		{
-			planets.push_back(std::make_unique<Planet>());
-		}
-		for (int i = 0; i < numPlanets; i ++)
-		{
-			uint64_t numChunks;
-			packet >> numChunks;
-			for (int j = 0; j < numChunks; j ++)
-			{
-				sf::Vector2i pos;
-				packet >> pos.x >> pos.y;
-				auto b = ReadBytesFromPacket(packet);
-				Chunk* c = new Chunk(pos);
-				c->LoadByteData(b);
-				planets[i]->chunks[pos] = std::unique_ptr<Chunk>(c);
-			}
-			uint64_t numEntities;
-			packet >> numEntities;
-			for (int j = 0; j < numEntities; j ++)
-			{
-				Entity* e = LoadEntityFromPacket(packet);
-				planets[i]->AddEntity(e);
-			}
-			planets[i]->generator.LoadFromPacket(packet);
-		}
-		// players currently on the server, including this one
-		auto playerData = ReadBytesFromPacket(packet);
-		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, playerData);
-
-		int numPlayers;
-		s.field("n", numPlayers);
-		for (int i = 0; i < numPlayers; i++)
-		{
-			PlayerData p;
-			s.field(std::to_string(i), p);
 			if (p.username == SaveManager::username)
 			{
-				// this is us: restore our saved planet and camera
-				activePlanet = p.planet;
-				planets[activePlanet]->camera.position = p.cameraPosition;
-				planets[activePlanet]->camera.targetZoom = p.cameraZoom;
 				continue;
 			}
-			AddOtherPlayer(p);
-		}
-		packet >> tickCounter;
-		serverTickCounter = tickCounter;
-		std::string msg = "Join data processed. Other players:";
-		for (auto &p : otherPlayers)
-		{
 			msg += "\n" + p.username;
 		}
 		LogMessage(msg);
@@ -383,27 +320,23 @@ namespace cc
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		PlayerData p;
 		s.field("player", p);
-		AddOtherPlayer(p);
+		AddPlayer(p);
 		LogMessage("Player Connected: " + p.username);
 	}
 
-	void Client::AddOtherPlayer(const PlayerData &player)
+	void Client::AddPlayer(const PlayerData &player)
 	{
-		otherPlayers.push_back(player);
-		prevOtherPlayers.push_back(player);
-		prevOtherClocks.push_back(sf::Clock());
-		prevOtherClocks.back().start();
+		world->AddPlayer(player);
 	}
 
 	void Client::RemoveOtherPlayer(const std::string &username)
 	{
-		for (size_t i = 0; i < otherPlayers.size(); i++)
+		for (size_t i = 0; i < world->players.size(); i++)
 		{
-			if (otherPlayers[i].username == username)
+			if (world->players[i].username == username)
 			{
-				otherPlayers.erase(otherPlayers.begin() + i);
-				prevOtherPlayers.erase(prevOtherPlayers.begin() + i);
-				prevOtherClocks.erase(prevOtherClocks.begin() + i);
+				world->SavePlayer(i);
+				world->players.erase(world->players.begin() + i);
 				return;
 			}
 		}
@@ -418,13 +351,13 @@ namespace cc
 		state->Update(inputState, 0);
 	}
 
-	void Client::LogMessage(std::string message, MessageOrigin origin, std::string username)
+	void Client::LogMessage(std::string message, ChatMessageOrigin origin, std::string username)
 	{
-		if (origin == MessageOrigin::SELF)
+		if (origin == ChatMessageOrigin::SELF)
 		{
 			chatLog.push_back("> " + message);
 		}
-		else if (origin == MessageOrigin::SERVER)
+		else if (origin == ChatMessageOrigin::SERVER)
 		{
 			chatLog.push_back("<SERVER> " + message);
 		}
@@ -483,7 +416,7 @@ namespace cc
 
 	void Client::SendChatMessage(const std::string &text)
 	{
-		LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
+		LogMessage(text, ChatMessageOrigin::PLAYER, SaveManager::username);
 		sf::Packet p;
 		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
 		p << text;
@@ -512,21 +445,24 @@ namespace cc
 	void Client::DrawOtherPlayers()
 	{
 		sf::RectangleShape rect;
-		for (size_t i = 0; i < otherPlayers.size(); i++)
+		for (size_t i = 0; i < world->players.size(); i++)
 		{
-			PlayerData &p = otherPlayers[i];
-			PlayerData &oldP = prevOtherPlayers[i];
+			PlayerData &p = world->players[i];
+			if (p.username == SaveManager::username)
+			{
+				continue;
+			}
 			if (p.planet != activePlanet)
 			{
 				continue;
 			}
 
 			// how far between their previous and latest update we are, from 0 to 1
-			float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate, 0.f, 1.f);
+			// float t = std::clamp(prevOtherClocks[i].getElapsedTime().asSeconds() / timePerPlayerDataUpdate, 0.f, 1.f);
 			sf::Color col = UsernameToColor(p.username);
-			sf::Vector2f targetResolution = Lerp(oldP.resolution, p.resolution, t);
-			float zoom = Lerp(oldP.cameraZoom, p.cameraZoom, t);
-			sf::Vector2f position = Lerp(oldP.cameraPosition, p.cameraPosition, t);
+			sf::Vector2f targetResolution = p.resolution;
+			float zoom = p.cameraZoom;
+			sf::Vector2f position = p.cameraPosition;
 
 			rect.setFillColor(sf::Color::Transparent);
 			rect.setOutlineColor(col);
@@ -542,8 +478,8 @@ namespace cc
 	{
 		PlayerData p;
 		p.username = SaveManager::username;
-		p.cameraPosition = planets[activePlanet]->camera.position;
-		p.cameraZoom = planets[activePlanet]->camera.targetZoom;
+		p.cameraPosition = world->planets[activePlanet]->camera.position;
+		p.cameraZoom = world->planets[activePlanet]->camera.targetZoom;
 		p.planet = activePlanet;
 		p.resolution = (sf::Vector2f)renderTarget->getSize();
 		return p;
@@ -564,6 +500,45 @@ namespace cc
 			}
 			else
 				break;
+		}
+	}
+
+	void Client::SendInputBundle()
+	{
+		sf::Packet p;
+		p << (uint16_t)CSMessageType::CLIENT_INPUT_BUNDLE;
+		p << world->currentTick;
+		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		currInputBundle.Serialize(s);
+		auto data = s.binary();
+		p << (uint64_t)data.size();
+		p.append(data.data(),data.size());
+		SendPacket(p);
+	}
+
+	void Client::ProcessTickBroadcast(sf::Packet& p)
+	{
+		p >> serverTickCounter;
+		std::vector<InputBundle> inputBundles;
+		uint64_t numInputBundles;
+		p >> numInputBundles;
+		for (int i = 0; i < numInputBundles; i ++)
+		{
+			auto data = ReadBytesFromPacket(p);
+			Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+			InputBundle in;
+			in.Serialize(s);
+			inputBundles.push_back(std::move(in));
+		}
+		//ensure any tile changes etc. are applied in the same order by everyone
+		std::sort(inputBundles.begin(), inputBundles.end(),
+		[](const InputBundle &a, const InputBundle &b)
+		{
+			return a.clientId < b.clientId;
+		});
+		for (auto& in : inputBundles)
+		{
+			world->EnactInputBundle(in);
 		}
 	}
 

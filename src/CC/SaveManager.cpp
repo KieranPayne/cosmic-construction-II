@@ -60,14 +60,14 @@ namespace cc
 			{
 				server->SetSeed(HashFromString(seed));
 			}
-			server->planets[0]->AddEntity(new Entity());
-			server->currentTick = 0;
+			server->world->planets[0]->AddEntity(new Entity());
+			// server->currentTick = 0;
 			Human *h = new Human();
 			h->position = {1.f, 0.f};
-			server->planets[0]->AddEntity(h);
+			server->world->planets[0]->AddEntity(h);
 			Item *item = new Item();
 			item->position = {2.f, 0.f};
-			server->planets[0]->AddEntity(item);
+			server->world->planets[0]->AddEntity(item);
 			SaveServer(server.get());
 			server->Start(5000);
 			server->StartThread();
@@ -86,14 +86,7 @@ namespace cc
 			nlohmann::json j = nlohmann::json::parse(ReadData(savePath + "/metadata.json"));
 			saveName = j["saveName"];
 			server = std::make_unique<Server>();
-			Serializer s = LoadSerializerFromFile(savePath + "/players");
-			s.field("players", server->allPlayers);
-			s.field("currentTick",server->currentTick);
-			server->SetSeed(j["seed"]);
-			for (auto &p : server->planets)
-			{
-				p->Load();
-			}
+			server->world->Load();
 			server->Start(5000);
 			server->StartThread();
 			Client *client = new Client(state->renderTarget);
@@ -103,17 +96,7 @@ namespace cc
 		}
 		void SaveServer(Server *server)
 		{
-			for (auto &p : server->planets)
-			{
-				p->Save();
-			}
-			Serializer s(Serializer::Mode::WRITE, saveFormat);
-			for (auto &c : server->clients)
-				if (c.joined)
-					server->SavePlayer(c.player);
-			s.field("players", server->allPlayers);
-			s.field("currentTick",server->currentTick);
-			WriteSerializerToFile(s, savePath + "/players");
+			server->world->Save();
 			WriteServerMetadata(server);
 		}
 		void WriteServerMetadata(Server *server)
