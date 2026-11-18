@@ -63,6 +63,13 @@ namespace cc
                 }
                 stateChecks.push_back({currentTick,p});
                 std::vector<bool> clientChecks(clients.size(),false);
+                for (int i = 0; i < clientChecks.size(); i ++)
+                {
+                    if (clients[i].joinTick >= currentTick)
+                    {
+                        clientChecks[i] = true;
+                    }
+                }
                 clientStateChecksVerified.push_back(clientChecks);
             }
         }
@@ -203,6 +210,7 @@ namespace cc
         if (!client)
             return;
         // REGISTERING PLAYER
+        client->joinTick = currentTick;
         std::string username;
         usernamePacket >> username;
         BroadcastServerLog("Received username: " + username);
@@ -279,7 +287,7 @@ namespace cc
         {
             AppendEntityToPacket(packet, planet->entities[i].get());
         }
-
+        packet << currentTick;
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;

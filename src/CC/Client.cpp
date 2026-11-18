@@ -28,15 +28,13 @@ namespace cc
 		{
 			return;
 		}
-		while (serverTickCounter >= tickCounter)
+		while (serverTickCounter > tickCounter)
 		{
-			for (auto &p : planets)
-			{
-				int tps = 60;
-				double dt = 1.0 / (double)tps;
-				p->Update(dt);
-			}
 			tickCounter ++;
+			for (auto& p : planets)
+			{
+				p->Tick();
+			}
 			if (tickCounter % 60 == 0)
 			{
 				sf::Packet p;
@@ -55,7 +53,10 @@ namespace cc
 		{
 			paused = !paused;
 		}
-
+		for (auto &p : planets)
+		{
+			p->Update(deltaTime);
+		}
 		if (paused)
 		{
 			DisplayPauseMenu();
@@ -64,7 +65,7 @@ namespace cc
 		{
 			
 			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
-
+			
 			// ask the server for any chunks that are in view but not loaded yet
 			// auto chunks = planets[activePlanet]->GetChunksToRequest(renderTarget);
 			// if (chunks.size() > 0)
@@ -265,7 +266,8 @@ namespace cc
 			Entity *e = LoadEntityFromPacket(packet);
 			planet.AddEntity(e);
 		}
-
+		packet >> tickCounter;
+		serverTickCounter = tickCounter;
 		std::string msg = "Join data processed. Other players:";
 		for (auto &p : otherPlayers)
 		{

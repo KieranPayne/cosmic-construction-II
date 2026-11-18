@@ -30,6 +30,7 @@ namespace cc
          */
         struct ServerClient
         {
+            uint64_t joinTick;
             /// Unique id for this connection, assigned by GetNextClientId(). Never reused while the server exists.
             uint64_t id;
             /// The client's TCP connection. Set to non-blocking in AcceptClients().

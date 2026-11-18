@@ -9,6 +9,7 @@ namespace cc
     class Human : public Entity
     {
     public:
+        int movementCounter;
         /// @brief Creates a human entity.
         Human();
 
@@ -17,5 +18,8 @@ namespace cc
          * @return The sprite's top-left corner, in pixels.
          */
         sf::Vector2f GetTexCoords();
+
+        void Tick();
+        void Serialize(Serializer& s);
     };
 }
