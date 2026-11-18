@@ -18,6 +18,8 @@ namespace cc
     class Client : public Kosmic::State
     {
     private:
+        //packets received before join data is received
+        std::vector<sf::Packet> packetBuffer;
         std::vector<double> timesBetweenTicks;
         sf::Clock tickTimer;
         uint64_t serverTickCounter = 0;

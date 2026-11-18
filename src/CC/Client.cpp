@@ -163,6 +163,13 @@ namespace cc
 	{
 		uint16_t t;
 		packet >> t;
+		if (!loadedJoinData && (CSMessageType)t != CSMessageType::JOIN_DATA)
+		{
+			sf::Packet p;
+			p << t;
+			p.append(packet.getData(),packet.getDataSize());
+			packetBuffer.push_back(p);
+		}
 		switch ((CSMessageType)t)
 		{
 		case CSMessageType::JOIN_DATA:
@@ -212,7 +219,7 @@ namespace cc
 					timesBetweenTicks.erase(timesBetweenTicks.begin());
 				}
 				tickTimer.restart();
-				if (timesBetweenTicks.size() >= 1)
+				if (timesBetweenTicks.size() >= 1 && serverTickCounter % 60 == 0)
 				{
 					double total = 0;
 					for (auto t : timesBetweenTicks)
@@ -300,6 +307,10 @@ namespace cc
 			msg += "\n" + p.username;
 		}
 		LogMessage(msg);
+		for (auto& p : packetBuffer)
+		{
+			ProcessPacket(p);
+		}
 	}
 
 	bool Client::ConnectToServer(sf::IpAddress &ip, unsigned short port)
