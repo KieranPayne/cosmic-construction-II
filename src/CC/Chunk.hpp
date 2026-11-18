@@ -146,6 +146,9 @@ namespace cc
 		void RemoveTileEntity(uint16_t index);
 
 		uint64_t GenerateChecksum();
+
+		//--UNDOCUMENTED---
+		void DestroyTile(Planet* p, sf::Vector2i pos);
 	};
 
 	/**

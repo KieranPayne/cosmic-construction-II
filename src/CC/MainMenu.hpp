@@ -80,5 +80,8 @@ namespace cc
 		void DerivedUpdate();
 
 		~MainMenu();
+
+		//---UNDOCUMENTED---
+		std::function<void()> pendingAction;
 	};
 }

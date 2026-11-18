@@ -5,11 +5,6 @@
     "isTileEntity":false
 },
 {
-    "name":"Stone",
-    "textures":["stone.png"],
-    "isTileEntity":false
-},
-{
     "name":"Stockpile",
     "textures":["stockpile.png", "stockpile 2.png"],
     "isTileEntity":true
@@ -77,6 +72,21 @@
 {
     "name":"Red",
     "textures":["red.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Tree",
+    "textures":["tree.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Rock",
+    "textures":["rock.png"],
+    "isTileEntity":false
+},
+{
+    "name":"Tall grass",
+    "textures":["tall grass.png"],
     "isTileEntity":false
 }
 ]

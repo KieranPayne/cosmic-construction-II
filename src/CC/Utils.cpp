@@ -340,7 +340,10 @@ namespace cc
 	{
 		return {Lerp(a.x, b.x, t), Lerp(a.y, b.y, t)};
 	}
-
+	sf::Color Lerp(sf::Color a, sf::Color b, float t)
+	{
+		return {Lerp(a.r, b.r, t), Lerp(a.g, b.g, t), Lerp(a.b,b.b,t), Lerp(a.a,b.a,t)};
+	}
 	sf::Color HsvToRgb(float h, float s, float v)
 	{
 		// Wrap hue into [0, 360) and clamp s and v to [0, 1]
@@ -410,4 +413,69 @@ namespace cc
 
         return hash;
     }
+
+	void DrawArrow(sf::RenderTarget *target,
+				   sf::Vector2f start,
+				   sf::Vector2f end,
+				   sf::Color color,
+				   float thickness,
+				   float headLength,
+				   float headWidth)
+	{
+		sf::Vector2f dir = end - start;
+		float length = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+
+		if (length == 0.f)
+			return;
+
+		// Normalize direction
+		dir /= length;
+
+		// Perpendicular direction
+		sf::Vector2f perp(-dir.y, dir.x);
+
+		// Arrowhead base position
+		sf::Vector2f headBase = end - dir * headLength;
+
+		// --- Draw rectangular shaft ---
+		float shaftLength = length - headLength;
+		if (shaftLength > 0.f)
+		{
+			sf::RectangleShape shaft(sf::Vector2f(shaftLength, thickness));
+			shaft.setFillColor(color);
+			shaft.setOrigin({0.f, thickness / 2.f});
+
+			float angle = std::atan2(dir.y, dir.x) * 180.f / 3.14159265f;
+			shaft.setPosition(start);
+			shaft.setRotation(sf::degrees(angle));
+
+			target->draw(shaft);
+		}
+
+		// --- Draw filled triangular arrowhead ---
+		sf::ConvexShape head;
+		head.setPointCount(3);
+
+		head.setPoint(0, end);
+		head.setPoint(1, headBase + perp * (headWidth / 2.f));
+		head.setPoint(2, headBase - perp * (headWidth / 2.f));
+
+		head.setFillColor(color);
+
+		target->draw(head);
+	}
+
+	void AppendSerializerToPacket(sf::Packet& packet, Serializer& s)
+	{
+		auto data = s.binary();
+		uint64_t numBytes = data.size();
+		packet << numBytes;
+		packet.append(data.data(),data.size());
+	}
+	Serializer ReadSerializerFromPacket(sf::Packet& packet)
+	{
+		std::vector<uint8_t> data = ReadBytesFromPacket(packet);
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
+		return s;
+	}
 }

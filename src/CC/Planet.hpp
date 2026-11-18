@@ -6,7 +6,7 @@
 #include "../json.hpp"
 #include "Entity.hpp"
 #include "TileEntity.hpp"
-#include "JsonEditor.hpp"
+#include "EntityEditor.hpp"
 #include "Serializer.hpp"
 namespace cc
 {
@@ -47,7 +47,7 @@ namespace cc
 		uint64_t seed = 0;
 
 		/// The "Entity Editor" window.
-		JsonEditor jsonEditor;
+		EntityEditor entityEditor;
 
 
 

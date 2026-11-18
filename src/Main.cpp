@@ -23,7 +23,14 @@ Kosmic::Macro macro;
 int main()
 {
 	srand(time(NULL));
-	window = std::make_unique<sf::RenderWindow>(sf::VideoMode({(unsigned int)width, (unsigned int)height}), "Cosmic Construction II");
+	sf::ContextSettings settings;
+	settings.antiAliasingLevel = 2;
+	window = std::make_unique<sf::RenderWindow>(
+		sf::VideoMode({(unsigned int)width, (unsigned int)height}),
+		"Cosmic Construction II",
+		sf::Style::Default,
+		sf::State::Windowed,
+		settings);
 	window->setFramerateLimit(9999);
 	window->setVerticalSyncEnabled(false);
 	// set the icon image that is displayed in the corner of the window

@@ -2,6 +2,7 @@
 #include "../PCH.hpp"
 #include "../json.hpp"
 #include "../imgui/imgui.h"
+#include "Serializer.hpp"
 namespace cc
 {
     class Entity;
@@ -104,6 +105,14 @@ namespace cc
     sf::Vector2f Lerp(sf::Vector2f a, sf::Vector2f b, float t);
 
     /**
+     * @brief Blends between two colors.
+     * @param a The color when t is 0.
+     * @param b The color when t is 1.
+     * @param t How far from a to b, usually from 0 to 1.
+     * @return The blended color.
+     */
+    sf::Color Lerp(sf::Color a, sf::Color b, float t);
+    /**
      * @brief Converts a colour from hue, saturation and value to RGB.
      * @param h Hue in degrees. Wraps around, so 360 is the same as 0.
      * @param s Saturation from 0 to 1 (values outside are clamped).
@@ -114,4 +123,15 @@ namespace cc
 
 
     uint64_t ComputeChecksum(const uint8_t* data, size_t length);
+    // --- UNDOCUMENTED STUFF ---
+    void DrawArrow(sf::RenderTarget* target,
+               sf::Vector2f start,
+               sf::Vector2f end,
+               sf::Color color = sf::Color::White,
+               float thickness = 6.f,
+               float headLength = 20.f,
+               float headWidth = 16.f);
+
+    void AppendSerializerToPacket(sf::Packet& packet, Serializer& s);
+    Serializer ReadSerializerFromPacket(sf::Packet& packet);
 }

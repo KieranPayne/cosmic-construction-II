@@ -15,6 +15,7 @@ namespace cc
 		{
 			p->client = this;
 		}
+		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget, knowledgeDatabase);
 	}
 
 	void Client::Tick()
@@ -92,11 +93,18 @@ namespace cc
 		{
 			return;
 		}
-		sf::View original = renderTarget->getView();
-		world->planets[activePlanet]->camera.SetView(renderTarget);
-		world->planets[activePlanet]->Render(renderTarget);
-		DrawOtherPlayers();
-		renderTarget->setView(original);
+		if (showingKnowledgeGraph)
+		{
+			knowledgeGraph->Render(inputState);
+		}
+		else
+		{
+			sf::View original = renderTarget->getView();
+			world->planets[activePlanet]->camera.SetView(renderTarget);
+			world->planets[activePlanet]->Render(renderTarget);
+			DrawOtherPlayers();
+			renderTarget->setView(original);
+		}
 	}
 
 	void Client::DisplayPauseMenu()
@@ -154,6 +162,14 @@ namespace cc
 			}
 		}
 
+		static int bytesReceived = 0;
+		static sf::Clock byteTimer;
+		if (!byteTimer.isRunning())
+		{
+			byteTimer.start();
+		}
+		bytesReceived += packet.getDataSize();
+		std::cout << "Received: " << (int)(bytesReceived / 1024.f) << " per second: " << (int)(bytesReceived / 1024.f / byteTimer.getElapsedTime().asSeconds()) << std::endl;
 		uint16_t t;
 		packet >> t;
 		switch ((CSMessageType)t)
@@ -231,7 +247,10 @@ namespace cc
 			}
 			break;
 		}
-
+		case CSMessageType::UPDATE_KNOWLEDGE_DB:
+		{
+			LoadKnowledgeDB(packet);
+		}
 		default:
 			break;
 		}
@@ -437,7 +456,11 @@ namespace cc
 
 	void Client::SendChatMessage(const std::string &text)
 	{
-		LogMessage(text, ChatMessageOrigin::PLAYER, SaveManager::username);
+		// Commands are run by the server and answered with server messages, so they aren't shown as player chat.
+		if (!text.empty() && text[0] == '/')
+			LogMessage(text);
+		else
+			LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
 		sf::Packet p;
 		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
 		p << text;
@@ -522,6 +545,20 @@ namespace cc
 			else
 				break;
 		}
+	}
+	void Client::SendKnowledgeDB()
+	{
+		sf::Packet packet;
+		packet << (uint16_t)CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB;
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+		knowledgeDatabase.Serialize(s);
+		AppendSerializerToPacket(packet, s);
+		SendPacket(packet);
+	}
+	void Client::LoadKnowledgeDB(sf::Packet &packet)
+	{
+		Serializer s = ReadSerializerFromPacket(packet);
+		knowledgeDatabase.Serialize(s);
 	}
 
 	void Client::SendInputBundle()

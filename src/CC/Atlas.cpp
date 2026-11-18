@@ -4,7 +4,7 @@ namespace cc
 {
 	// Pixels of duplicated edge colour added around every texture, so that rounding errors when
 	// sampling next to a texture's edge never pick up a neighbouring texture.
-	constexpr int PADDING = 1;
+	constexpr int PADDING = 2;
 
 	Atlas::Atlas()
 	{
@@ -86,7 +86,7 @@ namespace cc
 
 		if (!texture.loadFromImage(atlasImage))
 			std::cerr << "failed to convert atlas image to texture\n";
-
+		texture.setSmooth(false);
 		// remove the white pixel entry so indices match the order textures were added
 		textures.erase(textures.begin());
 		positions.erase(positions.begin());

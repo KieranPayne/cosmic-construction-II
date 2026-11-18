@@ -5,6 +5,8 @@
 #include "PlayerData.hpp"
 #include "InputBundle.hpp"
 #include "World.hpp"
+#include "KnowledgeGraph.hpp"
+#include "KnowledgeDatabase.hpp"
 namespace cc
 {
     /**
@@ -62,6 +64,7 @@ namespace cc
     public:
 
         void Tick();
+        KnowledgeDatabase knowledgeDatabase;
         /**
          * @brief Sends the current input bundle. note that if for example the tick label is tick 0, these are the inputs leading up to the
          *        tick counter rolling over to 1.
@@ -191,5 +194,12 @@ namespace cc
         /// @brief Returns this client's current player data (username, camera position and zoom, planet and
         ///        window size) for sending to the server.
         PlayerData GetPlayerData();
+
+
+        // --- UNDOCUMENTED STUFF --- 
+        std::unique_ptr<KnowledgeGraph> knowledgeGraph;
+        bool showingKnowledgeGraph = false;
+        void SendKnowledgeDB();
+        void LoadKnowledgeDB(sf::Packet& packet);
     };
 }

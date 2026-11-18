@@ -245,5 +245,16 @@ namespace cc
 		//TODO: make this also consider which entities are in the chunk.
 		auto bytes = GetByteData();
 		return ComputeChecksum(bytes.data(),bytes.size());
+  }
+	void Chunk::DestroyTile(Planet* p,sf::Vector2i pos)
+	{
+		static uint16_t airId = TileInfo::nameLookup["Air"]->id;
+		tiles[pos.x][pos.y].OnDestroy(p,position,pos);
+		auto index = TileEntityIndex(pos);
+		if (tileEntities.contains(index))
+		{
+			tileEntities.erase(index);
+		}
+		tiles[pos.x][pos.y] = Tile(airId);
 	}
 }

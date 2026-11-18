@@ -5,7 +5,7 @@ namespace cc
 {
 	/// Width and height of one tile, in pixels.
 #define TILE_SIZE 16
-
+	class Planet;
 	/**
 	 * @brief A tile in a chunk's main layer: just its type.
 	 */
@@ -26,6 +26,8 @@ namespace cc
 		{
 			s.field("type",type);
 		}
+
+		void OnDestroy(Planet* p, sf::Vector2i chunkPos, sf::Vector2i subChunkPos);
 	};
 
 	/**

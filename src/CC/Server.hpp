@@ -3,6 +3,9 @@
 #include "Planet.hpp"
 #include "PlayerData.hpp"
 #include "World.hpp"
+#include "KnowledgeDatabase.hpp"
+#include "CommandSystem.hpp"
+#include "KnowledgeSystem.hpp"
 namespace cc
 {
     /**
@@ -256,5 +259,19 @@ namespace cc
         std::mutex mutex;
         /// The server thread. Joined by Stop().
         std::thread thread;
+
+        //---UNDOCUMENTED---
+    public:
+        KnowledgeDatabase knowledgeDatabase;
+        KnowledgeSystem knowledgeSystem{knowledgeDatabase};
+        CommandSystem commandSystem;
+
+        // pass path without file extension pls
+        void LoadKnowledgeDatabase(std::string path);
+        // pass path without file extension pls
+        void SaveKnowledgeDatabase(std::string path);
+        /// True if this client is the host (connected from this machine).
+        bool IsHost(uint64_t clientId);
+        void BroadcastAddedEntity(Planet* p, Entity* e);
     };
 }

@@ -2,6 +2,7 @@
 #include "CSMessage.hpp"
 #include "Utils.hpp"
 #include "InputBundle.hpp"
+#include "SaveManager.hpp"
 namespace cc
 {
     void Server::Start(unsigned short port)
@@ -19,6 +20,7 @@ namespace cc
     Server::Server()
     {
         world = std::make_unique<World>();
+        RegisterBuiltinCommands(commandSystem);
     }
     void Server::SetSeed(uint64_t seed)
     {
@@ -61,6 +63,10 @@ namespace cc
                 }
                 clientStateChecksVerified.push_back(clientChecks);
             }
+        }
+        for (auto& p : planets)
+        {
+            p->Update(dt);
         }
     }
     uint64_t Server::GetNextClientId()
@@ -189,7 +195,10 @@ namespace cc
         {
             std::string message;
             packet >> message;
-            BroadcastChatLog(message, clientId);
+            if (!commandSystem.TryExecute(*this, clientId, message))
+            {
+                BroadcastChatLog(message, clientId);
+            }
         }
         else if (type == CSMessageType::STATE_CHECK)
         {
@@ -236,6 +245,23 @@ namespace cc
                 break;
             }
         }
+        else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
+        {
+            Serializer s = ReadSerializerFromPacket(packet);
+            sf::Packet out;
+            out << (uint16_t)CSMessageType::UPDATE_KNOWLEDGE_DB;
+            AppendSerializerToPacket(out, s);
+            Broadcast(out, {clientId});
+            knowledgeDatabase.Serialize(s);
+            if (SaveManager::debuggingKnowledgeGraph)
+            {
+                SaveKnowledgeDatabase(SaveManager::GetSavedataDir() + "/knowledge graph");
+            }
+            else
+            {
+                SaveKnowledgeDatabase(SaveManager::savePath + "/knowledge graph");
+            }
+        }
     }
     void Server::SendJoinData(uint64_t clientId, sf::Packet &usernamePacket)
     {
@@ -272,6 +298,10 @@ namespace cc
         sf::Packet packet;
         packet << (uint16_t)CSMessageType::JOIN_DATA;
         world->AppendJoinData(packet);
+
+        Serializer db(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+        knowledgeDatabase.Serialize(db);
+        AppendSerializerToPacket(packet, db);
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;
@@ -517,6 +547,50 @@ namespace cc
                 }
                 break;
             }
+        }
+    void Server::LoadKnowledgeDatabase(std::string path)
+    {
+        Serializer s = SaveManager::LoadSerializerFromFile(path);
+        knowledgeDatabase.Serialize(s);
+    }
+    void Server::SaveKnowledgeDatabase(std::string path)
+    {
+        Serializer s(Serializer::Mode::WRITE, SaveManager::saveFormat);
+        knowledgeDatabase.Serialize(s);
+        SaveManager::WriteSerializerToFile(s, path);
+    }
+    bool Server::IsHost(uint64_t clientId)
+    {
+        ServerClient *client = GetClient(clientId);
+        if (!client)
+            return false;
+        auto address = client->socket.getRemoteAddress();
+        return address.has_value() && *address == sf::IpAddress::getLocalAddress();
+    }
+
+    void Server::BroadcastAddedEntity(Planet *planet, Entity *entity)
+    {
+        // The planet's own `index` isn't reliable on the server, so find it by pointer.
+        int planetIndex = -1;
+        for (int i = 0; i < (int)planets.size(); i++)
+        {
+            if (planets[i].get() == planet)
+            {
+                planetIndex = i;
+                break;
+            }
+        }
+        if (planetIndex == -1)
+            return;
+
+        sf::Packet p;
+        p << (uint16_t)CSMessageType::ADD_ENTITIES;
+        p << (int)1;
+        AppendEntityToPacket(p, entity);
+        for (auto &c : clients)
+        {
+            if (c.joined && c.player.planet == planetIndex)
+                c.outgoing.push_back(p);
         }
     }
 }

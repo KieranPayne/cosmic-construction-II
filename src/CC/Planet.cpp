@@ -61,10 +61,10 @@ namespace cc
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
-		camera.Update(dt, inputState);
+		camera.Update(dt, inputState, target);
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
-		jsonEditor.Draw(this);
+		entityEditor.Draw(this);
 	}
 	// std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
 	// {
@@ -249,10 +249,23 @@ namespace cc
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
+
+		// Share the entity before the chunk check, so it is shared even if its chunk isn't loaded here yet.
+		if (isServerPlanet)
+		{
+			GenerateChunk(chunkPos);
+		}
+
 		// TODO: handle the case where the chunk isn't loaded yet
 		if (!chunks.contains(chunkPos))
 		{
-			GenerateChunk(chunkPos);
+			if (isServerPlanet)
+			{
+				GenerateChunk(chunkPos);
+			}else
+			{
+				return;
+			}
 		}
 		entity->isInChunk = true;
 		chunks[chunkPos]->AddEntity(entity);
@@ -270,6 +283,7 @@ namespace cc
 		double fps = 1.0 / (dt + 0.0000000001);
 		currFps += (fps - currFps) * dt * 3;
 		ImGui::Text(("FPS: " + std::to_string(currFps)).c_str());
+		ImGui::Text(("Time: " + std::format("{:.3g}", 1.0 / currFps * 1000.f) + "ms").c_str());
 		const char *currentLabel = "None";
 		switch (currentView)
 		{
@@ -424,6 +438,7 @@ namespace cc
 			return;
 		}
 		ImGui::Text("Hovering over:");
+		ImGui::Text((std::to_string(worldTilePos.x) + " " + std::to_string(worldTilePos.y)).c_str());
 		std::string bgTile = "Background Tile:\n";
 
 		sf::Vector2i subChunkPos = worldTilePos - worldChunkPos * CHUNK_SIZE;
@@ -475,7 +490,7 @@ namespace cc
 				}
 				ImGui::EndCombo();
 			}
-			if (inputState.Down(sf::Mouse::Button::Right))
+			if (inputState.Down(sf::Mouse::Button::Left))
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
