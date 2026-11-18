@@ -201,6 +201,28 @@ namespace cc
 		case CSMessageType::BROADCAST_NEXT_TICK:
 		{
 			packet >> serverTickCounter;
+			if (!tickTimer.isRunning())
+			{
+				tickTimer.start();
+			}else
+			{
+				timesBetweenTicks.push_back(tickTimer.getElapsedTime().asSeconds() / (serverTickCounter - tickCounter));
+				if (timesBetweenTicks.size() > 60)
+				{
+					timesBetweenTicks.erase(timesBetweenTicks.begin());
+				}
+				tickTimer.restart();
+				if (timesBetweenTicks.size() >= 1)
+				{
+					double total = 0;
+					for (auto t : timesBetweenTicks)
+					{
+						total += t;
+					}
+					total /= (double)timesBetweenTicks.size();
+					std::cout << "avg time between ticks: " << total << " tps: " << (1.0 / total) << std::endl;
+				}
+			}
 		}
 
 		default:
@@ -221,6 +243,35 @@ namespace cc
 	{
 		loadedJoinData = true;
 
+		
+		uint64_t numPlanets;
+		packet >> numPlanets;
+		while (numPlanets > planets.size())
+		{
+			planets.push_back(std::make_unique<Planet>());
+		}
+		for (int i = 0; i < numPlanets; i ++)
+		{
+			uint64_t numChunks;
+			packet >> numChunks;
+			for (int j = 0; j < numChunks; j ++)
+			{
+				sf::Vector2i pos;
+				packet >> pos.x >> pos.y;
+				auto b = ReadBytesFromPacket(packet);
+				Chunk* c = new Chunk(pos);
+				c->LoadByteData(b);
+				planets[i]->chunks[pos] = std::unique_ptr<Chunk>(c);
+			}
+			uint64_t numEntities;
+			packet >> numEntities;
+			for (int j = 0; j < numEntities; j ++)
+			{
+				Entity* e = LoadEntityFromPacket(packet);
+				planets[i]->AddEntity(e);
+			}
+			planets[i]->generator.LoadFromPacket(packet);
+		}
 		// players currently on the server, including this one
 		auto playerData = ReadBytesFromPacket(packet);
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, playerData);
@@ -240,31 +291,6 @@ namespace cc
 				continue;
 			}
 			AddOtherPlayer(p);
-		}
-
-		Planet &planet = *planets[activePlanet];
-
-		// chunks around the player
-		int numChunks;
-		packet >> numChunks;
-		for (int i = 0; i < numChunks; i++)
-		{
-			int posX, posY;
-			packet >> posX >> posY;
-			auto chunkData = ReadBytesFromPacket(packet);
-			Chunk *c = new Chunk({posX, posY});
-			c->LoadByteData(chunkData);
-			planet.chunks[{posX, posY}] = std::unique_ptr<Chunk>(c);
-			// planet.chunksRequested.emplace(sf::Vector2i{posX, posY});
-		}
-
-		// entities on the planet
-		uint64_t numEntities;
-		packet >> numEntities;
-		for (uint64_t i = 0; i < numEntities; i++)
-		{
-			Entity *e = LoadEntityFromPacket(packet);
-			planet.AddEntity(e);
 		}
 		packet >> tickCounter;
 		serverTickCounter = tickCounter;

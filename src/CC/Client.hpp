@@ -18,6 +18,8 @@ namespace cc
     class Client : public Kosmic::State
     {
     private:
+        std::vector<double> timesBetweenTicks;
+        sf::Clock tickTimer;
         uint64_t serverTickCounter = 0;
         uint64_t tickCounter = 0;
         /// Set by LogMessage() so that the chat window scrolls to the newest message the next time it is drawn.

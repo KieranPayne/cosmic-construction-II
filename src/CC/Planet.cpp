@@ -46,18 +46,18 @@ namespace cc
 	}
 	void Planet::Update(double dt)
 	{
-		for (auto &e : entities)
-		{
-			if (!e->isInChunk)
-			{
-				if (!chunks.contains(e->chunkPos))
-				{
-					GenerateChunk(e->chunkPos);
-				}
-				chunks[e->chunkPos]->AddEntity(e.get());
-				e->isInChunk = true;
-			}
-		}
+		// for (auto &e : entities)
+		// {
+		// 	if (!e->isInChunk)
+		// 	{
+		// 		if (!chunks.contains(e->chunkPos))
+		// 		{
+		// 			GenerateChunk(e->chunkPos);
+		// 		}
+		// 		chunks[e->chunkPos]->AddEntity(e.get());
+		// 		e->isInChunk = true;
+		// 	}
+		// }
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
@@ -315,14 +315,7 @@ namespace cc
 		sf::Vector2i chunkPos = TileToChunkPos(position);
 		if (!chunks.contains(chunkPos))
 		{
-			if (isServerPlanet)
-			{
-				GenerateChunk(chunkPos);
-			}
-			else
-			{
-				return {nullptr, nullptr};
-			}
+			GenerateChunk(chunkPos);
 		}
 		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 		return chunks[chunkPos]->GetTile(subChunkPos);
@@ -391,14 +384,7 @@ namespace cc
 		chunks[entity->chunkPos]->RemoveEntity(entity);
 		if (!chunks.contains(newPos))
 		{
-			if (isServerPlanet)
-			{
-				chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
-			}
-			else
-			{
-				entity->isInChunk = false;
-			}
+			chunks[newPos] = std::unique_ptr<Chunk>(generator.GenerateChunk(newPos));
 		}
 		chunks[newPos]->AddEntity(entity);
 		entity->chunkPos = newPos;

@@ -9,7 +9,7 @@ namespace cc
     class Human : public Entity
     {
     public:
-        int movementCounter;
+        int movementCounter = 0;
         /// @brief Creates a human entity.
         Human();
 

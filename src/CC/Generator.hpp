@@ -155,6 +155,9 @@ namespace cc
 		 * @return The finished chunk. The caller owns it. The generator forgets the partial chunk.
 		 */
 		Chunk *GenerateChunk(sf::Vector2i position);
+
+		void AppendToPacket(sf::Packet& p);
+		void LoadFromPacket(sf::Packet& p);
 	};
 
 }

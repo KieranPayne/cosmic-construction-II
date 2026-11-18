@@ -18,7 +18,6 @@ namespace cc
     Server::Server()
     {
         planets.push_back(std::make_unique<Planet>());
-        planets[0]->isServerPlanet = true;
     }
     void Server::SetSeed(uint64_t seed)
     {
@@ -237,8 +236,28 @@ namespace cc
         // ASSEMBLING PACKET TO SEND BACK
         sf::Packet packet;
         packet << (uint16_t)CSMessageType::JOIN_DATA;
-        // first bit of data is every other player currently in server
-        // start by serializing the list of current players
+        
+        packet << (uint64_t)planets.size();
+        for (auto& p : planets)
+        {
+            packet << (uint64_t)p->chunks.size();
+            for (auto& c : p->chunks)
+            {
+                packet << c.second->position.x << c.second->position.y;
+                auto b = c.second->GetByteData();
+                packet << (uint64_t)b.size();
+                packet.append(b.data(), b.size());
+                
+            }
+            // send entities
+            uint64_t numEntities = (uint64_t)p->entities.size();
+            packet << numEntities;
+            for (int i = 0; i < numEntities; i++)
+            {
+                AppendEntityToPacket(packet, p->entities[i].get());
+            }
+            p->generator.AppendToPacket(packet);
+        }
         Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
         std::vector<PlayerData *> joinedPlayers;
         for (auto &c : clients)
@@ -253,40 +272,6 @@ namespace cc
         packet << (uint64_t)data.size();
         // put bytes into packet
         packet.append(data.data(), data.size());
-        // next, want to send all the chunks visible to the player
-        sf::Vector2f targetResolution = p.resolution;
-        int minX = floor((p.cameraPosition.x - targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
-        int maxX = ceil((p.cameraPosition.x + targetResolution.x * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
-        int minY = floor((p.cameraPosition.y - targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
-        int maxY = ceil((p.cameraPosition.y + targetResolution.y * p.cameraZoom / 2.f) / TILE_SIZE / CHUNK_SIZE);
-        // add number of chunks to packet
-        packet << (int)((maxX - minX + 1) * (maxY - minY + 1));
-        Planet *planet = planets[p.planet].get();
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int y = minY; y <= maxY; y++)
-            {
-                if (!planet->chunks.contains({x, y}))
-                {
-                    planet->GenerateChunk({x, y});
-                }
-                Chunk *c = planet->chunks[{x, y}].get();
-                // put chunk position into packet
-                packet << c->position.x << c->position.y;
-                auto b = c->GetByteData();
-                // put size of bytes into packet
-                packet << (uint64_t)b.size();
-                // put chunk data into packet
-                packet.append(b.data(), b.size());
-            }
-        }
-        // send entities
-        uint64_t numEntities = (uint64_t)planet->entities.size();
-        packet << numEntities;
-        for (int i = 0; i < numEntities; i++)
-        {
-            AppendEntityToPacket(packet, planet->entities[i].get());
-        }
         packet << currentTick;
         SendToClient(clientId, packet);
         // let every other player know a new player has joined

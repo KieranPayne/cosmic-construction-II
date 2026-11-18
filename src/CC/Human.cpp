@@ -14,7 +14,7 @@ namespace cc
     void Human::Tick()
     {
         movementCounter ++;
-        if (movementCounter == 20)
+        if (movementCounter == 60)
         {
             movementCounter = 0;
             position.x ++;

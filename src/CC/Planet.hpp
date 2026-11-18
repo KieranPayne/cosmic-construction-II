@@ -50,8 +50,6 @@ namespace cc
 		/// The connection to the server, used to send changes. Null on the server's own planet.
 		Client *client = nullptr;
 
-		/// True for the server's planet, which generates missing chunks itself instead of waiting for them to be sent.
-		bool isServerPlanet = false;
 
 		/// Smoothed frames per second, shown in the info window.
 		double currFps;
