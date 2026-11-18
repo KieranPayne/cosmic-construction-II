@@ -479,7 +479,8 @@ namespace cc
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
-				SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
+				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(TileChange{Tile(currentTile),worldTilePos}));
+				// SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
 			}
 		}
 		else if (currentView == 1)
@@ -736,8 +737,8 @@ namespace cc
 				}
 				if (best < 0)
 					continue; // no usable tiles at all
-
-				SetTileAt(placePos + sf::Vector2i{x, y}, Tile(best));
+				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(Tile(best),placePos + sf::Vector2i{x,y}));
+				// SetTileAt(placePos + sf::Vector2i{x, y}, Tile(best));
 
 				// Floyd-Steinberg: push the leftover error onto unprocessed neighbours
 				if (dither)

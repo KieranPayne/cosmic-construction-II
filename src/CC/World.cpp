@@ -20,14 +20,23 @@ namespace cc
     {
         std::string username = bundle.username;
         // PlayerData* p = nullptr;
-        for (int i = 0; i < players.size(); i ++)
+        if (bundle.playerData.cameraZoom != 0)
         {
-            if (players[i].username == username)
+            for (int i = 0; i < players.size(); i ++)
             {
-                players[i] = bundle.playerData;
-                break;
+                if (players[i].username == username)
+                {
+                    players[i] = bundle.playerData;
+                    break;
+                }
             }
         }
+        Planet* planet = planets[bundle.playerData.planet].get();
+        for (int i = 0; i < bundle.tilesChanged.size(); i ++)
+        {
+            planet->SetTileAt(bundle.tilesChanged[i]->position,bundle.tilesChanged[i]->tile,bundle.tilesChanged[i]->tileEntity.release());
+        }
+
         // *p = bundle.playerData;
         GenerateChunksInView(&bundle.playerData);
         //TODO: do everything else stored in an input bundle

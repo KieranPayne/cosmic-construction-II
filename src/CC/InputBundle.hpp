@@ -10,7 +10,7 @@ namespace cc
     {
         Tile tile;
         sf::Vector2i position;
-        std::unique_ptr<TileEntity> tileEntity;
+        std::unique_ptr<TileEntity> tileEntity = std::unique_ptr<TileEntity>(nullptr);
         void Serialize(Serializer& s);
     };
     enum class ChatMessageOrigin : uint8_t

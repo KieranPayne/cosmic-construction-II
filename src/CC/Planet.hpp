@@ -22,6 +22,8 @@ namespace cc
 	class Planet
 	{
 	public:
+		//needed for tool guis etc.
+		Client* client = nullptr;
 		/// Every entity on the planet. The index in this vector is the entity's id in update packets. The planet owns them.
 		std::vector<std::unique_ptr<Entity>> entities;
 
@@ -47,8 +49,6 @@ namespace cc
 		/// The "Entity Editor" window.
 		JsonEditor jsonEditor;
 
-		/// The connection to the server, used to send changes. Null on the server's own planet.
-		Client *client = nullptr;
 
 
 		/// Smoothed frames per second, shown in the info window.

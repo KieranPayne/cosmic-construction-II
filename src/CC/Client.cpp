@@ -11,6 +11,10 @@ namespace cc
 		this->renderTarget = target;
 		activePlanet = 0;
 		world = std::make_unique<World>();
+		for (auto &p : world->planets)
+		{
+			p->client = this;
+		}
 	}
 
 	void Client::Tick()
@@ -29,16 +33,28 @@ namespace cc
 		{
 			if (queuedInputs.contains(world->currentTick))
 			{
-				for (int i = 0; i < queuedInputs[world->currentTick].size(); i ++)
+				for (int i = 0; i < queuedInputs[world->currentTick].size(); i++)
 				{
 					world->EnactInputBundle(queuedInputs[world->currentTick][i]);
 				}
 				queuedInputs.erase(world->currentTick);
 			}
+			PlayerData currPlayerData = GetPlayerData();
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			currPlayerData.Serialize(s);
+			prevPlayerData.Serialize(s2);
+			auto data = s.binary();
+			auto data2 = s2.binary();
+			if (data != data2)
+			{
+				currInputBundle.playerData = currPlayerData;
+			}
+			prevPlayerData = currPlayerData;
 			SendInputBundle();
 			Tick();
 			currInputBundle = InputBundle();
-			currInputBundle.playerData = GetPlayerData();
+			// currInputBundle.playerData = GetPlayerData();
 			if (world->currentTick % 60 == 0)
 			{
 				sf::Packet p;
@@ -65,7 +81,7 @@ namespace cc
 		// debug shortcut: place a test image made of tiles
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
-			std::string path = "content/resources/images/borzoi.png";
+			std::string path = "content/resources/images/herbert.png";
 			world->planets[activePlanet]->MakeImageFromTiles(path, {30, 30}, 150);
 		}
 	}
@@ -181,10 +197,10 @@ namespace cc
 			uint64_t numBundles;
 			packet >> numBundles;
 			// queuedInputs[serverTickCounter] = {};
-			for (int i = 0; i < numBundles; i ++)
+			for (int i = 0; i < numBundles; i++)
 			{
 				auto data = ReadBytesFromPacket(packet);
-				Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+				Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 				InputBundle in;
 				in.Serialize(s);
 				queuedInputs[serverTickCounter].push_back(std::move(in));
@@ -193,7 +209,8 @@ namespace cc
 			if (!tickTimer.isRunning())
 			{
 				tickTimer.start();
-			}else
+			}
+			else
 			{
 				timesBetweenTicks.push_back(tickTimer.getElapsedTime().asSeconds() / (serverTickCounter - world->currentTick));
 				if (timesBetweenTicks.size() > 60)
@@ -233,6 +250,10 @@ namespace cc
 	{
 		loadedJoinData = true;
 		world->LoadJoinData(packet);
+		for (auto &p : world->planets)
+		{
+			p->client = this;
+		}
 		serverTickCounter = world->currentTick;
 		std::string msg = "Join data processed. Other players:";
 		for (auto &p : world->players)
@@ -244,7 +265,7 @@ namespace cc
 			msg += "\n" + p.username;
 		}
 		LogMessage(msg);
-		for (auto& p : packetBuffer)
+		for (auto &p : packetBuffer)
 		{
 			ProcessPacket(p);
 		}
@@ -505,38 +526,70 @@ namespace cc
 
 	void Client::SendInputBundle()
 	{
+		bool playerDatSame = false;
+		PlayerData currPlayerData = GetPlayerData();
+		{
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			currPlayerData.Serialize(s);
+			prevPlayerData.Serialize(s2);
+			auto data = s.binary();
+			auto data2 = s2.binary();
+			if (data == data2)
+			{
+				playerDatSame = true;
+			}
+			prevPlayerData = currPlayerData;
+		}
+		{
+			InputBundle defaultBundle;
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+			defaultBundle.Serialize(s);
+			currInputBundle.Serialize(s2);
+			auto data = s.binary();
+			auto data2 = s2.binary();
+			if (data == data2 && playerDatSame)
+			{
+				return;
+			}else
+			{
+				currInputBundle.playerData = currPlayerData;
+			}
+		}
+		
 		sf::Packet p;
 		p << (uint16_t)CSMessageType::CLIENT_INPUT_BUNDLE;
 		p << world->currentTick;
-		Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 		currInputBundle.Serialize(s);
 		auto data = s.binary();
 		p << (uint64_t)data.size();
-		p.append(data.data(),data.size());
+		p.append(data.data(), data.size());
 		SendPacket(p);
 	}
 
-	void Client::ProcessTickBroadcast(sf::Packet& p)
+	void Client::ProcessTickBroadcast(sf::Packet &p)
 	{
 		p >> serverTickCounter;
 		std::vector<InputBundle> inputBundles;
 		uint64_t numInputBundles;
 		p >> numInputBundles;
-		for (int i = 0; i < numInputBundles; i ++)
+		for (int i = 0; i < numInputBundles; i++)
 		{
 			auto data = ReadBytesFromPacket(p);
-			Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},data);
+			Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 			InputBundle in;
 			in.Serialize(s);
 			inputBundles.push_back(std::move(in));
 		}
-		//ensure any tile changes etc. are applied in the same order by everyone
+		// ensure any tile changes etc. are applied in the same order by everyone
 		std::sort(inputBundles.begin(), inputBundles.end(),
-		[](const InputBundle &a, const InputBundle &b)
-		{
-			return a.clientId < b.clientId;
-		});
-		for (auto& in : inputBundles)
+				  [](const InputBundle &a, const InputBundle &b)
+				  {
+					  return a.clientId < b.clientId;
+				  });
+		for (auto &in : inputBundles)
 		{
 			world->EnactInputBundle(in);
 		}
