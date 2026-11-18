@@ -61,6 +61,7 @@ namespace cc
 				server->SetSeed(HashFromString(seed));
 			}
 			server->planets[0]->AddEntity(new Entity());
+			server->currentTick = 0;
 			Human *h = new Human();
 			h->position = {1.f, 0.f};
 			server->planets[0]->AddEntity(h);
@@ -87,6 +88,7 @@ namespace cc
 			server = std::make_unique<Server>();
 			Serializer s = LoadSerializerFromFile(savePath + "/players");
 			s.field("players", server->allPlayers);
+			s.field("currentTick",server->currentTick);
 			server->SetSeed(j["seed"]);
 			for (auto &p : server->planets)
 			{
@@ -110,6 +112,7 @@ namespace cc
 				if (c.joined)
 					server->SavePlayer(c.player);
 			s.field("players", server->allPlayers);
+			s.field("currentTick",server->currentTick);
 			WriteSerializerToFile(s, savePath + "/players");
 			WriteServerMetadata(server);
 		}

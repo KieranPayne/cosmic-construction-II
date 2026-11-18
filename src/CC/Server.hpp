@@ -239,7 +239,7 @@ namespace cc
         // ---- state ----
 
         /// Ticks per second. Used as `1.0 / tps` in Update(), so it must be set to a positive value before the first Update().
-        int tps;
+        int tps = 60;
 
         /// All planets in the world. The index in this vector is the planet index used by PlayerData::planet.
         /// The constructor creates planet 0 only.
@@ -254,9 +254,18 @@ namespace cc
         /// Id that will be given to the next accepted client. Use GetNextClientId() instead of reading this directly.
         uint64_t currClientId = 0;
 
+        uint64_t currentTick = 0;
+
         /// Last known data for every player (matched by username) that has joined this save, including
         /// players who are currently offline. Used to restore a returning player's camera and planet.
         std::vector<PlayerData> allPlayers = {};
+        //state checks that have not been compared against all clients yet
+        std::vector<std::pair<uint64_t,sf::Packet>> stateChecks;
+        std::vector<std::vector<bool>> clientStateChecksVerified;
+
+        void BroadcastNextTick();
+
+        void CompareStateChecks(uint64_t clientId,sf::Packet& packet);
 
     private:
         /// Body of the server thread: loops while `running`, waiting briefly for network activity and calling Update() under `mutex`.

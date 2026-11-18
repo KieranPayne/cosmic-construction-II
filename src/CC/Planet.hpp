@@ -208,6 +208,8 @@ namespace cc
 		 */
 		void MakeImageFromTiles(std::string &imagePath, sf::Vector2i placePos, int width);
 
+		void GenerateStateCheck(sf::Packet& packet);
+
 		// A planet can't be copied (it holds unique_ptrs), but it can be moved, so it can be stored in a vector.
 		Planet(const Planet &) = delete;
 		Planet &operator=(const Planet &) = delete;

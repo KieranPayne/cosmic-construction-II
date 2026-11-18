@@ -111,4 +111,7 @@ namespace cc
      * @return The colour, fully opaque.
      */
     sf::Color HsvToRgb(float h, float s, float v);
+
+
+    uint64_t ComputeChecksum(const uint8_t* data, size_t length);
 }

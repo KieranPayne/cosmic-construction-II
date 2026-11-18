@@ -775,4 +775,37 @@ namespace cc
 			}
 		}
 	}
+	void Planet::GenerateStateCheck(sf::Packet& packet)
+	{
+		packet << (uint64_t)chunks.size();
+		std::vector<sf::Vector2i> positions;
+		positions.reserve(chunks.size());
+
+		for (const auto& c : chunks)
+		{
+			positions.push_back(c.first);
+		}
+
+		std::sort(positions.begin(), positions.end(),
+			[](const sf::Vector2i& a, const sf::Vector2i& b)
+			{
+				if (a.y != b.y)
+					return a.y < b.y;
+
+				return a.x < b.x;
+			});
+		for (const auto& pos : positions)
+		{
+			packet << pos.x << pos.y;
+			packet << chunks.at(pos)->GenerateChecksum();
+		}
+		packet << (uint64_t)entities.size();
+		for (auto& e : entities)
+		{
+			Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+			e->Serialize(s);
+			auto binary = s.binary();
+			packet << ComputeChecksum(binary.data(),binary.size());
+		}
+	}
 }

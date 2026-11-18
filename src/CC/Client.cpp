@@ -28,7 +28,29 @@ namespace cc
 		{
 			return;
 		}
-
+		while (serverTickCounter >= tickCounter)
+		{
+			for (auto &p : planets)
+			{
+				int tps = 60;
+				double dt = 1.0 / (double)tps;
+				p->Update(dt);
+			}
+			tickCounter ++;
+			if (tickCounter % 60 == 0)
+			{
+				sf::Packet p;
+				p << (uint16_t)CSMessageType::STATE_CHECK;
+				p << tickCounter;
+				p << (uint64_t)planets.size();
+				for (auto& planet : planets)
+				{
+					planet->GenerateStateCheck(p);
+				}
+				SendPacket(p);
+			}
+		}
+		// std::cout << "on tick " << tickCounter << std::endl;
 		if (inputState.Pressed(sf::Keyboard::Key::Escape))
 		{
 			paused = !paused;
@@ -40,10 +62,7 @@ namespace cc
 		}
 		else
 		{
-			// for (auto &p : planets)
-			// {
-			// 	p->Update(deltaTime);
-			// }
+			
 			planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 
 			// ask the server for any chunks that are in view but not loaded yet
@@ -176,6 +195,11 @@ namespace cc
 			packet >> username >> message;
 			LogMessage(message, MessageOrigin::PLAYER, username);
 			break;
+		}
+
+		case CSMessageType::BROADCAST_NEXT_TICK:
+		{
+			packet >> serverTickCounter;
 		}
 
 		default:

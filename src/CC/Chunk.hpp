@@ -144,6 +144,8 @@ namespace cc
 		 * @note The tile itself in `tiles` is not changed.
 		 */
 		void RemoveTileEntity(uint16_t index);
+
+		uint64_t GenerateChecksum();
 	};
 
 	/**

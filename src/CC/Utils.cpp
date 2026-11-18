@@ -398,4 +398,16 @@ namespace cc
 			static_cast<uint8_t>(std::round((g + m) * 255.f)),
 			static_cast<uint8_t>(std::round((b + m) * 255.f)));
 	}
+	uint64_t ComputeChecksum(const uint8_t* data, size_t length)
+    {
+        uint64_t hash = 14695981039346656037ULL;
+
+        for (size_t i = 0; i < length; ++i)
+        {
+            hash ^= data[i];
+            hash *= 1099511628211ULL;
+        }
+
+        return hash;
+    }
 }

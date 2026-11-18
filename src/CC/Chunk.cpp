@@ -239,4 +239,11 @@ namespace cc
 		}
 		return {t, e};
 	}
+
+	uint64_t Chunk::GenerateChecksum()
+	{
+		//TODO: make this also consider which entities are in the chunk.
+		auto bytes = GetByteData();
+		return ComputeChecksum(bytes.data(),bytes.size());
+	}
 }

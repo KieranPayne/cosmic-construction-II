@@ -4,7 +4,7 @@ namespace cc
 {
     enum class CSMessageType : uint16_t
     {
-        SEND_USERNAME,
+        SEND_USERNAME = 0,
 
         JOIN_DATA,
 
@@ -15,5 +15,9 @@ namespace cc
         SERVER_MESSAGE,
 
         CHAT_MESSAGE,
+
+        STATE_CHECK,
+
+        BROADCAST_NEXT_TICK
     };
 }
