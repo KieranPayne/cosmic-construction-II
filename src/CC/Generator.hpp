@@ -160,6 +160,7 @@ namespace cc
 
 		void AppendToPacket(sf::Packet& p);
 		void LoadFromPacket(sf::Packet& p);
+		uint64_t GenerateChecksum();
 	};
 
 }

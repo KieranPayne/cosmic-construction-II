@@ -236,7 +236,7 @@ namespace cc
 														{1, -1}});
 			// not the actual number of trees as most will land on sand, water etc.
 			int numGrassMax = 50;
-			std::vector<sf::Vector2i> grassPoses = ChunkRandomCoords(p.generator->seed, p.position, numGrassMax,2);
+			std::vector<sf::Vector2i> grassPoses = ChunkRandomCoords(p.generator->seed, p.position, numGrassMax, 2);
 			int salt = 1;
 			double chance = 0.8;
 			for (auto &pos : grassPoses)
@@ -250,8 +250,8 @@ namespace cc
 					}
 					if (p.chunk->backgroundTiles[newPos.x][newPos.y].type == BackgroundTileType::GRASS)
 					{
-						salt ++;
-						if (ChunkRandom01(p.generator->seed,p.position,salt) < chance)
+						salt++;
+						if (ChunkRandom01(p.generator->seed, p.position, salt) < chance)
 						{
 							p.chunk->tiles[newPos.x][newPos.y] = Tile(tallGrassId);
 						}
@@ -454,44 +454,90 @@ namespace cc
 		partialChunks[p->position] = std::unique_ptr<PartialChunk>(p);
 	}
 
-	void Generator::AppendToPacket(sf::Packet& p)
+	void Generator::AppendToPacket(sf::Packet &p)
 	{
 		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 		Serialize(s);
 		auto bytes = s.binary();
 		p << (uint64_t)bytes.size();
-		p.append(bytes.data(),bytes.size());
+		p.append(bytes.data(), bytes.size());
 		p << (uint64_t)partialChunks.size();
-		for (auto& partial : partialChunks)
+		for (auto &partial : partialChunks)
 		{
 			p << partial.second->position.x << partial.second->position.y;
 			auto chunkData = partial.second->chunk->GetByteData();
 			p << (uint64_t)chunkData.size();
-			p.append(chunkData.data(),chunkData.size());
+			p.append(chunkData.data(), chunkData.size());
 			Serializer s2(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 			partial.second->Serialize(s2);
 			auto partialBytes = s2.binary();
 			p << (uint64_t)partialBytes.size();
-			p.append(partialBytes.data(),partialBytes.size());
+			p.append(partialBytes.data(), partialBytes.size());
 		}
 	}
-	void Generator::LoadFromPacket(sf::Packet& p)
+	void Generator::LoadFromPacket(sf::Packet &p)
 	{
 		auto bytes = ReadBytesFromPacket(p);
-		Serializer s(Serializer::Mode::READ,Serializer::Format::BINARY,{},bytes);
+		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, bytes);
 		Serialize(s);
-		uint64_t numPartials; p >> numPartials;
-		for (int i = 0; i < numPartials; i ++)
+		uint64_t numPartials;
+		p >> numPartials;
+		for (int i = 0; i < numPartials; i++)
 		{
 			sf::Vector2i pos;
 			p >> pos.x >> pos.y;
-			PartialChunk* partial = new PartialChunk(this,pos);
+			PartialChunk *partial = new PartialChunk(this, pos);
 			auto chunkData = ReadBytesFromPacket(p);
 			partial->chunk->LoadByteData(chunkData);
 			auto partialBytes = ReadBytesFromPacket(p);
-			Serializer s2(Serializer::Mode::READ,Serializer::Format::BINARY,{},partialBytes);
+			Serializer s2(Serializer::Mode::READ, Serializer::Format::BINARY, {}, partialBytes);
 			partial->Serialize(s2);
 			partialChunks[pos] = std::unique_ptr<PartialChunk>(partial);
 		}
+	}
+	uint64_t Generator::GenerateChecksum()
+	{
+		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+		uint64_t seedCopy = seed;
+		s.field("seed", seedCopy);
+
+		std::vector<sf::Vector2i> positions;
+		positions.reserve(partialChunks.size());
+		for (const auto &[pos, _] : partialChunks)
+		{
+			positions.push_back(pos);
+		}
+
+		std::sort(positions.begin(), positions.end(),
+				  [](const sf::Vector2i &a, const sf::Vector2i &b)
+				  {
+					  if (a.y != b.y)
+						  return a.y < b.y;
+					  return a.x < b.x;
+				  });
+
+		uint64_t partialCount = static_cast<uint64_t>(positions.size());
+		s.field("partialCount", partialCount);
+
+		for (const auto &pos : positions)
+		{
+			sf::Vector2i posCopy = pos;
+			s.field("pos", posCopy);
+
+			const PartialChunk *pc = partialChunks.at(pos).get();
+			uint16_t stage = static_cast<uint16_t>(pc->nextStage);
+			s.field("stage", stage);
+
+			bool hasChunk = (pc->chunk != nullptr);
+			s.field("hasChunk", hasChunk);
+			if (hasChunk)
+			{
+				uint64_t chunkHash = pc->chunk->GenerateChecksum();
+				s.field("chunkHash", chunkHash);
+			}
+		}
+
+		auto binary = s.binary();
+		return ComputeChecksum(binary.data(), binary.size());
 	}
 }

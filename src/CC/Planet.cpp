@@ -482,7 +482,7 @@ namespace cc
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
-				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(TileChange{Tile(currentTile),worldTilePos}));
+				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(TileChange{Tile(currentTile), worldTilePos}));
 				// SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
 			}
 		}
@@ -740,7 +740,7 @@ namespace cc
 				}
 				if (best < 0)
 					continue; // no usable tiles at all
-				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(Tile(best),placePos + sf::Vector2i{x,y}));
+				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(Tile(best), placePos + sf::Vector2i{x, y}));
 				// SetTileAt(placePos + sf::Vector2i{x, y}, Tile(best));
 
 				// Floyd-Steinberg: push the leftover error onto unprocessed neighbours
@@ -765,52 +765,56 @@ namespace cc
 			}
 		}
 	}
-	void Planet::GenerateStateCheck(sf::Packet& packet)
+	void Planet::GenerateStateCheck(sf::Packet &packet)
 	{
-		packet << (uint64_t)chunks.size();
+		packet << seed;
+		packet << generator.GenerateChecksum();
+
+		packet << static_cast<uint64_t>(chunks.size());
 		std::vector<sf::Vector2i> positions;
 		positions.reserve(chunks.size());
 
-		for (const auto& c : chunks)
+		for (const auto &c : chunks)
 		{
 			positions.push_back(c.first);
 		}
 
 		std::sort(positions.begin(), positions.end(),
-			[](const sf::Vector2i& a, const sf::Vector2i& b)
-			{
-				if (a.y != b.y)
-					return a.y < b.y;
+				  [](const sf::Vector2i &a, const sf::Vector2i &b)
+				  {
+					  if (a.y != b.y)
+						  return a.y < b.y;
+					  return a.x < b.x;
+				  });
 
-				return a.x < b.x;
-			});
-		for (const auto& pos : positions)
+		for (const auto &pos : positions)
 		{
 			packet << pos.x << pos.y;
 			packet << chunks.at(pos)->GenerateChecksum();
 		}
-		packet << (uint64_t)entities.size();
-		for (auto& e : entities)
+
+		packet << static_cast<uint64_t>(entities.size());
+		for (auto &e : entities)
 		{
-			Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+			Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
 			e->Serialize(s);
 			auto binary = s.binary();
-			packet << ComputeChecksum(binary.data(),binary.size());
+			packet << ComputeChecksum(binary.data(), binary.size());
 		}
 	}
 	void Planet::DestroyTile(sf::Vector2i position)
 	{
 		sf::Vector2i chunkPos = TileToChunkPos(position);
-        sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
+		sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
 
-        // The server generates chunks on demand, like GetTileAt does.
-        if (!chunks.contains(chunkPos))
-        {
-            GenerateChunk(chunkPos);
-        }
-        Chunk *chunk = chunks[chunkPos].get();
+		// The server generates chunks on demand, like GetTileAt does.
+		if (!chunks.contains(chunkPos))
+		{
+			GenerateChunk(chunkPos);
+		}
+		Chunk *chunk = chunks[chunkPos].get();
 
-        chunk->DestroyTile(this,subChunkPos); // adjust to DestroyTile's real signature
+		chunk->DestroyTile(this, subChunkPos); // adjust to DestroyTile's real signature
 		if (tileVertices.contains(chunkPos))
 		{
 			// erase the vertices since they're no longer accurate
@@ -818,7 +822,7 @@ namespace cc
 			tileVertices.erase(chunkPos);
 		}
 	}
-	void Planet::ChangeEntity(int index, Entity* newEntity)
+	void Planet::ChangeEntity(int index, Entity *newEntity)
 	{
 		sf::Vector2i oldPos = entities[index]->chunkPos;
 		chunks[oldPos]->RemoveEntity(entities[index].get());

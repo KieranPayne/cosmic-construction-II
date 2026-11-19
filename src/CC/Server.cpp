@@ -189,7 +189,7 @@ namespace cc
             return;
         if (type == CSMessageType::SEND_USERNAME)
         {
-            
+
             SendJoinData(clientId, packet);
         }
         // else if (type == CSMessageType::CHAT_MESSAGE)
@@ -207,7 +207,7 @@ namespace cc
         }
         else if (type == CSMessageType::CLIENT_INPUT_BUNDLE)
         {
-            ProcessInputBundle(clientId,packet);
+            ProcessInputBundle(clientId, packet);
         }
         // else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
         // {
@@ -263,7 +263,6 @@ namespace cc
                 break;
             }
         }
-        
     }
     void Server::SendJoinData(uint64_t clientId, sf::Packet &usernamePacket)
     {
@@ -292,8 +291,8 @@ namespace cc
             world->playerHistory.push_back(p);
         }
         world->players[GetIndexOfId(clientId)] = p;
-        //TODO: fix problem with client->player, need to make it sync up with the playerdata in World
-        // client->player = p;
+        // TODO: fix problem with client->player, need to make it sync up with the playerdata in World
+        //  client->player = p;
         client->joined = true;
 
         // ASSEMBLING PACKET TO SEND BACK
@@ -301,7 +300,6 @@ namespace cc
         packet << (uint16_t)CSMessageType::JOIN_DATA;
         world->AppendJoinData(packet);
 
-        
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;
@@ -316,7 +314,7 @@ namespace cc
     void Server::BroadcastServerLog(std::string message)
     {
         InputBundle in;
-        in.chatMessages.push_back(ChatMessage(ChatMessageOrigin::SERVER,message));
+        in.chatMessages.push_back(ChatMessage(ChatMessageOrigin::SERVER, message));
         queuedInputs[world->currentTick].push_back(std::move(in));
         // sf::Packet p;
         // p << (uint16_t)CSMessageType::SERVER_MESSAGE;
@@ -446,19 +444,19 @@ namespace cc
             Broadcast(p);
             return;
         }
-        std::vector<InputBundle>& bundles = queuedInputs[world->currentTick];
-        
+        std::vector<InputBundle> &bundles = queuedInputs[world->currentTick];
+
         p << (uint64_t)bundles.size();
-        for (int i = 0; i < bundles.size(); i ++)
+        for (int i = 0; i < bundles.size(); i++)
         {
-            Serializer s(Serializer::Mode::WRITE,Serializer::Format::BINARY);
+            Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
             bundles[i].Serialize(s);
             auto data = s.binary();
             p << (uint64_t)data.size();
-            p.append(data.data(),data.size());
+            p.append(data.data(), data.size());
         }
         Broadcast(p);
-        for (int i = 0; i < bundles.size(); i ++)
+        for (int i = 0; i < bundles.size(); i++)
         {
             world->EnactInputBundle(bundles[i]);
         }
@@ -469,12 +467,25 @@ namespace cc
     {
         uint64_t tick;
         packet >> tick;
-        for (int i = 0; i < stateChecks.size(); i++)
+
+        for (size_t i = 0; i < stateChecks.size(); i++)
         {
             if (stateChecks[i].first == tick)
             {
                 sf::Packet serverPacket(stateChecks[i].second);
-                uint64_t serverTick; serverPacket >> serverTick;
+                uint64_t serverTick;
+                serverPacket >> serverTick;
+
+                uint64_t serverKnowledgeChecksum;
+                serverPacket >> serverKnowledgeChecksum;
+                uint64_t clientKnowledgeChecksum;
+                packet >> clientKnowledgeChecksum;
+                if (serverKnowledgeChecksum != clientKnowledgeChecksum)
+                {
+                    std::cerr << "STATE DESYNCED; knowledge database checksum mismatch" << std::endl;
+                    std::abort();
+                }
+
                 uint64_t clientNumPlanets;
                 packet >> clientNumPlanets;
                 uint64_t serverNumPlanets;
@@ -484,8 +495,27 @@ namespace cc
                     std::cerr << "STATE DESYNCED; planet count mismatch" << std::endl;
                     std::abort();
                 }
-                for (int i = 0; i < serverNumPlanets; i++)
+
+                for (uint64_t p = 0; p < serverNumPlanets; p++)
                 {
+                    uint64_t serverSeed, clientSeed;
+                    serverPacket >> serverSeed;
+                    packet >> clientSeed;
+                    if (serverSeed != clientSeed)
+                    {
+                        std::cerr << "STATE DESYNCED; planet " << p << " seed mismatch" << std::endl;
+                        std::abort();
+                    }
+
+                    uint64_t serverGenChecksum, clientGenChecksum;
+                    serverPacket >> serverGenChecksum;
+                    packet >> clientGenChecksum;
+                    if (serverGenChecksum != clientGenChecksum)
+                    {
+                        std::cerr << "STATE DESYNCED; planet " << p << " generator checksum mismatch" << std::endl;
+                        std::abort();
+                    }
+
                     uint64_t serverNumChunks;
                     serverPacket >> serverNumChunks;
                     uint64_t clientNumChunks;
@@ -495,7 +525,8 @@ namespace cc
                         std::cerr << "STATE DESYNCED; chunk count mismatch" << std::endl;
                         std::abort();
                     }
-                    for (int j = 0; j < serverNumChunks; j++)
+
+                    for (uint64_t j = 0; j < serverNumChunks; j++)
                     {
                         sf::Vector2i serverPos;
                         serverPacket >> serverPos.x >> serverPos.y;
@@ -506,6 +537,7 @@ namespace cc
                             std::cerr << "STATE DESYNCED; chunk position mismatch" << std::endl;
                             std::abort();
                         }
+
                         uint64_t serverChecksum;
                         serverPacket >> serverChecksum;
                         uint64_t clientChecksum;
@@ -516,6 +548,7 @@ namespace cc
                             std::abort();
                         }
                     }
+
                     uint64_t serverNumEntities;
                     serverPacket >> serverNumEntities;
                     uint64_t clientNumEntities;
@@ -525,7 +558,8 @@ namespace cc
                         std::cerr << "STATE DESYNCED; entity count mismatch" << std::endl;
                         std::abort();
                     }
-                    for (int j = 0; j < serverNumEntities; j++)
+
+                    for (uint64_t j = 0; j < serverNumEntities; j++)
                     {
                         uint64_t serverChecksum;
                         serverPacket >> serverChecksum;
@@ -538,12 +572,14 @@ namespace cc
                         }
                     }
                 }
+
                 int index = GetIndexOfId(clientId);
-                if (index < clientStateChecksVerified[i].size())
+                if (index >= 0 && static_cast<size_t>(index) < clientStateChecksVerified[i].size())
                 {
                     clientStateChecksVerified[i][index] = true;
                 }
-                // check all clients have sent state check
+
+                // Check all clients have sent state check
                 if (std::find(clientStateChecksVerified[i].begin(), clientStateChecksVerified[i].end(), false) == clientStateChecksVerified[i].end())
                 {
                     stateChecks.erase(stateChecks.begin() + i);
@@ -553,8 +589,7 @@ namespace cc
             }
         }
     }
-    
-    
+
     bool Server::IsHost(uint64_t clientId)
     {
         ServerClient *client = GetClient(clientId);
