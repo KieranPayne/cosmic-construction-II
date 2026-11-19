@@ -20,7 +20,8 @@ namespace cc
             if (ImGui::Button("Done"))
             {
                 addingEntity = false;
-                p->AddEntity(entity);
+                //TODO: make this change currInputBundle
+                // p->AddEntity(entity);
                 entity = nullptr;
                 ImGui::End();
                 return;
@@ -62,14 +63,18 @@ namespace cc
                 nlohmann::json j = sw.json();
                 if (DrawJson(j, ("entity " + std::to_string(i)).c_str()))
                 {
+                    Entity::EntityType type = (Entity::EntityType)j["type"];
+                    Entity* e = CreateEntityFromType(type);
                     Serializer sr(Serializer::Mode::READ, Serializer::Format::JSON, j);
-                    p->entities[i]->Serialize(sr);
-                    sf::Packet packet;
-                    packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;
-                    packet << (int)1;
-                    packet << i;
-                    AppendEntityToPacket(packet, p->entities[i].get());
-                    p->client->SendPacket(packet);
+                    e->Serialize(sr);
+                    p->client->currInputBundle.entitiesChanged.push_back(std::make_unique<Entity>(e));
+                    // p->entities[i]->Serialize(sr);
+                    // sf::Packet packet;
+                    // packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;
+                    // packet << (int)1;
+                    // packet << i;
+                    // AppendEntityToPacket(packet, p->entities[i].get());
+                    // p->client->SendPacket(packet);
                 }
             }
             ImGui::End();
