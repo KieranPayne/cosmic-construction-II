@@ -16,7 +16,7 @@ namespace cc
 		{
 			p->client = this;
 		}
-		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget, knowledgeDatabase);
+		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget, world->knowledgeDatabase);
 	}
 
 	void Client::Tick()
@@ -30,6 +30,10 @@ namespace cc
 		if (!connected || !loadedJoinData)
 		{
 			return;
+		}
+		if (knowledgeGraph->ConsumeDatabaseDirty())
+		{
+			currInputBundle.knowledgeDatabaseChanged = std::make_unique<KnowledgeDatabase>(world->knowledgeDatabase);
 		}
 		while (serverTickCounter > world->currentTick)
 		{
@@ -70,16 +74,28 @@ namespace cc
 		{
 			paused = !paused;
 		}
+
+		if (!ImGui::GetIO().WantCaptureKeyboard && inputState.Pressed(sf::Keyboard::Key::K))
+		{
+			showingKnowledgeGraph = !showingKnowledgeGraph;
+			if (!showingKnowledgeGraph && SaveManager::debuggingKnowledgeGraph)
+				knowledgeGraph->SaveToFile();
+		}
+
 		if (paused)
 		{
 			DisplayPauseMenu();
+		}
+		else if (showingKnowledgeGraph)
+		{
+			knowledgeGraph->Update(deltaTime, inputState);
+			DrawLogWindow();
 		}
 		else
 		{
 			world->planets[activePlanet]->VisibleUpdate(renderTarget, inputState, deltaTime);
 			DrawLogWindow();
 		}
-
 		// debug shortcut: place a test image made of tiles
 		if (inputState.Pressed(sf::Keyboard::Key::I))
 		{
@@ -187,7 +203,7 @@ namespace cc
 		{
 			std::string username;
 			packet >> username;
-			LogMessage("Player " + username + " disconnected.",ChatMessageOrigin::SERVER);
+			LogMessage("Player " + username + " disconnected.", ChatMessageOrigin::SERVER);
 			RemoveOtherPlayer(username);
 			break;
 		}
@@ -200,13 +216,13 @@ namespace cc
 			break;
 		}
 
-		// case CSMessageType::CHAT_MESSAGE:
-		// {
-		// 	std::string username, message;
-		// 	packet >> username >> message;
-		// 	LogMessage(message, ChatMessageOrigin::PLAYER, username);
-		// 	break;
-		// }
+			// case CSMessageType::CHAT_MESSAGE:
+			// {
+			// 	std::string username, message;
+			// 	packet >> username >> message;
+			// 	LogMessage(message, ChatMessageOrigin::PLAYER, username);
+			// 	break;
+			// }
 
 		case CSMessageType::BROADCAST_NEXT_TICK:
 		{
@@ -270,6 +286,7 @@ namespace cc
 	{
 		loadedJoinData = true;
 		world->LoadJoinData(packet);
+		knowledgeGraph->LoadFromFile();
 		for (auto &p : world->planets)
 		{
 			p->client = this;
@@ -284,7 +301,7 @@ namespace cc
 			}
 			msg += "\n" + p.username;
 		}
-		LogMessage(msg,ChatMessageOrigin::SERVER);
+		LogMessage(msg, ChatMessageOrigin::SERVER);
 		for (auto &p : packetBuffer)
 		{
 			ProcessPacket(p);
@@ -309,7 +326,7 @@ namespace cc
 
 		socket.setBlocking(false);
 		connected = true;
-		LogMessage("Connected, sending username",ChatMessageOrigin::SERVER);
+		LogMessage("Connected, sending username", ChatMessageOrigin::SERVER);
 		SendUsername();
 		return true;
 	}
@@ -457,7 +474,7 @@ namespace cc
 
 	void Client::SendChatMessage(const std::string &text)
 	{
-		currInputBundle.chatMessages.push_back(ChatMessage(ChatMessageOrigin::PLAYER,text,SaveManager::username));
+		currInputBundle.chatMessages.push_back(ChatMessage(ChatMessageOrigin::PLAYER, text, SaveManager::username));
 		// if (!text.empty() && text[0] == '/')
 		// 	LogMessage(text);
 		// else
@@ -590,12 +607,13 @@ namespace cc
 			if (data == data2 && playerDatSame)
 			{
 				return;
-			}else
+			}
+			else
 			{
 				currInputBundle.playerData = currPlayerData;
 			}
 		}
-		
+
 		sf::Packet p;
 		p << (uint16_t)CSMessageType::CLIENT_INPUT_BUNDLE;
 		p << world->currentTick;
@@ -632,5 +650,9 @@ namespace cc
 			world->EnactInputBundle(in);
 		}
 	}
-
+	void Client::OnKnowledgeDatabaseUpdated()
+	{
+		if (knowledgeGraph)
+			knowledgeGraph->SyncWithDatabase();
+	}
 }

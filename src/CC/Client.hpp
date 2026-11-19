@@ -61,10 +61,9 @@ namespace cc
         /// @brief Draws the full-screen pause menu: resume, plus "save and quit" for the host or "disconnect" for other players.
         void DisplayPauseMenu();
 
-    public:
-
+    public: 
+        void OnKnowledgeDatabaseUpdated();
         void Tick();
-        KnowledgeDatabase knowledgeDatabase;
         /**
          * @brief Sends the current input bundle. note that if for example the tick label is tick 0, these are the inputs leading up to the
          *        tick counter rolling over to 1.
@@ -199,7 +198,5 @@ namespace cc
         // --- UNDOCUMENTED STUFF --- 
         std::unique_ptr<KnowledgeGraph> knowledgeGraph;
         bool showingKnowledgeGraph = false;
-        void SendKnowledgeDB();
-        void LoadKnowledgeDB(sf::Packet& packet);
     };
 }

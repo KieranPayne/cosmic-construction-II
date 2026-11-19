@@ -58,7 +58,7 @@ namespace cc
                         Connection c(sf::Color::White);
                         c.dataIndex = database.AddConnection(connectionStartIndex, hoverIndex);
                         connections.push_back(c);
-
+                        databaseDirty = true;
                         connectionStartIndex = -1;
                     }
                     else
@@ -219,12 +219,13 @@ namespace cc
         // Edits go straight into the database.
         if (selectedNodeIndex >= 0)
         {
-            EditObject(database.GetNode(selectedNodeIndex), "node", openRoot);
+            if (EditObject(database.GetNode(selectedNodeIndex), "node", openRoot))
+                databaseDirty = true;
         }
         else if (EditObject(database.GetConnection(selectedConnectionIndex), "connection", openRoot))
         {
-            // The start or end may have changed.
             database.BuildOutgoingAndIncoming();
+            databaseDirty = true;
         }
 
         ImGui::End();
@@ -271,6 +272,7 @@ namespace cc
             pendingNode.dataIndex = database.AddNode(pendingData);
             nodes.push_back(pendingNode);
             placingNode = false;
+            databaseDirty = true;
             ImGui::CloseCurrentPopup();
         }
 
@@ -781,5 +783,45 @@ namespace cc
         }
 
         return -1;
+    }
+    bool KnowledgeGraph::ConsumeDatabaseDirty()
+    {
+        bool wasDirty = databaseDirty;
+        databaseDirty = false;
+        return wasDirty;
+    }
+    void KnowledgeGraph::SyncWithDatabase()
+    {
+        connections.clear();
+        for (int i = 0; i < database.ConnectionCount(); ++i)
+        {
+            Connection c(sf::Color::White);
+            c.dataIndex = i;
+            connections.push_back(c);
+        }
+
+        std::vector<Node> updatedNodes;
+        updatedNodes.reserve(database.NodeCount());
+        for (int i = 0; i < database.NodeCount(); ++i)
+        {
+            if (Node *existing = NodeForData(i))
+            {
+                updatedNodes.push_back(*existing);
+            }
+            else
+            {
+                Node n;
+                n.dataIndex = i;
+                updatedNodes.push_back(n);
+            }
+        }
+        nodes = std::move(updatedNodes);
+
+        if (selectedNodeIndex >= database.NodeCount())
+            selectedNodeIndex = -1;
+        if (selectedConnectionIndex >= database.ConnectionCount())
+            selectedConnectionIndex = -1;
+        if (connectionStartIndex >= database.NodeCount())
+            connectionStartIndex = -1;
     }
 }

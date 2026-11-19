@@ -28,5 +28,6 @@ namespace cc
         s.field("entitiesChanged",entitiesChanged);
         s.field("changeIndices",changeIndices);
         s.field("chatMessages",chatMessages);
+        s.field("knowledgeDatabaseChanged", knowledgeDatabaseChanged);
     }
 }

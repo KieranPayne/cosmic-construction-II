@@ -65,6 +65,7 @@ namespace cc
         };
         EditMode editMode = EditMode::ADD;
         bool moving = false;
+        bool databaseDirty = false;
         sf::Vector2f moveMouseStartPos;
         sf::Vector2f moveNodeStartPos;
         int moveIndex;
@@ -140,5 +141,7 @@ namespace cc
         void SaveToFile();
         void Update(double dt, InputState &inputState);
         void Render(InputState &inputState);
+        bool ConsumeDatabaseDirty();
+        void SyncWithDatabase();
     };
 }

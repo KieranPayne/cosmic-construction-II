@@ -62,6 +62,24 @@ namespace cc
                 }
             }
         }
+        if (bundle.knowledgeDatabaseChanged)
+        {
+            knowledgeDatabase = std::move(*bundle.knowledgeDatabaseChanged);
+            knowledgeDatabase.BuildOutgoingAndIncoming();
+            bundle.knowledgeDatabaseChanged.reset();
+
+            if (server != nullptr)
+            {
+                if (SaveManager::debuggingKnowledgeGraph)
+                    SaveKnowledgeDatabase(SaveManager::GetSavedataDir() + "/knowledge graph");
+                else
+                    SaveKnowledgeDatabase(SaveManager::savePath + "/knowledge graph");
+            }
+            if (client != nullptr)
+            {
+                client->OnKnowledgeDatabaseUpdated();
+            }
+        }
         GenerateChunksInView(&bundle.playerData);
     }
 

@@ -4,6 +4,7 @@
 #include "Tile.hpp"
 #include "TileEntity.hpp"
 #include "Entity.hpp"
+#include "KnowledgeDatabase.hpp"
 namespace cc
 {
     struct TileChange
@@ -38,6 +39,7 @@ namespace cc
         std::vector<std::unique_ptr<Entity>> entitiesChanged;
         std::vector<int> changeIndices;
         std::vector<ChatMessage> chatMessages;
+        std::unique_ptr<KnowledgeDatabase> knowledgeDatabaseChanged = nullptr;
         InputBundle();
         void Serialize(Serializer& s);
     };
