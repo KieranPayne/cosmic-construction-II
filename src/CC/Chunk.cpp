@@ -209,7 +209,6 @@ namespace cc
 			RemoveTileEntity(entityIndex);
 		}
 		tiles[pos.x][pos.y] = tile;
-
 		if (!TileInfo::tileRegistry[tile.type].isTileEntity)
 		{
 			return;

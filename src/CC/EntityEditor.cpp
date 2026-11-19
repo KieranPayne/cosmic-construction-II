@@ -20,7 +20,7 @@ namespace cc
             if (ImGui::Button("Done"))
             {
                 addingEntity = false;
-                //TODO: make this change currInputBundle
+                p->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>(entity));
                 // p->AddEntity(entity);
                 entity = nullptr;
                 ImGui::End();
@@ -67,7 +67,21 @@ namespace cc
                     Entity* e = CreateEntityFromType(type);
                     Serializer sr(Serializer::Mode::READ, Serializer::Format::JSON, j);
                     e->Serialize(sr);
-                    p->client->currInputBundle.entitiesChanged.push_back(std::make_unique<Entity>(e));
+                    auto& b = p->client->currInputBundle;
+                    bool found = false;
+                    for (int j = 0; j < b.changeIndices.size(); j ++)
+                    {
+                        if (b.changeIndices[j] == i)
+                        {
+                            b.entitiesChanged[j] = std::unique_ptr<Entity>(e);
+                            found = true;
+                        }
+                    }
+                    if (!found)
+                    {
+                        p->client->currInputBundle.entitiesChanged.push_back(std::unique_ptr<Entity>(e));
+                        p->client->currInputBundle.changeIndices.push_back(i);
+                    }
                     // p->entities[i]->Serialize(sr);
                     // sf::Packet packet;
                     // packet << (uint16_t)CSMessageType::REQUEST_UPDATE_ENTITIES;

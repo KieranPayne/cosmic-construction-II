@@ -2,11 +2,13 @@
 #include "CSMessage.hpp"
 #include "SaveManager.hpp"
 #include "Utils.hpp"
+#include "Client.hpp"
 namespace cc
 {
     World::World()
     {
         planets.push_back(std::make_unique<Planet>());
+        RegisterBuiltinCommands(commandSystem);
     }
     void World::Tick()
     {
@@ -20,6 +22,7 @@ namespace cc
     {
         std::string username = bundle.username;
         // PlayerData* p = nullptr;
+        //playerdata
         if (bundle.playerData.cameraZoom != 0)
         {
             for (int i = 0; i < players.size(); i ++)
@@ -31,15 +34,35 @@ namespace cc
                 }
             }
         }
+        //tiles set
         Planet* planet = planets[bundle.playerData.planet].get();
         for (int i = 0; i < bundle.tilesChanged.size(); i ++)
         {
             planet->SetTileAt(bundle.tilesChanged[i]->position,bundle.tilesChanged[i]->tile,bundle.tilesChanged[i]->tileEntity.release());
         }
+        //entities added
+        for (int i = 0; i < bundle.entitiesAdded.size(); i ++)
+        {
+            planet->AddEntity(bundle.entitiesAdded[i].release());
+        }
+        //entities changed
+        for (int i = 0; i < bundle.entitiesChanged.size(); i++)
+        {
+            planet->ChangeEntity(bundle.changeIndices[i],bundle.entitiesChanged[i].release());
+        }
 
-        // *p = bundle.playerData;
+        //chat messages
+        for (auto& msg : bundle.chatMessages)
+        {
+            if (!commandSystem.TryExecute(this,&bundle.playerData,msg.message))
+            {   
+                if (client != nullptr)
+                {
+                    client->LogMessage(msg.message,msg.origin,msg.playerUsername);
+                }
+            }
+        }
         GenerateChunksInView(&bundle.playerData);
-        //TODO: do everything else stored in an input bundle
     }
 
     void World::GenerateStateCheck(sf::Packet& packet)
@@ -84,6 +107,9 @@ namespace cc
         // put bytes into packet
         packet.append(data.data(), data.size());
         packet << currentTick;
+        Serializer db(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+        knowledgeDatabase.Serialize(db);
+        AppendSerializerToPacket(packet, db);
     }
     void World::LoadJoinData(sf::Packet& packet)
     {
@@ -137,6 +163,8 @@ namespace cc
 			// AddOtherPlayer(p);
 		}
 		packet >> currentTick;
+        Serializer db = ReadSerializerFromPacket(packet);
+        knowledgeDatabase.Serialize(db);
     }
     void World::Save()
     {
@@ -231,5 +259,23 @@ namespace cc
     void World::AddPlayer(PlayerData player)
     {
         players.push_back(player);
+    }
+    void World::ShowMessageToClient(std::string senderName, std::string message)
+    {
+        if (client != nullptr)
+        {
+            client->LogMessage(message,ChatMessageOrigin::PLAYER,senderName);
+        }
+    }
+    void World::LoadKnowledgeDatabase(std::string path)
+    {
+        Serializer s = SaveManager::LoadSerializerFromFile(path);
+        knowledgeDatabase.Serialize(s);
+    }
+    void World::SaveKnowledgeDatabase(std::string path)
+    {
+        Serializer s(Serializer::Mode::WRITE, SaveManager::saveFormat);
+        knowledgeDatabase.Serialize(s);
+        SaveManager::WriteSerializerToFile(s, path);
     }
 }

@@ -250,22 +250,10 @@ namespace cc
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
 
-		// Share the entity before the chunk check, so it is shared even if its chunk isn't loaded here yet.
-		if (isServerPlanet)
-		{
-			GenerateChunk(chunkPos);
-		}
-
 		// TODO: handle the case where the chunk isn't loaded yet
 		if (!chunks.contains(chunkPos))
 		{
-			if (isServerPlanet)
-			{
-				GenerateChunk(chunkPos);
-			}else
-			{
-				return;
-			}
+			GenerateChunk(chunkPos);
 		}
 		entity->isInChunk = true;
 		chunks[chunkPos]->AddEntity(entity);
@@ -809,5 +797,38 @@ namespace cc
 			auto binary = s.binary();
 			packet << ComputeChecksum(binary.data(),binary.size());
 		}
+	}
+	void Planet::DestroyTile(sf::Vector2i position)
+	{
+		sf::Vector2i chunkPos = TileToChunkPos(position);
+        sf::Vector2i subChunkPos = position - chunkPos * CHUNK_SIZE;
+
+        // The server generates chunks on demand, like GetTileAt does.
+        if (!chunks.contains(chunkPos))
+        {
+            GenerateChunk(chunkPos);
+        }
+        Chunk *chunk = chunks[chunkPos].get();
+
+        chunk->DestroyTile(this,subChunkPos); // adjust to DestroyTile's real signature
+		if (tileVertices.contains(chunkPos))
+		{
+			// erase the vertices since they're no longer accurate
+			// note: erase instead of rebuilding since these may not necessarily be visible, so this would be wasted effort.
+			tileVertices.erase(chunkPos);
+		}
+	}
+	void Planet::ChangeEntity(int index, Entity* newEntity)
+	{
+		sf::Vector2i oldPos = entities[index]->chunkPos;
+		chunks[oldPos]->RemoveEntity(entities[index].get());
+		sf::Vector2i newPos = TileToChunkPos(newEntity->position);
+		if (!chunks.contains(newPos))
+		{
+			GenerateChunk(newPos);
+		}
+		chunks[newPos]->AddEntity(newEntity);
+		entities[index].reset(newEntity);
+		newEntity->chunkPos = newPos;
 	}
 }

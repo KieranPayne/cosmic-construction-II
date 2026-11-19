@@ -47,7 +47,7 @@ namespace cc
 
     static void RunHelp(CommandContext &ctx)
     {
-        CommandSystem &system = ctx.server.commandSystem;
+        CommandSystem &system = ctx.world->commandSystem;
 
         if (ctx.HasArg(0))
         {
@@ -71,7 +71,8 @@ namespace cc
 
     static void RunLearn(CommandContext &ctx)
     {
-        KnowledgeDatabase &database = ctx.server.knowledgeDatabase;
+        //TODO: fix this
+        KnowledgeDatabase &database = ctx.world->knowledgeDatabase;
 
         float amount;
         if (!ctx.HasArg(0) || !ctx.ArgFloat(1, amount))
@@ -111,7 +112,7 @@ namespace cc
         }
 
         std::vector<HumanKnowledge> before = human->knowledge;
-        ctx.server.knowledgeSystem.GainUnderstanding(*human, techId, amount);
+        ctx.world->knowledgeSystem.GainUnderstanding(*human, techId, amount);
 
         // Report everything that changed, including what spread to related technologies.
         std::string message = "Human " + std::to_string(entityIndex) + " gained understanding:";
@@ -141,7 +142,7 @@ namespace cc
         }
 
         ctx.Reply(message);
-        ctx.SyncEntity(entityIndex);
+        // ctx.SyncEntity(entityIndex);
     }
 
     void RunDestroyTile(CommandContext &ctx)
@@ -161,37 +162,36 @@ namespace cc
         }
 
         sf::Vector2i tilePos(x, y);
-        sf::Vector2i chunkPos = TileToChunkPos(tilePos);
-        sf::Vector2i subChunkPos = tilePos - chunkPos * CHUNK_SIZE;
+        planet->DestroyTile(tilePos);
+        // sf::Vector2i chunkPos = TileToChunkPos(tilePos);
+        // sf::Vector2i subChunkPos = tilePos - chunkPos * CHUNK_SIZE;
 
-        // The server generates chunks on demand, like GetTileAt does.
-        if (!planet->chunks.contains(chunkPos))
-        {
-            planet->GenerateChunk(chunkPos);
-        }
-        Chunk *chunk = planet->chunks[chunkPos].get();
+        // // The server generates chunks on demand, like GetTileAt does.
+        // if (!planet->chunks.contains(chunkPos))
+        // {
+        //     planet->GenerateChunk(chunkPos);
+        // }
+        // Chunk *chunk = planet->chunks[chunkPos].get();
 
-        chunk->DestroyTile(planet,subChunkPos); // adjust to DestroyTile's real signature
+        // chunk->DestroyTile(planet,subChunkPos); // adjust to DestroyTile's real signature
 
         // Tell the clients on this planet what the tile is now. Without this only the server sees the change.
-        uint16_t newType = (uint16_t)chunk->tiles[subChunkPos.x][subChunkPos.y].type;
-        int planetIndex = ctx.server.GetClient(ctx.clientId)->player.planet;
+        // uint16_t newType = (uint16_t)chunk->tiles[subChunkPos.x][subChunkPos.y].type;
+        // int planetIndex = ctx.playerData->planet;
+        
+        // sf::Packet p;
+        // p << (uint16_t)CSMessageType::SET_TILES;
+        // p << (int)1;
+        // p << x << y << newType << false; // false: no tile entity
+        // for (auto &c : ctx.server.clients)
+        // {
+        //     if (c.joined && c.player.planet == planetIndex)
+        //     {
+        //         c.outgoing.push_back(p);
+        //     }
+        // }
 
-        sf::Packet p;
-        p << (uint16_t)CSMessageType::SET_TILES;
-        p << (int)1;
-        p << x << y << newType << false; // false: no tile entity
-        for (auto &c : ctx.server.clients)
-        {
-            if (c.joined && c.player.planet == planetIndex)
-            {
-                c.outgoing.push_back(p);
-            }
-        }
-
-        ctx.Reply("Destroyed tile (" + std::to_string(x) + ", " + std::to_string(y) + ") in chunk (" +
-                  std::to_string(chunkPos.x) + ", " + std::to_string(chunkPos.y) + "), sub-chunk position (" +
-                  std::to_string(subChunkPos.x) + ", " + std::to_string(subChunkPos.y) + ").");
+        ctx.Reply("Destroyed tile (" + std::to_string(x) + ", " + std::to_string(y) + ").");
     }
 
     void RegisterBuiltinCommands(CommandSystem &system)

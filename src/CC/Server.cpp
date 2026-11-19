@@ -20,7 +20,8 @@ namespace cc
     Server::Server()
     {
         world = std::make_unique<World>();
-        RegisterBuiltinCommands(commandSystem);
+        world->server = this;
+        // RegisterBuiltinCommands(commandSystem);
     }
     void Server::SetSeed(uint64_t seed)
     {
@@ -64,10 +65,10 @@ namespace cc
                 clientStateChecksVerified.push_back(clientChecks);
             }
         }
-        for (auto& p : planets)
-        {
-            p->Update(dt);
-        }
+        // for (auto& p : planets)
+        // {
+        //     p->Update(dt);
+        // }
     }
     uint64_t Server::GetNextClientId()
     {
@@ -191,15 +192,15 @@ namespace cc
             
             SendJoinData(clientId, packet);
         }
-        else if (type == CSMessageType::CHAT_MESSAGE)
-        {
-            std::string message;
-            packet >> message;
-            if (!commandSystem.TryExecute(*this, clientId, message))
-            {
-                BroadcastChatLog(message, clientId);
-            }
-        }
+        // else if (type == CSMessageType::CHAT_MESSAGE)
+        // {
+        //     std::string message;
+        //     packet >> message;
+        //     if (!commandSystem.TryExecute(*this, clientId, message))
+        //     {
+        //         BroadcastChatLog(message, clientId);
+        //     }
+        // }
         else if (type == CSMessageType::STATE_CHECK)
         {
             CompareStateChecks(clientId, packet);
@@ -208,6 +209,23 @@ namespace cc
         {
             ProcessInputBundle(clientId,packet);
         }
+        // else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
+        // {
+        //     Serializer s = ReadSerializerFromPacket(packet);
+        //     sf::Packet out;
+        //     out << (uint16_t)CSMessageType::UPDATE_KNOWLEDGE_DB;
+        //     AppendSerializerToPacket(out, s);
+        //     Broadcast(out, {clientId});
+        //     knowledgeDatabase.Serialize(s);
+        //     if (SaveManager::debuggingKnowledgeGraph)
+        //     {
+        //         SaveKnowledgeDatabase(SaveManager::GetSavedataDir() + "/knowledge graph");
+        //     }
+        //     else
+        //     {
+        //         SaveKnowledgeDatabase(SaveManager::savePath + "/knowledge graph");
+        //     }
+        // }
     }
     void Server::ProcessInputBundle(uint64_t clientId, sf::Packet &p)
     {
@@ -245,23 +263,7 @@ namespace cc
                 break;
             }
         }
-        else if (type == CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB)
-        {
-            Serializer s = ReadSerializerFromPacket(packet);
-            sf::Packet out;
-            out << (uint16_t)CSMessageType::UPDATE_KNOWLEDGE_DB;
-            AppendSerializerToPacket(out, s);
-            Broadcast(out, {clientId});
-            knowledgeDatabase.Serialize(s);
-            if (SaveManager::debuggingKnowledgeGraph)
-            {
-                SaveKnowledgeDatabase(SaveManager::GetSavedataDir() + "/knowledge graph");
-            }
-            else
-            {
-                SaveKnowledgeDatabase(SaveManager::savePath + "/knowledge graph");
-            }
-        }
+        
     }
     void Server::SendJoinData(uint64_t clientId, sf::Packet &usernamePacket)
     {
@@ -299,9 +301,7 @@ namespace cc
         packet << (uint16_t)CSMessageType::JOIN_DATA;
         world->AppendJoinData(packet);
 
-        Serializer db(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-        knowledgeDatabase.Serialize(db);
-        AppendSerializerToPacket(packet, db);
+        
         SendToClient(clientId, packet);
         // let every other player know a new player has joined
         sf::Packet newPlayerPacket;
@@ -315,10 +315,13 @@ namespace cc
     }
     void Server::BroadcastServerLog(std::string message)
     {
-        sf::Packet p;
-        p << (uint16_t)CSMessageType::SERVER_MESSAGE;
-        p << message;
-        Broadcast(p);
+        InputBundle in;
+        in.chatMessages.push_back(ChatMessage(ChatMessageOrigin::SERVER,message));
+        queuedInputs[world->currentTick].push_back(std::move(in));
+        // sf::Packet p;
+        // p << (uint16_t)CSMessageType::SERVER_MESSAGE;
+        // p << message;
+        // Broadcast(p);
     }
     int Server::GetIndexOfId(uint64_t id)
     {
@@ -331,14 +334,15 @@ namespace cc
         }
         return -1;
     }
-    void Server::BroadcastChatLog(std::string message, uint64_t clientId)
-    {
-        sf::Packet p;
-        p << (uint16_t)CSMessageType::CHAT_MESSAGE;
-        p << world->players[GetIndexOfId(clientId)].username;
-        p << message;
-        Broadcast(p, {clientId});
-    }
+    // void Server::BroadcastChatLog(std::string message, uint64_t clientId)
+    // {
+    //     InputBundle in;
+    //     // sf::Packet p;
+    //     // p << (uint16_t)CSMessageType::CHAT_MESSAGE;
+    //     // p << world->players[GetIndexOfId(clientId)].username;
+    //     // p << message;
+    //     // Broadcast(p, {clientId});
+    // }
     // void Server::SendChunks(uint64_t clientId, std::vector<sf::Vector2i> &positions)
     // {
     //     sf::Packet p;
@@ -443,10 +447,7 @@ namespace cc
             return;
         }
         std::vector<InputBundle>& bundles = queuedInputs[world->currentTick];
-        for (int i = 0; i < bundles.size(); i ++)
-        {
-            world->EnactInputBundle(bundles[i]);
-        }
+        
         p << (uint64_t)bundles.size();
         for (int i = 0; i < bundles.size(); i ++)
         {
@@ -456,9 +457,12 @@ namespace cc
             p << (uint64_t)data.size();
             p.append(data.data(),data.size());
         }
-        queuedInputs.erase(world->currentTick);
         Broadcast(p);
-
+        for (int i = 0; i < bundles.size(); i ++)
+        {
+            world->EnactInputBundle(bundles[i]);
+        }
+        queuedInputs.erase(world->currentTick);
     }
 
     void Server::CompareStateChecks(uint64_t clientId, sf::Packet &packet)
@@ -548,17 +552,9 @@ namespace cc
                 break;
             }
         }
-    void Server::LoadKnowledgeDatabase(std::string path)
-    {
-        Serializer s = SaveManager::LoadSerializerFromFile(path);
-        knowledgeDatabase.Serialize(s);
     }
-    void Server::SaveKnowledgeDatabase(std::string path)
-    {
-        Serializer s(Serializer::Mode::WRITE, SaveManager::saveFormat);
-        knowledgeDatabase.Serialize(s);
-        SaveManager::WriteSerializerToFile(s, path);
-    }
+    
+    
     bool Server::IsHost(uint64_t clientId)
     {
         ServerClient *client = GetClient(clientId);
@@ -568,29 +564,29 @@ namespace cc
         return address.has_value() && *address == sf::IpAddress::getLocalAddress();
     }
 
-    void Server::BroadcastAddedEntity(Planet *planet, Entity *entity)
-    {
-        // The planet's own `index` isn't reliable on the server, so find it by pointer.
-        int planetIndex = -1;
-        for (int i = 0; i < (int)planets.size(); i++)
-        {
-            if (planets[i].get() == planet)
-            {
-                planetIndex = i;
-                break;
-            }
-        }
-        if (planetIndex == -1)
-            return;
+    // void Server::BroadcastAddedEntity(Planet *planet, Entity *entity)
+    // {
+    //     // The planet's own `index` isn't reliable on the server, so find it by pointer.
+    //     int planetIndex = -1;
+    //     for (int i = 0; i < (int)planets.size(); i++)
+    //     {
+    //         if (planets[i].get() == planet)
+    //         {
+    //             planetIndex = i;
+    //             break;
+    //         }
+    //     }
+    //     if (planetIndex == -1)
+    //         return;
 
-        sf::Packet p;
-        p << (uint16_t)CSMessageType::ADD_ENTITIES;
-        p << (int)1;
-        AppendEntityToPacket(p, entity);
-        for (auto &c : clients)
-        {
-            if (c.joined && c.player.planet == planetIndex)
-                c.outgoing.push_back(p);
-        }
-    }
+    //     sf::Packet p;
+    //     p << (uint16_t)CSMessageType::ADD_ENTITIES;
+    //     p << (int)1;
+    //     AppendEntityToPacket(p, entity);
+    //     for (auto &c : clients)
+    //     {
+    //         if (c.joined && c.player.planet == planetIndex)
+    //             c.outgoing.push_back(p);
+    //     }
+    // }
 }

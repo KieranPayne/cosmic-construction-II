@@ -15,8 +15,6 @@ namespace cc
     };
     enum class ChatMessageOrigin : uint8_t
     {
-        /// A message from this client itself, such as a status update. Shown as "> message".
-        SELF,
         /// A message from the server. Shown as "<SERVER> message".
         SERVER,
         /// A chat message from a player. Shown as "<username> message".
@@ -24,8 +22,9 @@ namespace cc
     };
     struct ChatMessage
     {
-        ChatMessageOrigin origin;
-        std::string message;
+        ChatMessageOrigin origin = ChatMessageOrigin::SERVER;
+        std::string message = "";
+        std::string playerUsername = "";
         void Serialize(Serializer& s);
     };
     class InputBundle

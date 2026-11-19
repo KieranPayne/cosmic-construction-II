@@ -175,7 +175,7 @@ namespace cc
          * @param origin Where it came from, which sets the prefix.
          * @param username The sender's name. Only used when `origin` is PLAYER.
          */
-        void LogMessage(std::string message, ChatMessageOrigin origin = ChatMessageOrigin::SELF, std::string username = "");
+        void LogMessage(std::string message, ChatMessageOrigin origin, std::string username = "");
 
     private:
         // ---- chat and drawing ----

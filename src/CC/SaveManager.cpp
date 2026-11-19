@@ -63,7 +63,7 @@ namespace cc
 			{
 				knowledgeDBPath = "content/resources/knowledge graph";
 			}
-			server->LoadKnowledgeDatabase(knowledgeDBPath);
+			server->world->LoadKnowledgeDatabase(knowledgeDBPath);
 
 			const bool randomize = false;
 			if (seed == "" && randomize)
@@ -108,7 +108,7 @@ namespace cc
 			{
 				knowledgeDBPath = savePath + "/knowledge graph";
 			}
-			server->LoadKnowledgeDatabase(knowledgeDBPath);
+			server->world->LoadKnowledgeDatabase(knowledgeDBPath);
 			server->world->Load();
 			server->Start(5000);
 			server->StartThread();
@@ -129,7 +129,7 @@ namespace cc
 			{
 				knowledgeDBPath = savePath = "/knowledge graph";
 			}
-			server->SaveKnowledgeDatabase(knowledgeDBPath);
+			server->world->SaveKnowledgeDatabase(knowledgeDBPath);
 			WriteServerMetadata(server);
 		}
 		void WriteServerMetadata(Server *server)

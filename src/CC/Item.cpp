@@ -8,7 +8,7 @@ namespace cc
     }
     sf::Vector2f Item::GetTexCoords()
     {
-        return JsonAsVector(EntityInfo::texturesJson["Item"][(uint16_t)itemData.type]);
+        return JsonAsVector(EntityInfo::texturesJson["Item"][(uint16_t)((itemData.type) > 0 ? itemData.type - 1 : itemData.type)]);
     }
     void Item::Serialize(Serializer &s)
     {

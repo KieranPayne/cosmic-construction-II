@@ -11,6 +11,7 @@ namespace cc
 		this->renderTarget = target;
 		activePlanet = 0;
 		world = std::make_unique<World>();
+		world->client = this;
 		for (auto &p : world->planets)
 		{
 			p->client = this;
@@ -186,7 +187,7 @@ namespace cc
 		{
 			std::string username;
 			packet >> username;
-			LogMessage("Player " + username + " disconnected.");
+			LogMessage("Player " + username + " disconnected.",ChatMessageOrigin::SERVER);
 			RemoveOtherPlayer(username);
 			break;
 		}
@@ -199,13 +200,13 @@ namespace cc
 			break;
 		}
 
-		case CSMessageType::CHAT_MESSAGE:
-		{
-			std::string username, message;
-			packet >> username >> message;
-			LogMessage(message, ChatMessageOrigin::PLAYER, username);
-			break;
-		}
+		// case CSMessageType::CHAT_MESSAGE:
+		// {
+		// 	std::string username, message;
+		// 	packet >> username >> message;
+		// 	LogMessage(message, ChatMessageOrigin::PLAYER, username);
+		// 	break;
+		// }
 
 		case CSMessageType::BROADCAST_NEXT_TICK:
 		{
@@ -247,10 +248,10 @@ namespace cc
 			}
 			break;
 		}
-		case CSMessageType::UPDATE_KNOWLEDGE_DB:
-		{
-			LoadKnowledgeDB(packet);
-		}
+		// case CSMessageType::UPDATE_KNOWLEDGE_DB:
+		// {
+		// 	LoadKnowledgeDB(packet);
+		// }
 		default:
 			break;
 		}
@@ -283,7 +284,7 @@ namespace cc
 			}
 			msg += "\n" + p.username;
 		}
-		LogMessage(msg);
+		LogMessage(msg,ChatMessageOrigin::SERVER);
 		for (auto &p : packetBuffer)
 		{
 			ProcessPacket(p);
@@ -308,7 +309,7 @@ namespace cc
 
 		socket.setBlocking(false);
 		connected = true;
-		LogMessage("Connected, sending username");
+		LogMessage("Connected, sending username",ChatMessageOrigin::SERVER);
 		SendUsername();
 		return true;
 	}
@@ -361,7 +362,7 @@ namespace cc
 		PlayerData p;
 		s.field("player", p);
 		AddPlayer(p);
-		LogMessage("Player Connected: " + p.username);
+		LogMessage("Player Connected: " + p.username, ChatMessageOrigin::SERVER);
 	}
 
 	void Client::AddPlayer(const PlayerData &player)
@@ -393,11 +394,11 @@ namespace cc
 
 	void Client::LogMessage(std::string message, ChatMessageOrigin origin, std::string username)
 	{
-		if (origin == ChatMessageOrigin::SELF)
-		{
-			chatLog.push_back("> " + message);
-		}
-		else if (origin == ChatMessageOrigin::SERVER)
+		// if (origin == ChatMessageOrigin::SELF)
+		// {
+		// 	chatLog.push_back("> " + message);
+		// }
+		if (origin == ChatMessageOrigin::SERVER)
 		{
 			chatLog.push_back("<SERVER> " + message);
 		}
@@ -456,15 +457,15 @@ namespace cc
 
 	void Client::SendChatMessage(const std::string &text)
 	{
-		// Commands are run by the server and answered with server messages, so they aren't shown as player chat.
-		if (!text.empty() && text[0] == '/')
-			LogMessage(text);
-		else
-			LogMessage(text, MessageOrigin::PLAYER, SaveManager::username);
-		sf::Packet p;
-		p << (uint16_t)CSMessageType::CHAT_MESSAGE;
-		p << text;
-		SendPacket(p);
+		currInputBundle.chatMessages.push_back(ChatMessage(ChatMessageOrigin::PLAYER,text,SaveManager::username));
+		// if (!text.empty() && text[0] == '/')
+		// 	LogMessage(text);
+		// else
+		// LogMessage(text, ChatMessageOrigin::PLAYER, SaveManager::username);
+		// sf::Packet p;
+		// p << (uint16_t)CSMessageType::CHAT_MESSAGE;
+		// p << text;
+		// SendPacket(p);
 	}
 
 	// void Client::LoadChunks(sf::Packet &packet)
@@ -523,7 +524,7 @@ namespace cc
 		PlayerData p;
 		p.username = SaveManager::username;
 		p.cameraPosition = world->planets[activePlanet]->camera.position;
-		p.cameraZoom = world->planets[activePlanet]->camera.targetZoom;
+		p.cameraZoom = world->planets[activePlanet]->camera.zoom;
 		p.planet = activePlanet;
 		p.resolution = (sf::Vector2f)renderTarget->getSize();
 		return p;
@@ -546,20 +547,20 @@ namespace cc
 				break;
 		}
 	}
-	void Client::SendKnowledgeDB()
-	{
-		sf::Packet packet;
-		packet << (uint16_t)CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB;
-		Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
-		knowledgeDatabase.Serialize(s);
-		AppendSerializerToPacket(packet, s);
-		SendPacket(packet);
-	}
-	void Client::LoadKnowledgeDB(sf::Packet &packet)
-	{
-		Serializer s = ReadSerializerFromPacket(packet);
-		knowledgeDatabase.Serialize(s);
-	}
+	// void Client::SendKnowledgeDB()
+	// {
+	// 	sf::Packet packet;
+	// 	packet << (uint16_t)CSMessageType::REQUEST_UPDATE_KNOWLEDGE_DB;
+	// 	Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
+	// 	knowledgeDatabase.Serialize(s);
+	// 	AppendSerializerToPacket(packet, s);
+	// 	SendPacket(packet);
+	// }
+	// void Client::LoadKnowledgeDB(sf::Packet &packet)
+	// {
+	// 	Serializer s = ReadSerializerFromPacket(packet);
+	// 	knowledgeDatabase.Serialize(s);
+	// }
 
 	void Client::SendInputBundle()
 	{

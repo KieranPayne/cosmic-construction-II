@@ -22,6 +22,7 @@ namespace cc
 	class Chunk
 	{
 	public:
+		bool tilesDirty = false;
 		/// Foreground tiles, indexed [x][y] by local tile coordinates. Type 0 is air.
 		Tile tiles[CHUNK_SIZE][CHUNK_SIZE] = {};
 

@@ -4,9 +4,10 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
+#include "PlayerData.hpp"
 namespace cc
 {
+    class World;
     class Server;
     class Human;
     class Planet;
@@ -18,12 +19,14 @@ namespace cc
      */
     struct CommandContext
     {
-        CommandContext(Server &server, uint64_t clientId) : server(server), clientId(clientId) {}
-
-        /// The server the command runs on. Commands run on the server thread, so this is safe to use directly.
-        Server &server;
-        /// Id of the client who typed the command.
-        uint64_t clientId;
+        CommandContext(World* world, PlayerData* playerData)
+        {
+            this->world = world;
+            this->playerData = playerData;
+        }
+        World* world;
+        //playerdata of the client running the command
+        PlayerData* playerData;
         /// The words after the command name. Quoted text counts as one word.
         std::vector<std::string> args;
         /// The command being run. Set by CommandSystem.
@@ -54,7 +57,7 @@ namespace cc
         Human *FindHuman(int entityIndex) const;
         /// Sends the current state of an entity to every joined client on the sender's planet.
         /// Call after a command changes an entity, so clients see the change.
-        void SyncEntity(int entityIndex) const;
+        // void SyncEntity(int entityIndex) const;
     };
 
     /// A chat command, for example "/learn". Add new ones with CommandSystem::Register().
@@ -90,7 +93,7 @@ namespace cc
          * @return true if the line was a command (even a failed or unknown one), meaning it should not be
          *         shown as normal chat. false if it is ordinary chat.
          */
-        bool TryExecute(Server &server, uint64_t clientId, const std::string &line);
+        bool TryExecute(World* world, PlayerData* playerData, const std::string &line);
 
         /// All registered commands, in registration order.
         const std::vector<Command> &Commands() const { return commands; }

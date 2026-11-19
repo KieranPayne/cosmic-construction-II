@@ -1,8 +1,11 @@
 #pragma once
 #include "../json.hpp"
 #include "../PCH.hpp"
+
 namespace cc
 {
+    class Entity;
+
     /**
      * @brief Saves or loads an object's fields, to json or to compact binary, using one piece of code for both directions.
      *
@@ -13,51 +16,26 @@ namespace cc
      * In JSON format fields are stored under their names, and are looked up by name when reading.
      * In BINARY format the names are ignored and the values are stored one after another, so the fields must be
      * read in exactly the same order and with the same types as they were written.
-     *
-     * Typical use:
-     * @code
-     * Serializer w(Serializer::Mode::WRITE, Serializer::Format::JSON);
-     * player.Serialize(w);
-     * nlohmann::json j = w.json();
-     *
-     * Serializer r(Serializer::Mode::READ, Serializer::Format::JSON, j);
-     * player.Serialize(r);
-     * @endcode
      */
     class Serializer
     {
     public:
-        /// Whether a serializer fills values in or stores them.
         enum class Mode
         {
-            /// field() fills in each value from the stored data.
             READ,
-            /// field() stores each value.
             WRITE
         };
 
-        /// Whether this serializer reads or writes.
         Mode mode;
 
-        /// The kind of data a serializer works with.
         enum class Format
         {
-            /// Human-readable json, with fields stored by name.
             JSON,
-            /// Compact bytes, with fields stored in order and no names.
             BINARY
         };
 
-        /// Whether this serializer works with json or binary.
         Format format;
 
-        /**
-         * @brief Creates a serializer.
-         * @param mode READ to load values, WRITE to store them.
-         * @param format JSON or BINARY.
-         * @param j The json to read from. Only used when reading JSON.
-         * @param b The bytes to read from. Only used when reading BINARY.
-         */
         Serializer(Mode mode, Format format, nlohmann::json j = {}, std::vector<uint8_t> b = {})
         {
             this->mode = mode;
@@ -66,11 +44,6 @@ namespace cc
             b_ = b;
         }
 
-        /**
-         * @brief Writes or reads a number, bool or string.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The value to store, or to fill in when reading.
-         */
         template <typename T>
         std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, std::string>>
         field(const std::string name, T &value)
@@ -99,10 +72,19 @@ namespace cc
                     }
                     else
                     {
-                        uint32_t len;
+                        uint32_t len = 0;
                         readRaw(len);
-                        value.assign(reinterpret_cast<const char *>(&b_[readPos_]), len);
-                        readPos_ += len;
+                        if (len == 0)
+                        {
+                            value.clear();
+                        }
+                        else
+                        {
+                            if (readPos_ + len > b_.size())
+                                throw std::runtime_error("Serializer: unexpected end of binary buffer");
+                            value.assign(reinterpret_cast<const char *>(b_.data() + readPos_), len);
+                            readPos_ += len;
+                        }
                     }
                 }
                 else
@@ -115,12 +97,6 @@ namespace cc
             }
         }
 
-        /**
-         * @brief Writes or reads an sf::Vector2. In JSON it is stored as {"x": ..., "y": ...}.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The vector to store, or to fill in when reading.
-         * @note SFML's vectors have no Serialize() function of their own, so they get their own overloads.
-         */
         template <typename T>
         void field(const char *name, sf::Vector2<T> &value)
         {
@@ -159,11 +135,6 @@ namespace cc
             }
         }
 
-        /**
-         * @brief Writes or reads an sf::Vector3. In JSON it is stored as {"x": ..., "y": ..., "z": ...}.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The vector to store, or to fill in when reading.
-         */
         template <typename T>
         void field(const char *name, sf::Vector3<T> &value)
         {
@@ -207,13 +178,6 @@ namespace cc
             }
         }
 
-        /**
-         * @brief Writes or reads an object that has its own `Serialize(Serializer&)` function.
-         *
-         * In JSON the object becomes a nested json object under `name`. In BINARY its fields follow on directly.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The object to store, or to fill in when reading.
-         */
         template <typename T>
         std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_enum_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, T &value)
@@ -234,21 +198,12 @@ namespace cc
                     value.Serialize(sub);
                 }
             }
-            else // BINARY — no keys, so just recurse into *this*, sharing the buffer/cursor
+            else // BINARY
             {
                 value.Serialize(*this);
             }
         }
 
-        /**
-         * @brief Writes or reads an object through a pointer. The object needs its own `Serialize(Serializer&)` function.
-         *
-         * Stored the same way as the by-reference overload.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The object to store, or to fill in when reading.
-         * @warning The pointer is passed by value. When reading, a null pointer gets a new object, but the caller
-         *          never sees it (and it is leaked), so always pass an existing object when reading.
-         */
         template <typename T>
         std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, T *value)
@@ -286,13 +241,6 @@ namespace cc
             }
         }
 
-        /**
-         * @brief Writes or reads a vector of numbers, bools or strings.
-         *
-         * In JSON it is a json array. In BINARY it is the element count followed by each element.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The vector to store, or to replace when reading.
-         */
         template <typename T>
         std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, std::string>>
         field(const std::string name, std::vector<T> &value)
@@ -316,7 +264,7 @@ namespace cc
                     uint32_t count = static_cast<uint32_t>(value.size());
                     writeRaw(count);
                     for (auto &elem : value)
-                        field(name, elem); // reuses the scalar overload for each element
+                        field(name, elem);
                 }
                 else
                 {
@@ -329,14 +277,6 @@ namespace cc
             }
         }
 
-        /**
-         * @brief Writes or reads a vector of objects that each have their own `Serialize(Serializer&)` function.
-         *
-         * In JSON it is an array with one nested object per element. In BINARY it is the element count followed by
-         * each element. When reading, the vector is cleared and refilled, and the element type must be default constructible.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The vector to store, or to replace when reading.
-         */
         template <typename T>
         std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
         field(const std::string name, std::vector<T> &value)
@@ -471,11 +411,6 @@ namespace cc
             }
         }
 
-        /**
-         * @brief Writes or reads a std::size_t.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The value to store, or to fill in when reading.
-         */
         void field(const std::string name, std::size_t &value)
         {
             if (format == Format::JSON)
@@ -498,14 +433,7 @@ namespace cc
                     readRaw(value);
             }
         }
-        /**
-         * @brief Writes or reads an optional object owned by a std::unique_ptr.
-         *
-         * In JSON, a null pointer is stored as `null` and a valid pointer as a nested object.
-         * In BINARY, a 1-byte bool flag precedes the object's bytes when non-null.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The unique_ptr to store, or to allocate/reset when reading.
-         */
+
         template <typename T>
         void field(const std::string name, std::unique_ptr<T> &value)
         {
@@ -567,32 +495,20 @@ namespace cc
                 }
             }
         }
-        /**
-         * @brief Writes or reads an enum or enum class using its underlying integer type.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The enum value to store, or to fill in when reading.
-         */
+
         template <typename T>
         std::enable_if_t<std::is_enum_v<T>>
         field(const std::string name, T &value)
         {
             using Underlying = std::underlying_type_t<T>;
             Underlying raw = static_cast<Underlying>(value);
-            field(name, raw); // delegates to the existing arithmetic overload (JSON + BINARY)
+            field(name, raw);
             if (mode == Mode::READ)
             {
                 value = static_cast<T>(raw);
             }
         }
 
-        /**
-         * @brief Writes or reads an sf::Color. In JSON it is stored as {"r": ..., "g": ..., "b": ..., "a": ...}.
-         *
-         * In BINARY it is 4 bytes, in the order r, g, b, a.
-         * @param name The field's name (used in JSON; ignored in BINARY).
-         * @param value The color to store, or to fill in when reading.
-         * @note sf::Color has no Serialize() function of its own, so it gets its own overload.
-         */
         void field(const std::string name, sf::Color &value)
         {
             if (format == Format::JSON)
@@ -600,7 +516,6 @@ namespace cc
                 if (mode == Mode::WRITE)
                 {
                     nlohmann::json j;
-                    // Cast to unsigned so the channels are stored as numbers rather than characters.
                     j["r"] = static_cast<unsigned>(value.r);
                     j["g"] = static_cast<unsigned>(value.g);
                     j["b"] = static_cast<unsigned>(value.b);
@@ -641,23 +556,18 @@ namespace cc
             }
         }
 
-        /// @brief Gets a copy of the json written so far (JSON format). Call after writing to get the result.
-        nlohmann::json json() const { return j_; }
+        // Implemented in Serializer.cpp to avoid circular include with Entity.hpp
+        void field(const std::string name, std::unique_ptr<Entity> &value);
+        void field(const std::string name, std::vector<std::unique_ptr<Entity>> &value);
 
-        /// @brief Gets a copy of the bytes written so far (BINARY format). Call after writing to get the result.
+        nlohmann::json json() const { return j_; }
         std::vector<uint8_t> binary() const { return b_; }
 
     private:
-        /// The json being written to or read from (JSON format).
         nlohmann::json j_;
-
-        /// The bytes being written to or read from (BINARY format).
         std::vector<uint8_t> b_;
-
-        /// Where the next binary read starts in `b_`.
         size_t readPos_ = 0;
 
-        /// @brief Appends a value's bytes to `b_`. Only for types that can be safely copied as raw bytes.
         template <typename T>
         void writeRaw(const T &value)
         {
@@ -666,7 +576,6 @@ namespace cc
             b_.insert(b_.end(), p, p + sizeof(T));
         }
 
-        /// @brief Fills a value from the bytes at `readPos_` in `b_`, then moves `readPos_` past them. Does not check that enough bytes remain.
         template <typename T>
         void readRaw(T &value)
         {

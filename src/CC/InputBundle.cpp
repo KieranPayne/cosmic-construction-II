@@ -12,6 +12,7 @@ namespace cc
     {
         s.field("origin",origin);
         s.field("message",message);
+        s.field("playerUsername",playerUsername);
     }
     InputBundle::InputBundle()
     {

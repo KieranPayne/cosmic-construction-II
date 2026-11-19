@@ -14,7 +14,7 @@ namespace cc
 
         SERVER_MESSAGE,
 
-        CHAT_MESSAGE,
+        // CHAT_MESSAGE,
 
         STATE_CHECK,
 

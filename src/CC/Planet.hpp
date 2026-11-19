@@ -164,7 +164,7 @@ namespace cc
 		 * @param tileEntity The tile's tile entity, or null if it has none.
 		 */
 		void SetTileAt(sf::Vector2i position, Tile tile, TileEntity *tileEntity = nullptr);
-
+		void DestroyTile(sf::Vector2i position);
 		/**
 		 * @brief Writes or reads the planet's own saved data: the camera and the seed.
 		 * @param s The serializer to use (its mode decides whether this reads or writes).
@@ -207,6 +207,8 @@ namespace cc
 		void MakeImageFromTiles(std::string &imagePath, sf::Vector2i placePos, int width);
 
 		void GenerateStateCheck(sf::Packet& packet);
+
+		void ChangeEntity(int index, Entity* newEntity);
 
 		// A planet can't be copied (it holds unique_ptrs), but it can be moved, so it can be stored in a vector.
 		Planet(const Planet &) = delete;

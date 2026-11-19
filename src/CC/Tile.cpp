@@ -14,7 +14,7 @@ namespace cc
             Item *i = new Item();
             i->position = (sf::Vector2f)(chunkPos * CHUNK_SIZE + subChunkPos);
             i->itemData.type = ItemData::WOOD;
-            p->AddEntity(i, true, true);
+            p->AddEntity(i);
         }
         else if (type == rockId)
         {
@@ -32,7 +32,7 @@ namespace cc
             {
                 i->itemData.type = ItemData::STONE;
             }
-            p->AddEntity(i, true, true);
+            p->AddEntity(i);
         }else if (type == tallGrassId)
         {
             static std::random_device rd;
@@ -45,7 +45,7 @@ namespace cc
                 Item *i = new Item();
                 i->position = (sf::Vector2f)(chunkPos * CHUNK_SIZE + subChunkPos);
                 i->itemData.type = ItemData::FIBER;
-                p->AddEntity(i, true, true);
+                p->AddEntity(i);
             }
         }
     }

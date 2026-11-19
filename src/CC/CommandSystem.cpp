@@ -2,7 +2,7 @@
 #include "Server.hpp"
 #include "Human.hpp"
 #include "CSMessage.hpp"
-
+#include "World.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -56,10 +56,11 @@ namespace cc
 
     void CommandContext::Reply(const std::string &message) const
     {
-        sf::Packet p;
-        p << (uint16_t)CSMessageType::SERVER_MESSAGE;
-        p << message;
-        server.SendToClient(clientId, p);
+        world->ShowMessageToClient("Command",message);
+        // sf::Packet p;
+        // p << (uint16_t)CSMessageType::SERVER_MESSAGE;
+        // p << message;
+        // server.SendToClient(clientId, p);
     }
 
     void CommandContext::ReplyError(const std::string &message) const
@@ -111,29 +112,30 @@ namespace cc
 
     Planet *CommandContext::PlayerPlanet() const
     {
-        Server::ServerClient *client = server.GetClient(clientId);
-        if (!client)
-        {
-            return nullptr;
-        }
-        int index = client->player.planet;
-        if (index < 0 || index >= static_cast<int>(server.planets.size()))
-        {
-            return nullptr;
-        }
-        return server.planets[index].get();
+        return world->planets[playerData->planet].get();
+        // Server::ServerClient *client = server.GetClient(clientId);
+        // if (!client)
+        // {
+        //     return nullptr;
+        // }
+        // int index = client->player.planet;
+        // if (index < 0 || index >= static_cast<int>(server.planets.size()))
+        // {
+        //     return nullptr;
+        // }
+        // return server.planets[index].get();
     }
 
     int CommandContext::NearestHumanIndex() const
     {
         Planet *planet = PlayerPlanet();
-        Server::ServerClient *client = server.GetClient(clientId);
-        if (!planet || !client)
-        {
-            return -1;
-        }
+        // Server::ServerClient *client = server.GetClient(clientId);
+        // if (!planet || !client)
+        // {
+        //     return -1;
+        // }
 
-        sf::Vector2f camera = client->player.cameraPosition;
+        sf::Vector2f camera = playerData->cameraPosition;
         int best = -1;
         float bestDistance = 0.f;
         for (int i = 0; i < static_cast<int>(planet->entities.size()); ++i)
@@ -164,31 +166,31 @@ namespace cc
         return dynamic_cast<Human *>(planet->entities[entityIndex].get());
     }
 
-    void CommandContext::SyncEntity(int entityIndex) const
-    {
-        Planet *planet = PlayerPlanet();
-        Server::ServerClient *sender = server.GetClient(clientId);
-        if (!planet || !sender || entityIndex < 0 || entityIndex >= static_cast<int>(planet->entities.size()))
-        {
-            return;
-        }
+    // void CommandContext::SyncEntity(int entityIndex) const
+    // {
+    //     Planet *planet = PlayerPlanet();
+    //     // Server::ServerClient *sender = server.GetClient(clientId);
+    //     if (!planet || entityIndex < 0 || entityIndex >= static_cast<int>(planet->entities.size()))
+    //     {
+    //         return;
+    //     }
+        
+    //     // sf::Packet p;
+    //     // p << (uint16_t)CSMessageType::UPDATE_ENTITIES;
+    //     // p << (int)1;
+    //     // p << (int)entityIndex;
+    //     // AppendEntityToPacket(p, planet->entities[entityIndex].get());
 
-        sf::Packet p;
-        p << (uint16_t)CSMessageType::UPDATE_ENTITIES;
-        p << (int)1;
-        p << (int)entityIndex;
-        AppendEntityToPacket(p, planet->entities[entityIndex].get());
-
-        // Only clients that have joined and are on this planet can apply it.
-        int planetIndex = sender->player.planet;
-        for (auto &c : server.clients)
-        {
-            if (c.joined && c.player.planet == planetIndex)
-            {
-                server.SendToClient(c.id, p);
-            }
-        }
-    }
+    //     // Only clients that have joined and are on this planet can apply it.
+    //     int planetIndex = sender->player.planet;
+    //     for (auto &c : server.clients)
+    //     {
+    //         if (c.joined && c.player.planet == planetIndex)
+    //         {
+    //             server.SendToClient(c.id, p);
+    //         }
+    //     }
+    // }
 
     // ---------------- CommandSystem ----------------
 
@@ -211,14 +213,14 @@ namespace cc
         return it == lookup.end() ? nullptr : &commands[it->second];
     }
 
-    bool CommandSystem::TryExecute(Server &server, uint64_t clientId, const std::string &line)
+    bool CommandSystem::TryExecute(World* world, PlayerData* playerData, const std::string &line)
     {
         if (line.empty() || line[0] != '/')
         {
             return false;
         }
 
-        CommandContext ctx(server, clientId);
+        CommandContext ctx(world,playerData);
         std::vector<std::string> tokens = TokenizeCommand(line.substr(1));
         if (tokens.empty())
         {
@@ -232,12 +234,12 @@ namespace cc
             ctx.ReplyError("unknown command \"" + tokens[0] + "\". Type /help for a list.");
             return true;
         }
-
-        if (command->hostOnly && !server.IsHost(clientId))
-        {
-            ctx.ReplyError("/" + command->name + " can only be used by the host.");
-            return true;
-        }
+        //TODO: fix host system (add operator?)
+        // if (command->hostOnly && !server.IsHost(clientId))
+        // {
+        //     ctx.ReplyError("/" + command->name + " can only be used by the host.");
+        //     return true;
+        // }
 
         ctx.command = command;
         ctx.args.assign(tokens.begin() + 1, tokens.end());
