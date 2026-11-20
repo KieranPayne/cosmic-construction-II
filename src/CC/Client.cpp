@@ -68,6 +68,8 @@ namespace cc
 				world->GenerateStateCheck(p);
 				SendPacket(p);
 			}
+			FlushOutgoing();
+
 		}
 		// std::cout << "on tick " << tickCounter << std::endl;
 		if (inputState.Pressed(sf::Keyboard::Key::Escape))

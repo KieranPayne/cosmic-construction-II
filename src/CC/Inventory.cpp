@@ -28,5 +28,23 @@ namespace cc
         s.field("numSlots",numSlots);
         s.field("data",data);
     }
+    bool Inventory::AddItem(ItemData* itemData)
+    {
+        for (int i = 0; i < numSlots; i ++)
+        {
+            if (data[i].type == itemData->type)
+            {
+                data[i].amount += itemData->amount;
+                return true;
+            }else if (data[i].type == ItemData::ItemType::NONE)
+            {
+                data[i].type = itemData->type;
+                data[i].amount = itemData->amount;
+                return true;
+            }
+        }
+        return false;
+        
+    }
 
 }

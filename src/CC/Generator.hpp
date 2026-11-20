@@ -17,12 +17,12 @@ namespace cc
 		/// Also stores, in each tile's red channel, how far through its terrain type's noise range it is
 		/// (in 5 steps), for the next stage to use.
 		SET_TYPES = 0,
-		//add tall grass, fiber, trees, rocks
-		ADD_DECORATION,
-
+		
 		/// Turns each tile's terrain type and blend amount into its final colour, with some
 		/// random-looking brightness variation for sand, grass and grassy stone.
 		SET_TILE_COLORS,
+		//add tall grass, fiber, trees, rocks
+		ADD_DECORATION,
 
 		/// Not a step: reaching this means generation is complete.
 		FINISHED
