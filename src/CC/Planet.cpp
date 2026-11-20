@@ -246,6 +246,18 @@ namespace cc
 	}
 	void Planet::AddEntity(Entity *entity)
 	{
+		uint64_t id;
+		if (client != nullptr)
+		{
+			id = client->world->nextEntityId++;
+		}else if (server != nullptr)
+		{
+			id = server->world->nextEntityId++;
+		}else
+		{
+			std::cerr << "Planet does not have access to a server nor a client to set an entity id" << std::endl;
+		}
+		entity->id = id;
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));

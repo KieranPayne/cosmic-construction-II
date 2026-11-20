@@ -21,7 +21,7 @@ namespace cc
      */
     class Client : public Kosmic::State
     {
-    private:
+    public:
         PlayerData prevPlayerData;
         //packets received before join data is received
         std::vector<sf::Packet> packetBuffer;

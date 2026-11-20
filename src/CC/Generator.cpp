@@ -105,7 +105,7 @@ namespace cc
 							(TERRAIN_BOUNDS[terrainType + 1] - TERRAIN_BOUNDS[terrainType]));
 
 					// quantise into 5 steps
-					transition = std::round(transition * 5.0f) / 5.0f;
+					transition = std::round(transition * 8.0f) / 8.0f;
 
 					tile.color = sf::Color{
 						static_cast<std::uint8_t>(

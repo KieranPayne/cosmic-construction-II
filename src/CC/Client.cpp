@@ -12,10 +12,10 @@ namespace cc
 		activePlanet = 0;
 		world = std::make_unique<World>();
 		world->client = this;
-		for (auto &p : world->planets)
-		{
-			p->client = this;
-		}
+		// for (auto &p : world->planets)
+		// {
+		// 	p->client = this;
+		// }
 		knowledgeGraph = std::make_unique<KnowledgeGraph>(renderTarget, world->knowledgeDatabase);
 	}
 
@@ -289,16 +289,17 @@ namespace cc
 		loadedJoinData = true;
 		world->LoadJoinData(packet);
 		knowledgeGraph->LoadFromFile();
-		for (auto &p : world->planets)
-		{
-			p->client = this;
-		}
+		// for (auto &p : world->planets)
+		// {
+		// 	p->client = this;
+		// }
 		serverTickCounter = world->currentTick;
 		std::string msg = "Join data processed. Other players:";
 		for (auto &p : world->players)
 		{
 			if (p.username == SaveManager::username)
 			{
+				activePlanet = p.planet;
 				continue;
 			}
 			msg += "\n" + p.username;

@@ -5,8 +5,11 @@
 #include "Utils.hpp"
 #include "Tile.hpp"
 #include "Serializer.hpp"
+
 namespace cc
 {
+    class Planet;
+    class World;
     /**
      * @brief Base class for everything in the world that moves or exists independently of tiles
      *        (people, items, ...). Subclasses override the virtual functions to change how an
@@ -33,14 +36,14 @@ namespace cc
             /// An Item.
             ITEM
         };
-
+        virtual void FixPointers(Planet* planet);
         /// @brief Creates a plain entity at the origin, with a size of one tile and type NONE.
         Entity() = default;
 
         /// @brief Virtual so that entities can be deleted through an Entity pointer (as the planet does)
         ///        and the subclass is destroyed properly.
         virtual ~Entity() = default;
-
+        uint64_t id = 0;
         /// What kind of entity this is. Subclasses set it in their constructors.
         EntityType type = NONE;
 
@@ -53,6 +56,9 @@ namespace cc
 
         /// Size in tile units. Scales the drawn rectangle.
         sf::Vector2f size = {1.f, 1.f};
+
+        Planet* planet;
+        World* world;
 
         /// True once the entity has been added to the entity list of the chunk at `chunkPos`.
         /// False while that chunk is not loaded (for example, on a client that has not received it yet).
@@ -118,6 +124,7 @@ namespace cc
             type = (EntityType)t;
             s.field("position", position);
             s.field("size", size);
+            s.field("id",id);
         }
 
         /// @brief Recalculates `chunkPos` from the current `position`. This only updates the number;

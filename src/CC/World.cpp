@@ -8,6 +8,7 @@ namespace cc
     World::World()
     {
         planets.push_back(std::make_unique<Planet>());
+        planets[0]->world = this;
         RegisterBuiltinCommands(commandSystem);
     }
     void World::Tick()
@@ -143,6 +144,7 @@ namespace cc
         while (numPlanets > planets.size())
         {
             planets.push_back(std::make_unique<Planet>());
+            planets.back()->world = this;
         }
         for (int i = 0; i < numPlanets; i++)
         {
@@ -185,6 +187,11 @@ namespace cc
             // 	continue;
             // }
             players.push_back(p);
+            if (p.username == SaveManager::username)
+            {
+                planets[p.planet]->camera.position = p.cameraPosition;
+                planets[p.planet]->camera.zoom = p.cameraZoom;
+            }
             // AddOtherPlayer(p);
         }
         packet >> currentTick;
@@ -225,6 +232,7 @@ namespace cc
         while (planets.size() < planetCount)
         {
             planets.push_back(std::make_unique<Planet>());
+            planets.back()->world = this;
         } 
         s.field("seed", seed);
         SetSeed(seed);

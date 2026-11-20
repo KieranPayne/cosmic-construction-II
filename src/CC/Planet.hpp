@@ -24,6 +24,8 @@ namespace cc
 	public:
 		//needed for tool guis etc.
 		Client* client = nullptr;
+		World* world = nullptr;
+		Server* server = nullptr;
 		/// Every entity on the planet. The index in this vector is the entity's id in update packets. The planet owns them.
 		std::vector<std::unique_ptr<Entity>> entities;
 

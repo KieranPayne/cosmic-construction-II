@@ -1,6 +1,7 @@
 #include "Entity.hpp"
 #include "Human.hpp"
 #include "Item.hpp"
+#include "Planet.hpp"
 namespace cc
 {
     Entity *CreateEntityFromType(Entity::EntityType type)
@@ -15,5 +16,10 @@ namespace cc
             return new Item();
         }
         return nullptr;
+    }
+    void Entity::FixPointers(Planet* planet)
+    {
+        world = planet->world;
+        this->planet = planet;
     }
 }
