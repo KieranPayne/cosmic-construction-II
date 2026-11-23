@@ -40,6 +40,7 @@ namespace cc
 				tileData.id = i;
 				tileData.name = j["name"];
 				tileData.isTileEntity = j["isTileEntity"];
+				tileData.destroyTime = j["destroyTime"];
 				tileData.paths = {};
 				for (auto &j2 : j["textures"])
 				{

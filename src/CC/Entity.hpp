@@ -36,7 +36,7 @@ namespace cc
             /// An Item.
             ITEM
         };
-        virtual void FixPointers(Planet* planet);
+        virtual void SetPointers(Planet* planet);
         /// @brief Creates a plain entity at the origin, with a size of one tile and type NONE.
         Entity() = default;
 
@@ -57,8 +57,8 @@ namespace cc
         /// Size in tile units. Scales the drawn rectangle.
         sf::Vector2f size = {1.f, 1.f};
 
-        Planet* planet;
-        World* world;
+        Planet* planet = nullptr;
+        World* world = nullptr;
 
         /// True once the entity has been added to the entity list of the chunk at `chunkPos`.
         /// False while that chunk is not loaded (for example, on a client that has not received it yet).

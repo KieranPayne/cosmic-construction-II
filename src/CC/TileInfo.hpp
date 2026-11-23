@@ -47,6 +47,7 @@ namespace cc
 			std::string name;
 			/// The tile's type id: its index in `tileRegistry`.
 			uint16_t id;
+			float destroyTime;
 
 
 			/// Whether tiles of this type have a TileEntity.

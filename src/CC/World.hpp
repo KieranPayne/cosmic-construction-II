@@ -12,7 +12,7 @@ namespace cc
     class World
     {
         public:
-        uint64_t nextEntityId = 0;
+        uint64_t nextEntityId = 1;
         CommandSystem commandSystem;
         KnowledgeDatabase knowledgeDatabase;
         KnowledgeSystem knowledgeSystem{knowledgeDatabase};

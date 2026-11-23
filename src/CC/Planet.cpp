@@ -13,6 +13,7 @@
 #include "Serializer.hpp"
 #include "CSMessage.hpp"
 #include "Client.hpp"
+#include "ActionDestroyTile.hpp"
 namespace cc
 {
 	// The six corners (two triangles) of one tile quad, relative to its top-left corner.
@@ -46,18 +47,6 @@ namespace cc
 	}
 	void Planet::Update(double dt)
 	{
-		// for (auto &e : entities)
-		// {
-		// 	if (!e->isInChunk)
-		// 	{
-		// 		if (!chunks.contains(e->chunkPos))
-		// 		{
-		// 			GenerateChunk(e->chunkPos);
-		// 		}
-		// 		chunks[e->chunkPos]->AddEntity(e.get());
-		// 		e->isInChunk = true;
-		// 	}
-		// }
 	}
 	void Planet::VisibleUpdate(sf::RenderTarget *target, InputState &inputState, double dt)
 	{
@@ -65,67 +54,11 @@ namespace cc
 		DrawInfoGUI(dt);
 		DrawToolGUI(inputState);
 		entityEditor.Draw(this);
+		if (inputState.Pressed(sf::Keyboard::Key::P))
+		{
+			PlaceActionHumanAtMouse(inputState);
+		}
 	}
-	// std::vector<sf::Vector2i> Planet::GetChunksToRequest(sf::RenderTarget *target)
-	// {
-	// 	sf::FloatRect view = camera.toFloatRect(target);
-	// 	constexpr int chunkSizePixels = CHUNK_SIZE * TILE_SIZE;
-	// 	sf::Vector2i topLeft = {(int)floor(view.position.x / chunkSizePixels), (int)floor(view.position.y / chunkSizePixels)};
-	// 	sf::Vector2i bottomRight = {(int)floor((view.position.x + view.size.x) / chunkSizePixels), (int)floor((view.position.y + view.size.y) / chunkSizePixels)};
-	// 	topLeft -= {1, 1};
-	// 	bottomRight += {1, 1};
-	// 	std::vector<sf::Vector2i> positions = {};
-	// 	for (int x = topLeft.x; x <= bottomRight.x; x++)
-	// 	{
-	// 		for (int z = topLeft.y; z <= bottomRight.y; z++)
-	// 		{
-
-	// 			if (!chunks.contains({x, z}))
-	// 			{
-	// 				positions.push_back({x, z});
-	// 			}
-	// 		}
-	// 	}
-	// 	for (auto &e : entities)
-	// 	{
-	// 		if (!e->isInChunk)
-	// 		{
-	// 			if (chunks.contains(e->chunkPos))
-	// 			{
-	// 				chunks[e->chunkPos]->AddEntity(e.get());
-	// 				e->isInChunk = true;
-	// 			}
-	// 			else
-	// 			{
-	// 				if (std::find(positions.begin(), positions.end(), e->chunkPos) == positions.end())
-	// 				{
-	// 					positions.push_back(e->chunkPos);
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	for (int i = 0; i < tileSetRequests.size(); i++)
-	// 	{
-	// 		sf::Vector2i chunkPos = TileToChunkPos(tileSetRequests[i].first);
-	// 		if (!chunks.contains(chunkPos) && std::find(positions.begin(), positions.end(), chunkPos) == positions.end())
-	// 		{
-	// 			positions.push_back(chunkPos);
-	// 		}
-	// 	}
-	// 	for (int i = 0; i < positions.size(); i++)
-	// 	{
-	// 		if (chunksRequested.contains(positions[i]))
-	// 		{
-	// 			positions.erase(positions.begin() + i);
-	// 			i--;
-	// 		}
-	// 		else
-	// 		{
-	// 			chunksRequested.emplace(positions[i]);
-	// 		}
-	// 	}
-	// 	return positions;
-	// }
 	void Planet::Render(sf::RenderTarget *target)
 	{
 		sf::RenderStates states;
@@ -246,18 +179,11 @@ namespace cc
 	}
 	void Planet::AddEntity(Entity *entity)
 	{
-		uint64_t id;
-		if (client != nullptr)
+		if (entity->id == 0)
 		{
-			id = client->world->nextEntityId++;
-		}else if (server != nullptr)
-		{
-			id = server->world->nextEntityId++;
-		}else
-		{
-			std::cerr << "Planet does not have access to a server nor a client to set an entity id" << std::endl;
+			entity->id = world->nextEntityId++;
 		}
-		entity->id = id;
+		entity->SetPointers(this);
 		sf::Vector2i chunkPos = TileToChunkPos(entity->position);
 		entity->chunkPos = chunkPos;
 		entities.push_back(std::unique_ptr<Entity>(entity));
@@ -377,14 +303,16 @@ namespace cc
 		std::vector<Entity *> entitiesToMove;
 		std::vector<sf::Vector2i> oldPoses;
 		std::vector<sf::Vector2i> newPoses;
-
-		for (auto &e : entities)
+		//check before running loop to avoid ticking freshly created entities
+		int n = entities.size();
+		for (int i = 0; i < n; i ++)
 		{
+			Entity* e = entities[i].get();
 			e->Tick();
 			sf::Vector2i newChunkPos = TileToChunkPos(e->position);
 			if (newChunkPos != e->chunkPos)
 			{
-				entitiesToMove.push_back(e.get());
+				entitiesToMove.push_back(e);
 				newPoses.push_back(newChunkPos);
 			}
 		}
@@ -494,7 +422,7 @@ namespace cc
 			{
 				sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 				sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
-				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(TileChange{Tile(currentTile), worldTilePos}));
+				world->client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(Tile(currentTile), worldTilePos));
 				// SetTileAt(sf::Vector2i(worldTilePos.x, worldTilePos.y), Tile(currentTile));
 			}
 		}
@@ -752,7 +680,7 @@ namespace cc
 				}
 				if (best < 0)
 					continue; // no usable tiles at all
-				client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(Tile(best), placePos + sf::Vector2i{x, y}));
+				world->client->currInputBundle.tilesChanged.push_back(std::make_unique<TileChange>(Tile(best), placePos + sf::Vector2i{x, y}));
 				// SetTileAt(placePos + sf::Vector2i{x, y}, Tile(best));
 
 				// Floyd-Steinberg: push the leftover error onto unprocessed neighbours
@@ -846,5 +774,20 @@ namespace cc
 		chunks[newPos]->AddEntity(newEntity);
 		entities[index].reset(newEntity);
 		newEntity->chunkPos = newPos;
+	}
+
+	void Planet::PlaceActionHumanAtMouse(InputState& inputState)
+	{
+		sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
+		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
+		// sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
+		Human* human = new Human();
+		ActionDestroyTile* action = new ActionDestroyTile();
+		//destroy to the right
+		action->direction = 1;
+		human->SetCurrAction(action);
+		human->position = (sf::Vector2f)worldTilePos;
+		// AddEntity(human);
+		world->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>((Entity*)human));
 	}
 }

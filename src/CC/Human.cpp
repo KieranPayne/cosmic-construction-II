@@ -10,15 +10,26 @@ namespace cc
     {
         return JsonAsVector(EntityInfo::texturesJson["Human"]);
     }
-
+    void Human::SetPointers(Planet* planet)
+    {
+        Entity::SetPointers(planet);
+        if (currAction.get() != nullptr)
+        {
+            currAction->SetPointers(this);
+        }
+    }
     void Human::Tick()
     {
-        movementCounter ++;
-        if (movementCounter == 60)
+        if (currAction)
         {
-            movementCounter = 0;
-            position.x ++;
+            currAction->Tick();
         }
+        // movementCounter ++;
+        // if (movementCounter == 60)
+        // {
+        //     movementCounter = 0;
+        //     position.x ++;
+        // }
     }
 
     void Human::Serialize(Serializer &s)
@@ -26,6 +37,7 @@ namespace cc
         Entity::Serialize(s);
         s.field("knowledge", knowledge);
         s.field("movementCounter",movementCounter);
+        s.field("currAction",currAction);
     }
 
     HumanKnowledge *Human::FindKnowledge(int techId)
@@ -74,5 +86,17 @@ namespace cc
     {
         const HumanKnowledge *k = FindKnowledge(techId);
         return k ? k->skill : 0.f;
+    }
+    Action* Human::GetCurrAction()
+    {
+        return currAction.get();
+    }
+    void Human::SetCurrAction(Action* action)
+    {
+        currAction.reset(action);
+        if (planet != nullptr)
+        {
+            currAction->SetPointers(this);
+        }
     }
 }

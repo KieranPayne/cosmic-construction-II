@@ -5,6 +5,7 @@
 namespace cc
 {
     class Entity;
+    class Action;
 
     /**
      * @brief Saves or loads an object's fields, to json or to compact binary, using one piece of code for both directions.
@@ -559,6 +560,8 @@ namespace cc
         // Implemented in Serializer.cpp to avoid circular include with Entity.hpp
         void field(const std::string name, std::unique_ptr<Entity> &value);
         void field(const std::string name, std::vector<std::unique_ptr<Entity>> &value);
+        void field(const std::string name, std::unique_ptr<Action> &value);
+        void field(const std::string name, std::vector<std::unique_ptr<Action>> &value);
 
         nlohmann::json json() const { return j_; }
         std::vector<uint8_t> binary() const { return b_; }

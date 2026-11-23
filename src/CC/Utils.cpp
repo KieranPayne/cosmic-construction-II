@@ -478,4 +478,8 @@ namespace cc
 		Serializer s(Serializer::Mode::READ, Serializer::Format::BINARY, {}, data);
 		return s;
 	}
+    sf::Vector2i EntityToTilePos(sf::Vector2f pos)
+	{
+		return {floor(pos.x),floor(pos.y)};
+	}
 }

@@ -18,7 +18,7 @@ namespace cc
         Serializer sr(Serializer::Mode::READ, Serializer::Format::JSON, j);
         e->Serialize(sr);
 
-        auto &b = p->client->currInputBundle;
+        auto &b = p->world->client->currInputBundle;
         for (size_t k = 0; k < b.changeIndices.size(); k++)
         {
             if (b.changeIndices[k] == index)
@@ -47,7 +47,7 @@ namespace cc
             if (ImGui::Button("Done"))
             {
                 addingEntity = false;
-                p->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>(entity));
+                p->world->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>(entity));
                 entity = nullptr;
                 ImGui::End();
                 return;

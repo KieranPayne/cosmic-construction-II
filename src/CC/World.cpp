@@ -133,6 +133,7 @@ namespace cc
         packet.append(data.data(), data.size());
         packet << currentTick;
         packet << seed;
+        packet << nextEntityId;
         Serializer db(Serializer::Mode::WRITE, Serializer::Format::BINARY);
         knowledgeDatabase.Serialize(db);
         AppendSerializerToPacket(packet, db);
@@ -196,6 +197,7 @@ namespace cc
         }
         packet >> currentTick;
         packet >> seed;
+        packet >> nextEntityId;
         SetSeed(seed);
         Serializer db = ReadSerializerFromPacket(packet);
         knowledgeDatabase.Serialize(db);
@@ -235,6 +237,7 @@ namespace cc
             planets.back()->world = this;
         } 
         s.field("seed", seed);
+        s.field("nextEntityId",nextEntityId);
         SetSeed(seed);
     }
     void World::GenerateChunksInView(PlayerData *player)

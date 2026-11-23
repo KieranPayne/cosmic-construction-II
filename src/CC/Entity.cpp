@@ -17,7 +17,7 @@ namespace cc
         }
         return nullptr;
     }
-    void Entity::FixPointers(Planet* planet)
+    void Entity::SetPointers(Planet* planet)
     {
         world = planet->world;
         this->planet = planet;

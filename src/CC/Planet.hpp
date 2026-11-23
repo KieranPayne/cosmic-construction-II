@@ -11,6 +11,7 @@
 namespace cc
 {
 	class Client;
+	class Server;
 
 	/**
 	 * @brief One planet: its chunks, tiles and entities, and the code to draw and edit them.
@@ -23,9 +24,7 @@ namespace cc
 	{
 	public:
 		//needed for tool guis etc.
-		Client* client = nullptr;
 		World* world = nullptr;
-		Server* server = nullptr;
 		/// Every entity on the planet. The index in this vector is the entity's id in update packets. The planet owns them.
 		std::vector<std::unique_ptr<Entity>> entities;
 
@@ -217,5 +216,9 @@ namespace cc
 		Planet &operator=(const Planet &) = delete;
 		Planet(Planet &&) = default;
 		Planet &operator=(Planet &&) = default;
+
+
+		//debugging functions
+		void PlaceActionHumanAtMouse(InputState& inputState);
 	};
 }

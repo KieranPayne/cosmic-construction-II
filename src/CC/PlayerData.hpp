@@ -19,7 +19,7 @@ namespace cc
             resolution = {1920.f, 1080.f};
             username = "";
             cameraPosition = {0.f, 0.f};
-            cameraZoom = 0.f;
+            cameraZoom = 1.f;
             planet = 0;
         }
 

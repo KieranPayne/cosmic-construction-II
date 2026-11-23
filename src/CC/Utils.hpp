@@ -134,4 +134,6 @@ namespace cc
 
     void AppendSerializerToPacket(sf::Packet& packet, Serializer& s);
     Serializer ReadSerializerFromPacket(sf::Packet& packet);
+
+    sf::Vector2i EntityToTilePos(sf::Vector2f pos);
 }
