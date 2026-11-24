@@ -153,7 +153,7 @@ namespace cc
 		}
 	}
 
-	void Chunk::RenderEntities(sf::RenderTarget *target)
+	void Chunk::RenderEntities(sf::RenderTarget *target, float renderAlpha)
 	{
 		sf::RenderStates states;
 		states.texture = &EntityInfo::atlas.texture;
@@ -163,7 +163,7 @@ namespace cc
 		int i = 0;
 		for (auto &e : entities)
 		{
-			auto verts = e->GetVerts();
+			auto verts = e->GetVerts(renderAlpha);
 			for (int j = 0; j < verts.size(); j++)
 			{
 				arr[i] = verts[j];

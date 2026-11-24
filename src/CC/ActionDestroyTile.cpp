@@ -23,6 +23,12 @@ namespace cc
             sf::Vector2i offset = offsets[direction];
             sf::Vector2i position = EntityToTilePos(context.human->position) + offset;
             auto tile = context.planet->GetTileAt(position);
+            //if air just say done
+            if (tile.first->type == 0)
+            {
+                finished = true;
+                return;
+            }
             destroyTime = TileInfo::tileRegistry[tile.first->type].destroyTime * 60;
         }
         progress ++;

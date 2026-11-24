@@ -53,7 +53,7 @@ namespace cc
 
         /// Position in tile units (not pixels). Multiply by TILE_SIZE to get the position in world pixels.
         sf::Vector2f position = {0.f, 0.f};
-
+        sf::Vector2f prevPosition = position;
         /// Size in tile units. Scales the drawn rectangle.
         sf::Vector2f size = {1.f, 1.f};
 
@@ -69,7 +69,7 @@ namespace cc
          * @return Six vertices with positions in world pixels and texture coordinates from GetTexCoords().
          *         The rectangle's top-left is at `position` and its size is `size` in tiles.
          */
-        virtual std::vector<sf::Vertex> GetVerts()
+        virtual std::vector<sf::Vertex> GetVerts(float alpha)
         {
             sf::Vector2f offsets[6] = {
                 {0, 0},
@@ -86,7 +86,7 @@ namespace cc
             {
                 sf::Vertex v;
 
-                v.position = position * (float)TILE_SIZE + offsets[i];
+                v.position = Lerp(prevPosition,position,alpha) * (float)TILE_SIZE + offsets[i];
                 v.texCoords = texCoords + offsets[i];
 
                 verts.push_back(v);
@@ -125,6 +125,10 @@ namespace cc
             s.field("position", position);
             s.field("size", size);
             s.field("id",id);
+            if (s.mode == Serializer::Mode::READ)
+            {
+                prevPosition = position;
+            }
         }
 
         /// @brief Recalculates `chunkPos` from the current `position`. This only updates the number;

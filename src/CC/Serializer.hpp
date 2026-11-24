@@ -7,6 +7,24 @@ namespace cc
     class Entity;
     class Action;
 
+    template <typename T>
+    struct is_sfml_vector : std::false_type
+    {
+    };
+
+    template <typename T>
+    struct is_sfml_vector<sf::Vector2<T>> : std::true_type
+    {
+    };
+
+    template <typename T>
+    struct is_sfml_vector<sf::Vector3<T>> : std::true_type
+    {
+    };
+
+    template <typename T>
+    inline constexpr bool is_sfml_vector_v = is_sfml_vector<T>::value;
+
     /**
      * @brief Saves or loads an object's fields, to json or to compact binary, using one piece of code for both directions.
      *
@@ -178,9 +196,211 @@ namespace cc
                 }
             }
         }
+        template <typename T>
+        void field(const std::string name, sf::Vector2<T> &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    nlohmann::json j;
+                    j["x"] = value.x;
+                    j["y"] = value.y;
+                    j_[name] = j;
+                }
+                else
+                {
+                    if (!j_.contains(name))
+                        return;
+                    const auto &j = j_.at(name);
+                    if (j.contains("x"))
+                        value.x = j.at("x").get<T>();
+                    if (j.contains("y"))
+                        value.y = j.at("y").get<T>();
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    writeRaw(value.x);
+                    writeRaw(value.y);
+                }
+                else
+                {
+                    readRaw(value.x);
+                    readRaw(value.y);
+                }
+            }
+        }
 
         template <typename T>
-        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_enum_v<T> && !std::is_same_v<T, std::string>>
+        void field(const std::string name, sf::Vector3<T> &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    nlohmann::json j;
+                    j["x"] = value.x;
+                    j["y"] = value.y;
+                    j["z"] = value.z;
+                    j_[name] = j;
+                }
+                else
+                {
+                    if (!j_.contains(name))
+                        return;
+                    const auto &j = j_.at(name);
+                    if (j.contains("x"))
+                        value.x = j.at("x").get<T>();
+                    if (j.contains("y"))
+                        value.y = j.at("y").get<T>();
+                    if (j.contains("z"))
+                        value.z = j.at("z").get<T>();
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    writeRaw(value.x);
+                    writeRaw(value.y);
+                    writeRaw(value.z);
+                }
+                else
+                {
+                    readRaw(value.x);
+                    readRaw(value.y);
+                    readRaw(value.z);
+                }
+            }
+        }
+
+        template <typename T>
+        void field(const std::string name, std::vector<sf::Vector2<T>> &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    nlohmann::json arr = nlohmann::json::array();
+                    for (const auto &elem : value)
+                    {
+                        nlohmann::json item;
+                        item["x"] = elem.x;
+                        item["y"] = elem.y;
+                        arr.push_back(std::move(item));
+                    }
+                    j_[name] = std::move(arr);
+                }
+                else
+                {
+                    if (!j_.contains(name))
+                        return;
+                    value.clear();
+                    for (const auto &elem_json : j_.at(name))
+                    {
+                        sf::Vector2<T> elem{};
+                        if (elem_json.contains("x"))
+                            elem.x = elem_json.at("x").get<T>();
+                        if (elem_json.contains("y"))
+                            elem.y = elem_json.at("y").get<T>();
+                        value.push_back(elem);
+                    }
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    uint32_t count = static_cast<uint32_t>(value.size());
+                    writeRaw(count);
+                    for (const auto &elem : value)
+                    {
+                        writeRaw(elem.x);
+                        writeRaw(elem.y);
+                    }
+                }
+                else
+                {
+                    uint32_t count = 0;
+                    readRaw(count);
+                    value.resize(count);
+                    for (auto &elem : value)
+                    {
+                        readRaw(elem.x);
+                        readRaw(elem.y);
+                    }
+                }
+            }
+        }
+
+        template <typename T>
+        void field(const std::string name, std::vector<sf::Vector3<T>> &value)
+        {
+            if (format == Format::JSON)
+            {
+                if (mode == Mode::WRITE)
+                {
+                    nlohmann::json arr = nlohmann::json::array();
+                    for (const auto &elem : value)
+                    {
+                        nlohmann::json item;
+                        item["x"] = elem.x;
+                        item["y"] = elem.y;
+                        item["z"] = elem.z;
+                        arr.push_back(std::move(item));
+                    }
+                    j_[name] = std::move(arr);
+                }
+                else
+                {
+                    if (!j_.contains(name))
+                        return;
+                    value.clear();
+                    for (const auto &elem_json : j_.at(name))
+                    {
+                        sf::Vector3<T> elem{};
+                        if (elem_json.contains("x"))
+                            elem.x = elem_json.at("x").get<T>();
+                        if (elem_json.contains("y"))
+                            elem.y = elem_json.at("y").get<T>();
+                        if (elem_json.contains("z"))
+                            elem.z = elem_json.at("z").get<T>();
+                        value.push_back(elem);
+                    }
+                }
+            }
+            else // BINARY
+            {
+                if (mode == Mode::WRITE)
+                {
+                    uint32_t count = static_cast<uint32_t>(value.size());
+                    writeRaw(count);
+                    for (const auto &elem : value)
+                    {
+                        writeRaw(elem.x);
+                        writeRaw(elem.y);
+                        writeRaw(elem.z);
+                    }
+                }
+                else
+                {
+                    uint32_t count = 0;
+                    readRaw(count);
+                    value.resize(count);
+                    for (auto &elem : value)
+                    {
+                        readRaw(elem.x);
+                        readRaw(elem.y);
+                        readRaw(elem.z);
+                    }
+                }
+            }
+        }
+        template <typename T>
+        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_enum_v<T> && !std::is_same_v<T, std::string> && !is_sfml_vector_v<T>>
         field(const std::string name, T &value)
         {
             if (format == Format::JSON)
@@ -206,7 +426,7 @@ namespace cc
         }
 
         template <typename T>
-        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
+        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string> && !is_sfml_vector_v<T>>
         field(const std::string name, T *value)
         {
             if (format == Format::JSON)
@@ -279,7 +499,7 @@ namespace cc
         }
 
         template <typename T>
-        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string>>
+        std::enable_if_t<!std::is_arithmetic_v<T> && !std::is_same_v<T, std::string> && !is_sfml_vector_v<T>>
         field(const std::string name, std::vector<T> &value)
         {
             if (format == Format::JSON)

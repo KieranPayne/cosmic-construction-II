@@ -3,6 +3,12 @@
 #include "../json.hpp"
 #include "../imgui/imgui.h"
 #include "Serializer.hpp"
+    #ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <netinet/tcp.h>
+    #include <sys/socket.h>
+#endif
 namespace cc
 {
     class Entity;
@@ -136,4 +142,5 @@ namespace cc
     Serializer ReadSerializerFromPacket(sf::Packet& packet);
 
     sf::Vector2i EntityToTilePos(sf::Vector2f pos);
+
 }

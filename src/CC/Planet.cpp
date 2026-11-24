@@ -14,6 +14,7 @@
 #include "CSMessage.hpp"
 #include "Client.hpp"
 #include "ActionDestroyTile.hpp"
+#include "ActionPathfind.hpp"
 namespace cc
 {
 	// The six corners (two triangles) of one tile quad, relative to its top-left corner.
@@ -56,10 +57,11 @@ namespace cc
 		entityEditor.Draw(this);
 		if (inputState.Pressed(sf::Keyboard::Key::P))
 		{
-			PlaceActionHumanAtMouse(inputState);
+			PlacePathfindHumanAtMouse(inputState);
+			// PlaceDestroyHumanAtMouse(inputState);
 		}
 	}
-	void Planet::Render(sf::RenderTarget *target)
+	void Planet::Render(sf::RenderTarget *target, float renderAlpha)
 	{
 		sf::RenderStates states;
 		states.texture = &TileInfo::atlas.texture;
@@ -92,7 +94,7 @@ namespace cc
 				{
 					continue;
 				}
-				chunks[{x, y}]->RenderEntities(target);
+				chunks[{x, y}]->RenderEntities(target, renderAlpha);
 			}
 		}
 	}
@@ -300,14 +302,18 @@ namespace cc
 	}
 	void Planet::Tick()
 	{
+		for (auto& e : entities)
+		{
+			e->prevPosition = e->position;
+		}
 		std::vector<Entity *> entitiesToMove;
 		std::vector<sf::Vector2i> oldPoses;
 		std::vector<sf::Vector2i> newPoses;
-		//check before running loop to avoid ticking freshly created entities
+		// check before running loop to avoid ticking freshly created entities
 		int n = entities.size();
-		for (int i = 0; i < n; i ++)
+		for (int i = 0; i < n; i++)
 		{
-			Entity* e = entities[i].get();
+			Entity *e = entities[i].get();
 			e->Tick();
 			sf::Vector2i newChunkPos = TileToChunkPos(e->position);
 			if (newChunkPos != e->chunkPos)
@@ -458,6 +464,19 @@ namespace cc
 	{
 		s.field("camera", camera);
 		s.field("seed", seed);
+		std::string rngState;
+		if (s.mode == Serializer::Mode::WRITE)
+		{
+			std::ostringstream oss;
+			oss << rng;
+			rngState = oss.str();
+		}
+		s.field("rngState", rngState);
+		if (s.mode == Serializer::Mode::READ && !rngState.empty())
+		{
+			std::istringstream iss(rngState);
+			iss >> rng;
+		}
 	}
 	void Planet::GetTileVertices(sf::Vector2i chunkPos)
 	{
@@ -514,6 +533,7 @@ namespace cc
 	{
 		this->seed = seed;
 		generator.SetSeed(seed);
+		rng.seed(seed);
 	}
 	void Planet::GenerateChunk(sf::Vector2i position)
 	{
@@ -776,18 +796,44 @@ namespace cc
 		newEntity->chunkPos = newPos;
 	}
 
-	void Planet::PlaceActionHumanAtMouse(InputState& inputState)
+	void Planet::PlaceDestroyHumanAtMouse(InputState &inputState)
 	{
 		sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
 		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
 		// sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
-		Human* human = new Human();
-		ActionDestroyTile* action = new ActionDestroyTile();
-		//destroy to the right
+		Human *human = new Human();
+		ActionDestroyTile *action = new ActionDestroyTile();
+		// destroy to the right
 		action->direction = 1;
 		human->SetCurrAction(action);
 		human->position = (sf::Vector2f)worldTilePos;
 		// AddEntity(human);
-		world->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>((Entity*)human));
+		world->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>((Entity *)human));
+	}
+
+	void Planet::PlacePathfindHumanAtMouse(InputState& inputState)
+	{
+		sf::Vector2f worldPos = camera.ToWorldPos(inputState.mousePosition, window.get());
+		sf::Vector2i worldTilePos(floor((float)worldPos.x / TILE_SIZE), floor((float)worldPos.y / TILE_SIZE));
+		// sf::Vector2i worldChunkPos = TileToChunkPos(worldTilePos);
+		Human *human = new Human();
+		ActionPathfind *action = new ActionPathfind();
+		action->SetGoal({0,0},false);
+		human->SetCurrAction(action);
+		human->position = (sf::Vector2f)worldTilePos;
+		world->client->currInputBundle.entitiesAdded.push_back(std::unique_ptr<Entity>((Entity *)human));
+	}
+	bool Planet::IsTileWalkable(sf::Vector2i tilePos)
+	{
+		sf::Vector2i chunkPos = TileToChunkPos(tilePos);
+		auto it = chunks.find(chunkPos);
+		if (it == chunks.end())
+		{
+			return false; // Treat unloaded chunks as impassable
+		}
+
+		sf::Vector2i subChunkPos = tilePos - chunkPos * CHUNK_SIZE;
+		uint16_t type = it->second->tiles[subChunkPos.x][subChunkPos.y].type;
+		return !TileInfo::tileRegistry[type].solid;
 	}
 }

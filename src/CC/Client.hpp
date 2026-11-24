@@ -23,7 +23,7 @@ namespace cc
     {
     public:
         PlayerData prevPlayerData;
-        //packets received before join data is received
+        // packets received before join data is received
         std::vector<sf::Packet> packetBuffer;
         std::vector<double> timesBetweenTicks;
         sf::Clock tickTimer;
@@ -33,7 +33,7 @@ namespace cc
 
         /// Set by LogMessage() so that the chat window scrolls to the newest message the next time it is drawn.
         bool chatLogScrollToBottom = false;
-        
+
         /// True while the pause menu is showing. While paused the world is not updated and no chunk requests
         /// or player data are sent, but incoming packets are still processed.
         bool paused = false;
@@ -57,17 +57,16 @@ namespace cc
         /// Index into `planets` of the planet the player is on. Set from the server's data when joining.
         int activePlanet = 0;
 
-
         /// @brief Draws the full-screen pause menu: resume, plus "save and quit" for the host or "disconnect" for other players.
         void DisplayPauseMenu();
 
-    public: 
+    public:
         void OnKnowledgeDatabaseUpdated();
         void Tick();
         /**
          * @brief Sends the current input bundle. note that if for example the tick label is tick 0, these are the inputs leading up to the
          *        tick counter rolling over to 1.
-         *        
+         *
          *
          */
         void SendInputBundle();
@@ -158,10 +157,10 @@ namespace cc
         ///        and retrying it next time. Returns to the main menu if the server disconnected.
         void FlushOutgoing();
 
-        void ProcessTickBroadcast(sf::Packet& p);
+        void ProcessTickBroadcast(sf::Packet &p);
 
     public:
-        std::unordered_map<uint64_t,std::vector<InputBundle>> queuedInputs;
+        std::unordered_map<uint64_t, std::vector<InputBundle>> queuedInputs;
 
         InputBundle currInputBundle;
 
@@ -185,7 +184,6 @@ namespace cc
         /// @brief Draws the chat window: the message log and the input box with a Send button.
         void DrawLogWindow();
 
-
         /// @brief Draws an outline of each other player's visible area on the active planet, in a colour based
         ///        on their username, interpolating between their last two updates.
         void DrawOtherPlayers();
@@ -194,9 +192,13 @@ namespace cc
         ///        window size) for sending to the server.
         PlayerData GetPlayerData();
 
-
-        // --- UNDOCUMENTED STUFF --- 
+        // --- UNDOCUMENTED STUFF ---
         std::unique_ptr<KnowledgeGraph> knowledgeGraph;
         bool showingKnowledgeGraph = false;
+        double simAccumulator = 0.0;
+        bool bufferingTicks = true;
+        float renderAlpha = 1.0f;
+
+        void StepSimulationTick();
     };
 }

@@ -86,7 +86,7 @@ namespace cc
 			server->Start(5000);
 			server->StartThread();
 			Client *client = new Client(state->renderTarget);
-			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
+			sf::IpAddress ip = sf::IpAddress::LocalHost;
 			state = std::unique_ptr<Kosmic::State>(client);
 			client->ConnectToServer(ip, 5000);
 		}
@@ -114,7 +114,7 @@ namespace cc
 			server->StartThread();
 			Client *client = new Client(state->renderTarget);
 			state = std::unique_ptr<Kosmic::State>(client);
-			sf::IpAddress ip = sf::IpAddress::getLocalAddress().value();
+			sf::IpAddress ip = sf::IpAddress::LocalHost;
 			client->ConnectToServer(ip, 5000);
 		}
 		void SaveServer(Server *server)

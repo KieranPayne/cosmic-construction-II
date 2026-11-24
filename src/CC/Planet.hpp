@@ -40,7 +40,7 @@ namespace cc
 
 		/// The view onto the planet: position, zoom and movement.
 		Camera camera;
-
+		std::mt19937_64 rng;
 		/// This planet's index in the server's list of planets. -1 until set. Names the planet's save folder.
 		int index;
 
@@ -82,7 +82,7 @@ namespace cc
 		 * @brief Draws the visible chunks' tiles, then their entities.
 		 * @param target The window or texture to draw to.
 		 */
-		void Render(sf::RenderTarget *target);
+		void Render(sf::RenderTarget *target, float renderAlpha);
 
 		/**
 		 * @brief Draws the "World Info" window: the frame rate, and optionally the camera's or entities' data as json.
@@ -211,6 +211,9 @@ namespace cc
 
 		void ChangeEntity(int index, Entity* newEntity);
 
+		bool IsTileWalkable(sf::Vector2i tilePos);
+
+
 		// A planet can't be copied (it holds unique_ptrs), but it can be moved, so it can be stored in a vector.
 		Planet(const Planet &) = delete;
 		Planet &operator=(const Planet &) = delete;
@@ -219,6 +222,7 @@ namespace cc
 
 
 		//debugging functions
-		void PlaceActionHumanAtMouse(InputState& inputState);
+		void PlaceDestroyHumanAtMouse(InputState& inputState);
+		void PlacePathfindHumanAtMouse(InputState& inputState);
 	};
 }

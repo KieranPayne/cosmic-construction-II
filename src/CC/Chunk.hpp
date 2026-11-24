@@ -90,7 +90,7 @@ namespace cc
 		 * @brief Draws every entity in this chunk using the entity atlas, in a single draw call.
 		 * @param target The render target to draw to. The current view of the target is used.
 		 */
-		void RenderEntities(sf::RenderTarget *target);
+		void RenderEntities(sf::RenderTarget *target, float renderAlpha);
 
 		/**
 		 * @brief Registers an entity as being in this chunk.

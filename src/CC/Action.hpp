@@ -8,8 +8,9 @@ namespace cc
     class Planet;
     enum class ActionType : uint16_t
     {
-        NONE,
-        DESTROY_TILE
+        NONE = 0,
+        DESTROY_TILE,
+        PATHFIND
     };
     struct ActionContext
     {
@@ -32,5 +33,6 @@ namespace cc
             s.field("type",type);
             s.field("finished",finished); 
         }
+        virtual ~Action() = default;
     };
 }

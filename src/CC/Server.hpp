@@ -4,6 +4,7 @@
 #include "PlayerData.hpp"
 #include "World.hpp"
 #include "CommandSystem.hpp"
+#define TPS (60.f)
 namespace cc
 {
     /**
@@ -218,8 +219,6 @@ namespace cc
 
         // ---- state ----
 
-        /// Ticks per second. Used as `1.0 / tps` in Update(), so it must be set to a positive value before the first Update().
-        int tps = 60;
 
         /// Accepts incoming connections. Non-blocking once Start() succeeds.
         sf::TcpListener listener;

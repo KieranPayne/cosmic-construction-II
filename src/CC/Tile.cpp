@@ -2,6 +2,7 @@
 #include "TileInfo.hpp"
 #include "Planet.hpp"
 #include "Item.hpp"
+
 namespace cc
 {
     void Tile::OnDestroy(Planet *p, sf::Vector2i chunkPos, sf::Vector2i subChunkPos)
@@ -9,6 +10,7 @@ namespace cc
         static uint16_t treeId = TileInfo::nameLookup["Tree"]->id;
         static uint16_t rockId = TileInfo::nameLookup["Rock"]->id;
         static uint16_t tallGrassId = TileInfo::nameLookup["Tall grass"]->id;
+
         if (type == treeId)
         {
             Item *i = new Item();
@@ -18,29 +20,23 @@ namespace cc
         }
         else if (type == rockId)
         {
-            static std::random_device rd;
-            static std::mt19937 gen(rd());
-            static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-
-            float random = dist(gen);
+            uint64_t roll = p->rng() % 1000;
             Item *i = new Item();
             i->position = (sf::Vector2f)(chunkPos * CHUNK_SIZE + subChunkPos);
-            if (random < 0.1f)
+            if (roll < 100) // 10% chance
             {
                 i->itemData.type = ItemData::FLINT;
-            }else
+            }
+            else
             {
                 i->itemData.type = ItemData::STONE;
             }
             p->AddEntity(i);
-        }else if (type == tallGrassId)
+        }
+        else if (type == tallGrassId)
         {
-            static std::random_device rd;
-            static std::mt19937 gen(rd());
-            static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-
-            float random = dist(gen);
-            if (random < 0.3f)
+            uint64_t roll = p->rng() % 1000;
+            if (roll < 300) // 30% chance
             {
                 Item *i = new Item();
                 i->position = (sf::Vector2f)(chunkPos * CHUNK_SIZE + subChunkPos);

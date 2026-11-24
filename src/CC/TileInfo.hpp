@@ -48,8 +48,7 @@ namespace cc
 			/// The tile's type id: its index in `tileRegistry`.
 			uint16_t id;
 			float destroyTime;
-
-
+			bool solid;
 			/// Whether tiles of this type have a TileEntity.
 			bool isTileEntity;
 		};

@@ -120,6 +120,11 @@ namespace cc
                 AppendEntityToPacket(packet, p->entities[i].get());
             }
             p->generator.AppendToPacket(packet);
+            std::string rngState;
+			std::ostringstream oss;
+			oss << p->rng;
+			rngState = oss.str();
+            packet << rngState;
         }
         Serializer s(Serializer::Mode::WRITE, Serializer::Format::BINARY);
         int n = players.size();
@@ -168,6 +173,10 @@ namespace cc
                 planets[i]->AddEntity(e);
             }
             planets[i]->generator.LoadFromPacket(packet);
+            std::string rngState;
+            packet >> rngState;
+            std::istringstream iss(rngState);
+			iss >> planets[i]->rng;
         }
         // players currently on the server, including this one
         auto playerData = ReadBytesFromPacket(packet);
@@ -179,14 +188,6 @@ namespace cc
         {
             PlayerData p;
             s.field(std::to_string(i), p);
-            // if (p.username == SaveManager::username)
-            // {
-            // 	// this is us: restore our saved planet and camera
-            // 	activePlanet = p.planet;
-            // 	planets[activePlanet]->camera.position = p.cameraPosition;
-            // 	planets[activePlanet]->camera.targetZoom = p.cameraZoom;
-            // 	continue;
-            // }
             players.push_back(p);
             if (p.username == SaveManager::username)
             {

@@ -41,7 +41,7 @@ namespace cc
         ReceivePackets();
         FlushOutgoing();
         timeSinceTick += dt;
-        const double interval = 1.0 / tps;
+        const double interval = 1.0 / TPS;
         timeSinceTick = std::min(timeSinceTick, interval * 5); // avoid a spiral after a long stall
         while (timeSinceTick >= interval)
         {

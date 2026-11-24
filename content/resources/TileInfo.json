@@ -3,108 +3,126 @@
     "name":"Air",
     "textures":[],
     "isTileEntity":false,
-    "destroyTime":0
+    "destroyTime":0,
+    "solid":false
 },
 {
     "name":"Stockpile",
     "textures":["stockpile.png", "stockpile 2.png"],
     "isTileEntity":true,
-    "destroyTime":3
+    "destroyTime":3,
+    "solid":true
 },
 {
     "name":"Black",
     "textures":["black.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Dark grey",
     "textures":["dark grey.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Grey",
     "textures":["grey.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Light grey",
     "textures":["light grey.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"White",
     "textures":["white.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Brown",
     "textures":["brown.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Purple",
     "textures":["purple.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Blue",
     "textures":["blue.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Teal",
     "textures":["teal.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Green",
     "textures":["green.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Yellow",
     "textures":["yellow.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Orange",
     "textures":["orange.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Red",
     "textures":["red.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":true
 },
 {
     "name":"Tree",
     "textures":["tree.png"],
     "isTileEntity":false,
-    "destroyTime":5
+    "destroyTime":5,
+    "solid":true
 },
 {
     "name":"Rock",
     "textures":["rock.png"],
     "isTileEntity":false,
-    "destroyTime":10
+    "destroyTime":10,
+    "solid":true    
 },
 {
     "name":"Tall grass",
     "textures":["tall grass.png"],
     "isTileEntity":false,
-    "destroyTime":1
+    "destroyTime":1,
+    "solid":false
 }
 ]

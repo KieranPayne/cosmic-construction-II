@@ -2,6 +2,7 @@
 #include "Human.hpp"
 #include "ActionDestroyTile.hpp"
 #include "Planet.hpp"
+#include "ActionPathfind.hpp"
 namespace cc
 {
     Action* Action::CreateActionFromType(ActionType type)
@@ -12,6 +13,8 @@ namespace cc
                 return new Action();
             case ActionType::DESTROY_TILE:
                 return new ActionDestroyTile();
+            case ActionType::PATHFIND:
+                return new ActionPathfind();
         }
     }
     void Action::SetPointers(Human* human)
